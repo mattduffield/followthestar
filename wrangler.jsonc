@@ -1,0 +1,11 @@
+{
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"name": "followthestar",
+	"compatibility_date": "2026-09-28",
+	"assets": {
+		// serve the static site from src/ (no Worker script needed)
+		"directory": "./src",
+		// serve src/404.html with a 404 status for missing pages
+		"not_found_handling": "404-page"
+	}
+}
