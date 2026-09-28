@@ -65,8 +65,16 @@ Each year:
 
 ## Deployment
 
-Publish the `src` folder as the site root on any static host. The host should be configured to:
+The site is hosted on Cloudflare Workers as static assets, connected to this GitHub repository. Every push to `main` deploys automatically.
 
-- serve `404.html` for missing pages (Netlify, Cloudflare Pages and GitHub Pages do this automatically)
-- redirect HTTP to HTTPS, and `www.followthestar.church` to `followthestar.church`
-- optionally, send security headers such as `Strict-Transport-Security`, `X-Content-Type-Options: nosniff` and `X-Frame-Options: SAMEORIGIN`
+`wrangler.jsonc` tells Cloudflare to publish the `src` folder and to use `src/404.html` for missing pages. The Worker project name in Cloudflare must match `name` in that file (`followthestar`).
+
+To deploy manually, run `npx wrangler deploy`. To check the config without deploying, run `npx wrangler deploy --dry-run`.
+
+The domain is set up in the Cloudflare dashboard:
+
+- `followthestar.church` and `www.followthestar.church` are added under the Worker's Settings → Domains & Routes
+- a Redirect Rule sends `www.followthestar.church` to `followthestar.church`
+- SSL/TLS → Edge Certificates → Always Use HTTPS is turned on
+
+To send extra response headers (such as `Strict-Transport-Security` or `X-Content-Type-Options: nosniff`), add a `src/_headers` file. Cloudflare applies it and doesn't publish it as a page.
