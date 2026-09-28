@@ -1,0 +1,6 @@
+.ddev
+app/config
+app/data
+tests
+**/.DS_Store
+uploads

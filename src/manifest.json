@@ -1,0 +1,20 @@
+{
+	"short_name":"Follow the Star",  	
+	"name": "Follow the Star",
+	"start_url":"/",
+	"display":"standalone",
+  	"description": "Follow the Star invites you to experience the story of Jesus' birth at our live nativity event! This is a Christmas tradition since 2002.",
+	"background_color":"#fff",
+	"theme_color":"#fff",
+  	"icons": [{
+    	"src": "/assets/images/global/android-chrome-192x192.png",
+    	"sizes": "192x192",
+		"type":"image/png"
+ 	},
+	{
+    	"src": "/assets/images/global/android-chrome-512x512.png",
+    	"sizes": "512x512",
+		"type":"image/png"
+ 	}
+	]
+}

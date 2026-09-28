@@ -1,0 +1,62 @@
+/* Shared layout styles (formerly inline in app/views/_layouts/base.phtml) */
+
+body {margin:0; font-family:Inter,Arial,sans-serif;}
+* {box-sizing: border-box;}
+.c {text-align: center;}
+
+/* header */
+header {display:flex; justify-content: space-between; background: rgba(0, 0, 0, 0.25); height:90px; position: fixed; top:0; left:0; right:0; border-bottom: 1px solid #565656; padding:10px 40px; z-index:10; transition: background 0.2s;}
+header.scrolled {background: rgba(0, 0, 0, 0.75);}
+header > a > img {width:86px; height:69px;}
+header > .buttons {display:flex; align-items:center;}
+header > .buttons a, header > .buttons button {border:1px solid #FFDB59; border-radius: 5px; color:#FFDB59; background:none; padding:10px 25px; display:inline-block; font:400 18px Inter,Arial,sans-serif; text-decoration: none; text-transform: uppercase; cursor:pointer; text-align:center;}
+header > .buttons a {margin-right:20px;}
+
+@media screen and (max-width:500px) {
+	header > a > img {width:55px; height:40px; margin-top:15px}
+	header {padding:10px 10px;}
+	header > .buttons a, header > .buttons button {padding:8px 12px;}
+	header > .buttons a {margin-right:12px;}
+}
+
+@media screen and (max-width:365px) {
+	header > .buttons a, header > .buttons button {font-size:14px}
+}
+
+/* main */
+main {overflow: hidden;}
+
+main .hero .intro {margin-top:10px; font:28px Merienda,Arial,sans-serif; color:#fff; text-align: center; text-shadow: 2px 2px 4px #333333; line-height:110%;}
+main .hero .location {margin-top:10px; font:28px Inter,Arial,sans-serif; color:#fff; text-align: center; text-shadow: 2px 2px 4px #333333;}
+main article {position: relative; z-index:2; background:#fff; text-align: center; padding:20px; margin:780px 0 0 0; overflow: hidden;}
+main article .padding {margin:0 auto 20px auto; max-width:900px; }
+
+main article h1 {font-size:50px; font-weight:200; margin-bottom:16px;}
+main article h2 {font-size:40px; font-weight:200; margin-bottom:16px;}
+main article h3 {font-size:30px; font-weight:200; margin-bottom:16px;}
+main article h4 {font-size:26px; font-weight:400; margin-bottom:16px;}
+main article p {font-size:20px; font-weight:300;}
+main article .left {text-align: left;}
+
+@media screen and (max-width:500px) {
+	main article h1 {font-size:35px; font-weight:200;}
+	main article h2 {font-size:25px; font-weight:200;}
+	main article h3 {font-size:20px; font-weight:200;}
+	main article h4 {font-size:18px; font-weight:400;}
+	main .hero img {margin-top:100px;}
+	main .hero .intro {font-size:20px;}
+	main .hero .intro br {display:none;}
+}
+
+/* footer */
+footer {background:#333; padding:40px; overflow: hidden; position: relative; z-index:10;}
+footer .contactInfo {display:flex; justify-content: space-between; color:#fff;}
+footer .contactInfo img {margin-top:60px}
+footer .contactInfo h5 {font-size:20px; margin-bottom:15px; text-transform: uppercase;}
+footer .contactInfo p {font-size:20px; font-weight: 200; margin-top:5px;}
+footer .contactInfo a {color:#fff;}
+
+@media screen and (max-width:500px) {
+	footer .contactInfo {flex-direction: column;}
+	footer .contactInfo img {margin-top:10px}
+}
