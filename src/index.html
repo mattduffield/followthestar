@@ -143,6 +143,33 @@ main .hero img {margin-top:90px; left:0; position: relative; width:100%; height:
 
 		<h4>Follow the Star invites you to experience the<br> story of Jesus' birth at our live nativity event!</h4>
 
+		<style>
+		.video {position: relative; aspect-ratio: 16 / 9; margin:30px 0 20px 0; background:#000; box-shadow:0 8px 24px rgba(0,0,0,0.25); overflow:hidden;}
+		.video iframe, .video video, .video .video-facade, .video img {position:absolute; inset:0; width:100%; height:100%; border:0;}
+		.video img {object-fit: cover; transition: transform 0.4s;}
+		.video .video-facade {display:block; cursor:pointer;}
+		.video .video-facade:after {content:""; position:absolute; inset:0; background:linear-gradient(to top, rgba(0,0,0,0.55), rgba(0,0,0,0.1) 60%);}
+		.video .video-play {position:absolute; z-index:1; top:50%; left:50%; width:84px; height:84px; margin:-42px 0 0 -42px; border:2px solid #FFDB59; border-radius:50%; background:rgba(0,0,0,0.45); transition: background 0.2s, transform 0.2s;}
+		.video .video-play:before {content:""; position:absolute; top:50%; left:50%; margin:-14px 0 0 -8px; border-style:solid; border-width:14px 0 14px 24px; border-color:transparent transparent transparent #FFDB59;}
+		.video .video-label {position:absolute; z-index:1; left:0; right:0; bottom:18px; color:#fff; font:20px Merienda,Arial,sans-serif; text-shadow: 2px 2px 4px #333333;}
+		.video .video-facade:hover img, .video .video-facade:focus-visible img {transform: scale(1.03);}
+		.video .video-facade:hover .video-play, .video .video-facade:focus-visible .video-play {background:#751D19; transform: scale(1.08);}
+		.video .video-facade:focus-visible {outline:3px solid #FFDB59; outline-offset:-3px;}
+		@media screen and (max-width:500px) {
+			.video {margin:20px -20px;}
+			.video .video-play {width:64px; height:64px; margin:-32px 0 0 -32px;}
+			.video .video-play:before {margin:-11px 0 0 -6px; border-width:11px 0 11px 19px;}
+			.video .video-label {font-size:16px; bottom:12px;}
+		}
+		</style>
+		<div class="video">
+			<a class="video-facade" href="https://media.followthestar.church/follow-the-star.mp4" data-video-src="https://media.followthestar.church/follow-the-star.mp4" data-video-title="Follow the Star" aria-label="Play video: Follow the Star">
+				<img src="/assets/images/home/video-poster.jpg" alt="" width="1280" height="720" loading="lazy">
+				<span class="video-play" aria-hidden="true"></span>
+				<span class="video-label" aria-hidden="true">Take a glimpse of the journey</span>
+			</a>
+		</div>
+
 		<div class="left">
 		<p>Come join the thousands of people who have made Follow the Star part of their Christmas traditions since 2002!</p>
 
