@@ -62,6 +62,13 @@ document.addEventListener('DOMContentLoaded', function() {
 		});
 	});
 
+	// show elements from a set date onward, e.g. the Buy Tickets button from the public sale
+	// <a data-show-after="2026-11-08T09:00:00-08:00" hidden>
+	document.querySelectorAll('[data-show-after]').forEach(function(el) {
+		if (Date.now() >= Date.parse(el.dataset.showAfter))
+			el.hidden = false;
+	});
+
 	// footer copyright year
 	document.querySelectorAll('.year').forEach(function(el) {
 		el.textContent = new Date().getFullYear();

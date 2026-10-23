@@ -4,3 +4,5 @@ app/data
 tests
 **/.DS_Store
 uploads
+# Private planning documents (this repo is public on GitHub)
+docs/
