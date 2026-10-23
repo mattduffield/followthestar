@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+	<title>The Journey | Follow the Star, Live Walkthrough Nativity in Gladstone, Oregon</title>
+	<meta name="description" content="Travel with the wise men. Each day they come a little closer to Bethlehem, arriving at the stable on Christmas Day. A new reading and a different night sky every day.">
+	<meta name="robots" content="noindex">
+
+	<link rel="stylesheet" href="/assets/css/base.css">
+	<link rel="stylesheet" href="/assets/css/site.css">
+
+	<link rel="icon" href="/favicon.ico" type="image/x-icon">
+	<link rel="apple-touch-icon" sizes="180x180" href="/assets/images/global/apple-touch-icon.png">
+	<link rel="icon" type="image/png" sizes="32x32" href="/assets/images/global/favicon-32x32.png">
+	<link rel="icon" type="image/png" sizes="16x16" href="/assets/images/global/favicon-16x16.png">
+	<link rel="manifest" href="/manifest.json">
+	<link rel="mask-icon" href="/assets/images/global/safari-pinned-tab.svg" color="#5bbad5">
+	<meta name="msapplication-TileColor" content="#da532c">
+	<meta name="theme-color" content="#070b22">
+
+	<meta property="og:title" content="The Journey | Follow the Star">
+	<meta property="og:type" content="website">
+	<meta property="og:description" content="Travel with the wise men to Bethlehem, a little farther every day until Christmas.">
+	<meta property="og:url" content="https://followthestar.church/journey/">
+	<meta property="og:image" content="https://followthestar.church/assets/images/global/sharing.jpg">
+
+	<link rel="preconnect" href="https://fonts.googleapis.com">
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link href="https://fonts.googleapis.com/css2?family=Inter:wght@200;300;400;700&family=Merienda&display=swap" rel="stylesheet">
+
+	<!-- Google Tag Manager -->
+	<script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+	new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+	j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+	'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+	})(window,document,'script','dataLayer','GTM-KBN7NC3');</script>
+	<!-- End Google Tag Manager -->
+
+<style>
+body {background:#070b22; color:#fff;}
+main {overflow:visible;}
+
+/* the scene fills the screen and plays on its own */
+.stage {position:relative; height:100vh; height:100svh; overflow:hidden; background:#070b22;}
+.stage canvas {display:block; width:100%; height:100%;}
+
+.overlay {position:absolute; left:0; right:0; pointer-events:none; text-align:center; text-shadow:0 1px 6px rgba(0,0,0,0.6);}
+.title {top:22%; transition:opacity 0.6s;}
+.title h1 {font:400 46px/1.15 Merienda,Georgia,serif; margin:0 0 10px; color:#fff;}
+.title p {font:300 19px Inter,Arial,sans-serif; margin:0; color:#e8e3ff;}
+.when {top:104px; left:24px; right:auto; text-align:left; font:600 13px Inter,Arial,sans-serif; letter-spacing:0.08em; text-transform:uppercase; color:#e8e3ff;}
+.when b {display:block; font:200 26px Inter,Arial,sans-serif; letter-spacing:0; text-transform:none; color:#FFDB59; margin-top:2px;}
+.caption {top:30%; opacity:0; transition:opacity 0.8s;}
+.done {top:26%;}
+.done h2 {font:400 40px/1.2 Merienda,Georgia,serif; color:#fff; margin:0 0 10px;}
+.done p {font:300 19px Inter,Arial,sans-serif; color:#e8e3ff; margin:0;}
+.caption.on {opacity:1;}
+.verse-end {top:20%; left:50%; right:auto; transform:translateX(-50%); width:min(780px, 88%); padding:18px 26px; border-radius:10px; background:rgba(7,11,34,0.55); box-shadow:0 0 40px 20px rgba(7,11,34,0.35); opacity:0; transition:opacity 1.6s;}
+.verse-end.on {opacity:1;}
+.pip-key {position:absolute; left:-9999px;}
+.pip-key:focus {left:20px; top:150px; z-index:5; background:#FFDB59; color:#070b22; border:0; border-radius:6px; padding:8px 12px;}
+.pip-card {position:absolute; left:50%; top:24%; transform:translateX(-50%); width:min(440px, 86%); background:#fbf3e1; color:#2a2140; border-radius:14px; padding:18px 22px 16px; box-shadow:0 10px 40px rgba(0,0,0,0.45); text-align:center; z-index:4; animation: pip-pop 0.35s ease-out;}
+.pip-card b {display:block; font:400 24px Merienda,Georgia,serif; color:#751D19; margin-bottom:6px;}
+.pip-card p {font:400 17px/1.45 Inter,Arial,sans-serif; margin:0 0 10px;}
+.pip-card small {display:block; font-size:13px; color:#6b5f80; margin-bottom:12px;}
+.pip-card button {background:#751D19; color:#fff; border:0; border-radius:20px; padding:8px 18px; font:400 14px Inter,Arial,sans-serif; cursor:pointer;}
+@keyframes pip-pop {from {opacity:0; transform:translateX(-50%) scale(0.85);} to {opacity:1; transform:translateX(-50%) scale(1);}}
+.pip-hint {max-width:1100px; margin:24px auto 0; text-align:center; font:italic 300 16px Inter,Arial,sans-serif; color:#FFDB59;}
+.verse-end blockquote {font:400 26px/1.45 Merienda,Georgia,serif; color:#fff; margin:0 0 10px;}
+.verse-end cite {font:300 16px Inter,Arial,sans-serif; font-style:normal; color:#FFDB59; letter-spacing:0.04em;}
+.caption span {display:inline-block; font:400 24px Merienda,Georgia,serif; color:#fff; padding:6px 18px; border-top:1px solid rgba(255,219,89,0.6); border-bottom:1px solid rgba(255,219,89,0.6);}
+/* the controls along the bottom of the scene */
+.player {position:absolute; left:0; right:0; bottom:18px; display:flex; justify-content:center; align-items:center; flex-wrap:wrap; gap:10px; padding:0 12px; font:400 14px Inter,Arial,sans-serif;}
+.player .nights {display:flex; align-items:center; background:rgba(7,11,34,0.6); border:1px solid rgba(255,219,89,0.5); border-radius:24px;}
+.player .nights button {background:none; border:0; color:#FFDB59; font-size:16px; width:40px; height:40px; cursor:pointer;}
+.player .nights button:disabled {color:rgba(255,255,255,0.2); cursor:default;}
+.player .nights span {width:132px; text-align:center; color:#fff; line-height:1.15;}
+.player .nights small {display:block; font-size:12px; color:#c9c3e6;}
+.player .btn {min-width:118px; background:rgba(7,11,34,0.6); border:1px solid #FFDB59; border-radius:20px; color:#FFDB59; padding:9px 16px; font:400 13px Inter,Arial,sans-serif; text-transform:uppercase; letter-spacing:0.04em; cursor:pointer;}
+.player button:focus-visible {outline:2px solid #fff; outline-offset:2px;}
+.player .btn.away {visibility:hidden;}
+#play {min-width:132px;} #tonight-btn {min-width:150px;} #sofar {min-width:176px;}
+.player .sound[aria-pressed="true"] {background:#FFDB59; color:#070b22;}
+.player .sound.remembered[aria-pressed="false"] {animation: nudge-glow 2s ease-in-out 3;}
+@keyframes nudge-glow {50% {box-shadow:0 0 0 4px rgba(255,219,89,0.35);}}
+.rotate {position:absolute; left:50%; bottom:80px; transform:translateX(-50%); background:rgba(7,11,34,0.7); border:1px solid rgba(255,255,255,0.3); border-radius:20px; padding:6px 14px; font:300 13px Inter,Arial,sans-serif; color:#e8e3ff; white-space:nowrap; display:none;}
+@media (orientation:portrait) and (max-width:760px) {.rotate {display:block;}}
+
+/* where they are today */
+.today {position:relative; z-index:2; background:#070b22; padding:40px 24px 50px;}
+.today-grid {display:grid; grid-template-columns: 1fr 1.3fr; gap:28px; max-width:1100px; margin:0 auto;}
+.countdown .day {font-size:14px; letter-spacing:0.08em; text-transform:uppercase; color:#c9c3e6; margin-bottom:10px;}
+.countdown .big {font:200 56px Inter,Arial,sans-serif; line-height:1; color:#FFDB59;}
+.countdown .label {font-size:20px; font-weight:300; margin-top:6px;}
+.countdown .ticking {font-size:15px; color:#c9c3e6; margin-top:6px; font-variant-numeric: tabular-nums;}
+.tonight {margin-top:18px; font-size:15px; font-weight:300; color:#c9c3e6;}
+.event-countdown {margin-top:22px; padding-top:18px; border-top:1px solid rgba(255,255,255,0.15); font-size:17px; font-weight:300;}
+.event-countdown b {font-weight:600; color:#fff;}
+.event-countdown a.btn {display:inline-block; margin-top:12px; border:1px solid #FFDB59; border-radius:5px; color:#FFDB59; padding:9px 20px; text-decoration:none; text-transform:uppercase; font-size:15px;}
+.verse {background:rgba(255,255,255,0.06); border-left:3px solid #FFDB59; padding:20px 24px; margin:0; align-self:start;}
+.verse .verse-label {font-size:13px; letter-spacing:0.08em; text-transform:uppercase; color:#c9c3e6;}
+.verse blockquote {font:20px/1.45 Merienda,Georgia,serif; margin:10px 0 8px;}
+.verse cite {font-style:normal; color:#FFDB59; font-size:15px;}
+.come-back {max-width:1100px; margin:30px auto 0; font-size:16px; font-weight:300; color:#c9c3e6; text-align:center;}
+
+/* test mode (/journey/?test) */
+.test-panel {max-width:1100px; margin:26px auto 0; padding:12px 16px; border:1px dashed #FFDB59; border-radius:6px; font-size:14px; color:#e8e3ff;}
+.test-panel button, .test-panel select {background:none; border:1px solid #c9c3e6; color:#e8e3ff; border-radius:4px; padding:4px 10px; margin:0 3px; cursor:pointer; font:13px Inter,Arial,sans-serif;}
+.test-panel select option {color:#000;}
+.test-panel button.on {background:#FFDB59; color:#070b22; border-color:#FFDB59;}
+.plan {background:#0d1130; padding:30px 24px 50px; color:#e8e3ff;}
+.plan h2 {font:200 30px Inter,Arial,sans-serif; text-align:center; margin:0 0 6px;}
+.plan p {text-align:center; font-size:15px; margin:4px 0;}
+.plan .coverage {font-size:12px; color:#c9c3e6; max-width:1100px; margin:8px auto 16px;}
+.plan-scroll {overflow-x:auto; max-width:1300px; margin:0 auto;}
+.plan table {border-collapse:collapse; width:100%; font-size:13px;}
+.plan th, .plan td {padding:6px 8px; border-bottom:1px solid rgba(255,255,255,0.1); text-align:left; white-space:nowrap;}
+.plan th {color:#FFDB59; font-weight:600;}
+.plan tr[data-k] {cursor:pointer;}
+.plan tr[data-k]:hover {background:rgba(255,255,255,0.06);}
+.plan tr.on {background:rgba(255,219,89,0.18);}
+.plan tr.w-storm td:nth-child(5), .plan tr.w-sandstorm td:nth-child(5) {color:#ff9d7a; font-weight:600;}
+.plan tr.w-rain td:nth-child(5), .plan tr.w-fog td:nth-child(5) {color:#9dc4ff;}
+
+@media screen and (max-width:760px) {
+	.today-grid {grid-template-columns: 1fr;}
+	.title h1 {font-size:32px;}
+	.title p {font-size:16px;}
+	.countdown .big {font-size:44px;}
+	.verse blockquote {font-size:17px;}
+}
+/* phones held sideways: little height, so a slimmer header and smaller words */
+@media screen and (max-height:500px) {
+	header {height:56px; padding:6px 16px;}
+	header > a > img {width:48px; height:38px; margin-top:0;}
+	header > .buttons a, header > .buttons button {padding:5px 12px; font-size:14px;}
+	.when {top:66px; left:16px; font-size:11px;}
+	.when b {font-size:20px;}
+	.title {top:18%;}
+	.title h1 {font-size:28px;}
+	.title p {font-size:15px;}
+	.caption {top:36%;}
+	.verse-end {top:14%;}
+	.verse-end blockquote {font-size:17px;}
+	.caption span {font-size:18px;}
+	.player {bottom:8px; gap:6px;}
+	.player .nights button {width:34px; height:32px;}
+	.player .btn {padding:6px 12px; font-size:12px; min-width:0;}
+	#play {min-width:118px;} #tonight-btn {min-width:124px;} #sofar {min-width:150px;}
+}
+</style>
+</head>
+
+<body>
+	<header>
+		<a href="/"><img src="/assets/images/global/yellow-logo-partial.png" alt="Follow the Star logo" width="120" height="96" class="logo"></a>
+
+		<div class="buttons">
+			<a href="/tickets/" data-show-after="2026-11-08T09:00:00-08:00" hidden>Buy Tickets</a>
+		</div>
+	</header>
+
+<main>
+	<section class="road" aria-label="The wise men's journey">
+		<div class="stage">
+			<canvas id="scene" role="img" aria-label="Three wise men ride camels across the desert at night, following a bright star toward Bethlehem."></canvas>
+			<div class="overlay title" id="title">
+				<h1>Follow the wise men</h1>
+				<p>A little closer to Bethlehem every day, until Christmas</p>
+			</div>
+			<div class="overlay when" id="when"></div>
+			<div class="overlay caption" id="caption"><span></span></div>
+			<div class="overlay verse-end" id="verse-end" aria-live="polite"><blockquote></blockquote><cite></cite></div>
+			<div class="player">
+				<div class="nights">
+					<button type="button" id="prev" aria-label="Previous night">◀</button>
+					<span id="ctl-day" aria-live="polite"></span>
+					<button type="button" id="next" aria-label="Next night">▶</button>
+				</div>
+				<button type="button" class="btn" id="play">Pause</button>
+				<button type="button" class="btn away" id="tonight-btn">Back to tonight</button>
+				<button type="button" class="btn" id="sofar">The journey so far</button>
+				<button type="button" class="btn sound" id="sound" aria-pressed="false">Sound off</button>
+			</div>
+			<div class="overlay done" id="done" hidden>
+				<h2>The wise men are home</h2>
+				<p>Thank you for following the journey with us. See you next Advent.</p>
+			</div>
+			<button type="button" class="pip-key" id="pip-key">Find Pip, the little mouse hiding in tonight’s scene</button>
+			<div class="pip-card" id="pip-card" role="dialog" aria-labelledby="pip-title" hidden>
+				<b id="pip-title">You found Pip!</b>
+				<p></p>
+				<small class="pip-count"></small>
+				<button type="button" id="pip-close">Keep travelling</button>
+			</div>
+			<div class="rotate" id="rotate">Turn your phone sideways for the full view</div>
+		</div>
+	</section>
+
+	<section class="today" id="today" aria-labelledby="days-left">
+		<div class="today-grid">
+			<div class="countdown">
+				<div class="day" id="day-label"></div>
+				<div class="big" id="days-left"></div>
+				<div class="label" id="days-label"></div>
+				<div class="ticking" id="ticking"></div>
+				<div class="tonight" id="tonight"></div>
+				<div class="event-countdown" id="event-countdown"></div>
+			</div>
+			<figure class="verse">
+				<div class="verse-label" id="verse-label">Today's reading</div>
+				<blockquote id="verse-text"></blockquote>
+				<cite id="verse-ref"></cite>
+			</figure>
+		</div>
+		<div class="test-panel" id="test-panel" hidden>
+			<b>Test mode</b> · every night is open ·
+			Speed <button type="button" data-speed="1" class="on">1×</button><button type="button" data-speed="2">2×</button><button type="button" data-speed="4">4×</button><button type="button" data-speed="8">8×</button>
+			<button type="button" id="test-skip">Jump to the middle</button>
+			· Weather <select id="test-weather"><option value="">as planned</option></select>
+		</div>
+		<p class="pip-hint">Someone small is travelling with the wise men every night. Can you find him?</p>
+		<p class="come-back">Come back tomorrow night for the next stretch of their journey, under a different sky. Missed a night? Use ◀ ▶ to watch it.</p>
+	</section>
+
+	<section class="plan" id="plan-table" hidden>
+		<h2>The plan, night by night</h2>
+		<p>Click a night to watch it. Edit <code>src/journey/plan.js</code> to change what happens.</p>
+		<p id="plan-coverage" class="coverage"></p>
+		<div class="plan-scroll"><table></table></div>
+	</section>
+</main>
+
+	<footer>
+		<div class="contactInfo">
+			<img src="/assets/images/global/yellow-logo-partial.png" width="86" height="69" alt="Follow the Star logo">
+			<div class="location">
+				<h5>Location</h5>
+				<p>Seventh-day Adventist<br>Conference Center<br>
+					19500 Oatfield Rd.<br>
+					Gladstone, Oregon 97027</p>
+				<p class="footer-link"><a href="https://goo.gl/maps/5rdy2zwCDDMBvn4A7" target="_blank" rel="noopener">Get Directions</a></p>
+			</div>
+			<div class="coordinators">
+				<h5>Event Coordinators</h5>
+				<p>Gladstone Park<br>
+					Seventh-day Adventist<br>
+					503-655-2614</p>
+				<p class="footer-link"><a href="/volunteers/">Volunteers</a></p>
+			</div>
+		</div>
+		<div class="credits">
+			© <span class="year">2026</span> All rights reserved.
+		</div>
+	</footer>
+
+	<script src="/assets/js/site.js" defer></script>
+	<script src="/journey/camels.js?v=202610230758" defer></script>
+	<script src="/journey/camel-rig.js?v=202610230758" defer></script>
+	<script src="/journey/art-ready.js?v=202610230758" defer></script>
+	<script src="/journey/readings.js?v=202610230758" defer></script>
+	<script src="/journey/pip.js" defer></script>
+	<script src="/journey/plan.js?v=202610230758" defer></script>
+	<script src="/journey/audio-ready.js?v=202610230758" defer></script>
+	<script src="/journey/sound.js?v=202610230758" defer></script>
+	<script src="/journey/journey.js?v=202610230758" defer></script>
+</body>
+</html>

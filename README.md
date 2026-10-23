@@ -31,7 +31,7 @@ Serve the `src` folder with any static web server, for example:
 
 ```sh
 cd src
-python3 -m http.server 8000
+python3 -m http.server 8022
 ```
 
 Then open http://localhost:8000.

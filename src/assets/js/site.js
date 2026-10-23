@@ -69,6 +69,16 @@ document.addEventListener('DOMContentLoaded', function() {
 			el.hidden = false;
 	});
 
+	// The Journey is in preview: its links stay hidden until this browser has been to /journey/?preview=journey
+	// (the © in the footer links there). /journey/?preview=off hides them again.
+	try {
+		var q = new URLSearchParams(location.search).get('preview');
+		if (q === 'journey') localStorage.setItem('journey-preview', '1');
+		if (q === 'off') localStorage.removeItem('journey-preview');
+		if (localStorage.getItem('journey-preview') === '1')
+			document.querySelectorAll('[data-preview]').forEach(function(el) { el.hidden = false; });
+	} catch (e) {}
+
 	// footer copyright year
 	document.querySelectorAll('.year').forEach(function(el) {
 		el.textContent = new Date().getFullYear();
