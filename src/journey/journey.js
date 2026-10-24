@@ -602,7 +602,7 @@
 		else {
 			var sx = dir < 0 ? VW + 40 : -40;
 			c.u = sx - LEAD_X + cam * DAYW; c.depth = 16 + Math.random() * 18;
-			c.v = {jerboa: 150, mouse: 190, gecko: 220, hedgehog: 34}[kind] * (0.85 + Math.random() * 0.3);
+			c.v = {jerboa: 150, mouse: 190, gecko: 220, hedgehog: 34, scorpion: 55, centipede: 70, spider: 120, beetle: 40}[kind] * (0.85 + Math.random() * 0.3);
 			if (kind === 'hedgehog') { c.u = cam * DAYW + (Math.random() < 0.5 ? 420 : -500); c.dir = 1; }
 		}
 		critters.push(c);
@@ -614,7 +614,7 @@
 			var fast = show && show.mode === 'sofar' ? 4 : 1;      // in the time-lapse, everything moves faster
 			if (c.kind === 'owl') { c.x += c.dir * c.v * dt * fast; return c.x > -120 && c.x < VW + 120; }
 			if (c.kind === 'bats') return c.t < c.life;
-			var go = c.kind === 'jerboa' ? (Math.sin(c.t * 7 + c.seed) > -0.2 ? 1 : 0) : c.kind === 'mouse' || c.kind === 'gecko' ? (Math.sin(c.t * 2.2 + c.seed) > -0.45 ? 1 : 0.05) : 1;
+			var go = c.kind === 'jerboa' ? (Math.sin(c.t * 7 + c.seed) > -0.2 ? 1 : 0) : /mouse|gecko|spider|scorpion/.test(c.kind) ? (Math.sin(c.t * 2.2 + c.seed) > -0.45 ? 1 : 0.05) : 1;   // dart, stop, dart
 			c.moving = go > 0.5;
 			c.u += c.dir * c.v * go * dt;
 			var x = c.u - cam * DAYW + LEAD_X;
@@ -628,6 +628,54 @@
 			return art('jr-cr-owl-wings-down') ? art(Math.sin(clock * 9 + c.seed) > 0 ? 'jr-cr-owl-wings-up' : 'jr-cr-owl-wings-down') : art('jr-cr-owl-wings-up');
 		}
 		return art({jerboa: 'jr-cr-jerboa', mouse: 'jr-cr-sand-mouse', gecko: 'jr-cr-gecko', hedgehog: 'jr-cr-hedgehog', bats: 'jr-cr-bat'}[kind]);
+	}
+	// the small things that scuttle across the sand, drawn in code: a scorpion, a centipede, a spider, a beetle.
+	// Kept small and dark (shapes in the night, not close-ups) so they're interesting rather than creepy.
+	function drawBug(c) {
+		if (!/scorpion|centipede|spider|beetle/.test(c.kind)) return false;
+		var t = c.t * (c.moving ? 18 : 0), col = '#2a1c22';
+		ctx.scale(1.35, 1.35);   // (the caller restores)
+		ctx.fillStyle = col; ctx.strokeStyle = col; ctx.lineCap = 'round';
+		if (c.kind === 'scorpion') {
+			ctx.lineWidth = 1.1;
+			for (var i = 0; i < 4; i++) { var lx = -3 + i * 2.2, sw = Math.sin(t + i * 1.6) * 1.4; ctx.beginPath(); ctx.moveTo(lx, -2.5); ctx.lineTo(lx - 1.5 + sw, 0); ctx.stroke(); }
+			ctx.beginPath(); ctx.ellipse(0, -3, 5, 1.9, 0, 0, Math.PI * 2); ctx.fill();
+			ctx.lineWidth = 1.6; ctx.beginPath(); ctx.moveTo(-4, -3);                       // the tail curls up over its back
+			ctx.bezierCurveTo(-9, -4, -10, -11, -5, -11.5); ctx.stroke();
+			ctx.beginPath(); ctx.arc(-4.2, -11.2, 1.1, 0, Math.PI * 2); ctx.fill();
+			ctx.lineWidth = 1.1; [-1, 1].forEach(function(sd) { ctx.beginPath(); ctx.moveTo(4, -3); ctx.lineTo(7, -3 + sd * 1.5); ctx.lineTo(8.5, -3 + sd * 0.6); ctx.stroke(); });   // pincers
+			return true;
+		}
+		if (c.kind === 'centipede') {
+			ctx.lineWidth = 0.7;
+			for (var k = 0; k < 12; k++) {
+				var sx = -k * 1.6, sy = -1.6 + Math.sin(c.t * 9 - k * 0.7) * 0.6 * (c.moving ? 1 : 0);
+				ctx.beginPath(); ctx.arc(sx, sy, 1.1, 0, Math.PI * 2); ctx.fill();
+				var lg = Math.sin(t - k * 1.1) * 0.9;
+				ctx.beginPath(); ctx.moveTo(sx, sy); ctx.lineTo(sx + lg, 0.4); ctx.stroke();
+			}
+			ctx.beginPath(); ctx.moveTo(1, -2); ctx.lineTo(3, -3.6); ctx.stroke();       // antennae
+			return true;
+		}
+		if (c.kind === 'spider') {
+			ctx.lineWidth = 0.9;
+			for (var j = 0; j < 4; j++) [-1, 1].forEach(function(sd) {
+				var ang = -0.6 + j * 0.4, sw2 = Math.sin(t + j * 1.3 + (sd > 0 ? Math.PI : 0)) * 0.25;
+				ctx.beginPath(); ctx.moveTo(0, -3);
+				ctx.lineTo(Math.cos(ang + sw2) * 4 * sd, -5.5); ctx.lineTo(Math.cos(ang + sw2) * 6.5 * sd, 0); ctx.stroke();
+			});
+			ctx.beginPath(); ctx.ellipse(-1.2, -3.4, 2.4, 1.9, 0, 0, Math.PI * 2); ctx.fill();
+			ctx.beginPath(); ctx.arc(1.4, -3.2, 1.2, 0, Math.PI * 2); ctx.fill();
+			return true;
+		}
+		// a dung beetle, rolling its little ball of sand
+		var rot = c.u * 0.12;
+		ctx.fillStyle = '#b48a56'; ctx.beginPath(); ctx.arc(5, -3, 3, 0, Math.PI * 2); ctx.fill();
+		ctx.strokeStyle = 'rgba(90,60,30,0.6)'; ctx.lineWidth = 0.6; ctx.beginPath(); ctx.arc(5, -3, 3, rot, rot + 2); ctx.stroke();
+		ctx.fillStyle = col; ctx.beginPath(); ctx.ellipse(0, -2.6, 2.6, 2, -0.3, 0, Math.PI * 2); ctx.fill();
+		ctx.strokeStyle = col; ctx.lineWidth = 0.8;
+		for (var m = 0; m < 3; m++) { var bl = Math.sin(t + m * 2) * 1; ctx.beginPath(); ctx.moveTo(-1 + m * 1.2, -1.5); ctx.lineTo(-2 + m * 1.2 + bl, 0); ctx.stroke(); }
+		return true;
 	}
 	function paintCritters(sky) {
 		critters.forEach(function(c) {
@@ -670,6 +718,7 @@
 			var hop = c.kind === 'jerboa' && c.moving ? Math.abs(Math.sin(c.t * 9 + c.seed)) * 16 : c.kind === 'mouse' && c.moving ? Math.abs(Math.sin(c.t * 20)) * 2 : 0;
 			ctx.save(); ctx.translate(x, gy - hop); ctx.scale(c.dir, 1);
 			ctx.fillStyle = 'rgba(60,30,10,0.25)'; ctx.beginPath(); ctx.ellipse(0, hop, 9, 2, 0, 0, 7); ctx.fill();
+			if (drawBug(c)) { ctx.restore(); return; }
 			if (im) { var hh = {jerboa: 26, mouse: 14, gecko: 10, hedgehog: 20}[c.kind]; ctx.drawImage(im, -hh * im.width / im.height / 2, -hh, hh * im.width / im.height, hh); ctx.restore(); return; }
 			ctx.fillStyle = col; ctx.strokeStyle = col; ctx.lineCap = 'round';
 			if (c.kind === 'jerboa') {
@@ -1110,12 +1159,29 @@
 		});
 		ctx.restore();
 	}
-	function drawKing(im, x, y, h, dir, bob, tilt, a) {
+	// The kings' stride: their robes hide their legs, so the hem and feet move instead. The bottom of the picture is
+	// cut off and drawn in two halves (back and front foot) that step forward and back in turn, with the hem
+	// swinging; the body above rises a touch over each step. Set KING_STRIDE to false to go back to the plain walk.
+	var KING_STRIDE = true;
+	function drawKing(im, x, y, h, dir, bob, tilt, a, ph) {
 		if (!im || a <= 0) return;
-		var w = h * im.width / im.height;
+		var w = h * im.width / im.height, base = im.base || 1, top = -h * base;
 		ctx.save(); ctx.globalAlpha = a;
 		ctx.translate(x, y - bob); ctx.rotate(tilt); ctx.scale(dir, 1);
-		ctx.drawImage(im, -w / 2, -h * (im.base || 1), w, h);
+		if (!KING_STRIDE || ph == null) { ctx.drawImage(im, -w / 2, top, w, h); ctx.restore(); return; }
+		var split = 0.84, srcSplit = im.height * base * split, srcBottom = im.height * base;
+		var ySplit = top + h * base * split, hLow = h * base * (1 - split), stepAmt = Math.sin(ph), reach = w * 0.045;
+		// the body, down to the knees
+		ctx.drawImage(im, 0, 0, im.width, srcSplit + 2, -w / 2, top, w, h * base * split + 2 * h / im.height);
+		// the hem and feet: back half and front half step in turn, and the hem swings with them
+		[[0, 0.5, -1], [0.5, 1, 1]].forEach(function(part) {
+			var sx0 = im.width * part[0], sw = im.width * (part[1] - part[0]), off = stepAmt * reach * part[2];
+			ctx.save();
+			ctx.translate(0, ySplit);
+			ctx.transform(1, 0, stepAmt * 0.06 * part[2], 1, 0, 0);   // the bottom swings further than the top of the strip
+			ctx.drawImage(im, sx0, srcSplit, sw, srcBottom - srcSplit, -w / 2 + w * part[0] + off, 0, w * (part[1] - part[0]) + 0.5, hLow);
+			ctx.restore();
+		});
 		ctx.restore();
 	}
 	// the wise men on their own camels, and what they do when the night's walk is over. All of a king's poses come from
@@ -1156,7 +1222,7 @@
 			var bob = stepping ? (1 - Math.cos(2 * ph)) * 1.1 : 0, tilt = stepping ? Math.sin(ph) * 0.012 : 0;
 			var still = art(c.rest) || art(c.walkFree), walking = art(c.walkFree) || art(c.walk);   // (the gift appears as he kneels at the manger)
 			if (wt <= 0) kings.push({im: still, x: x, y: y, ks: p.ks, dir: 1, a: p.stand});                       // just stood up
-			else if (wt < 1) kings.push({im: walking, x: x, y: y, ks: p.ks, dir: 1, bob: bob, tilt: tilt, a: 1});
+			else if (wt < 1) kings.push({im: walking, x: x, y: y, ks: p.ks, dir: 1, bob: bob, tilt: tilt, a: 1, ph: ph});
 			else {
 				var arrived = smooth((e - p.walkStart - walkDur) / 0.35);
 				var end = gifts ? art(c.pray) : still;
@@ -1164,7 +1230,7 @@
 				kings.push({im: end, x: x, y: y, ks: p.ks, dir: gifts ? 1 : p.spot.dir, a: arrived});
 			}
 		});
-		kings.forEach(function(q) { drawKing(q.im, q.x, q.y, q.im.height * q.ks, q.dir, q.bob || 0, q.tilt || 0, q.a); });
+		kings.forEach(function(q) { drawKing(q.im, q.x, q.y, q.im.height * q.ks, q.dir, q.bob || 0, q.tilt || 0, q.a, q.ph); });
 		// 2. the camels, and the kings still on them
 		plan.forEach(function(p) {
 			var c = p.c, r = p.r, s = p.g.s, ri = art(c.ride);
@@ -1859,6 +1925,8 @@
 			pip: function() { return pip.box; },
 			findPip: function() { findPip(); },
 			owl: function() { spawnCritter('owl'); },
+			bugs: function() { return critters.filter(function(c) { return /scorpion|centipede|spider|beetle/.test(c.kind); }).map(function(c) { return [c.u - cam * DAYW + LEAD_X, roadY(c.u) + c.depth]; }); },
+			spawn: function(k) { spawnCritter(k); var c = critters[critters.length - 1]; c.u = cam * DAYW + 120 + critters.length * 40; c.dir = -1; return critters.length; },
 			// every piece: which night, when it passes (0..1 of the night) and where it is on screen then
 			pieces: function() {
 				return PIECES.map(function(p) {
