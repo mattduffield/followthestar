@@ -63,18 +63,21 @@ main {overflow:visible;}
 .verse-end.on {opacity:1;}
 /* the journey map, top centre in the header */
 header {position:fixed;}
-.map {position:absolute; left:50%; top:8px; transform:translateX(-50%); width:min(520px, 46vw); text-align:center; pointer-events:none;}
+.map {position:absolute; left:50%; top:6px; transform:translateX(-50%); width:min(540px, 48vw); text-align:center; pointer-events:none;}
 .map svg {display:block; width:100%; height:auto; overflow:visible;}
-.map #map-out, .map #map-home {fill:none; stroke:rgba(255,255,255,0.25); stroke-width:2; stroke-dasharray:3 4;}
-.map #map-done path {fill:none; stroke:#FFDB59; stroke-width:2.5; stroke-linecap:round;}
-.map #map-icons circle {fill:rgba(255,255,255,0.55);}
-.map #map-icons .big {fill:#FFDB59;}
-.map #map-icons text {font:9px Inter,Arial,sans-serif; fill:rgba(255,255,255,0.7); text-anchor:middle;}
+.map #map-road {fill:none; stroke:rgba(255,255,255,0.22); stroke-width:2; stroke-dasharray:2 5; stroke-linecap:round;}
+.map #map-done {fill:none; stroke:#FFDB59; stroke-width:2.5; stroke-linecap:round; filter:drop-shadow(0 0 3px rgba(255,219,89,0.6));}
+.map #map-icons .ico {fill:none; stroke:rgba(232,227,255,0.55); stroke-width:1.4; stroke-linejoin:round; stroke-linecap:round;}
+.map #map-icons .ico.done {stroke:#FFDB59;}
+.map #map-icons .star {fill:#FFDB59;}
 .map #map-paws circle {fill:#e8a3b0;}
-.map #map-dot {fill:#fffbe8; filter:drop-shadow(0 0 4px #FFDB59);}
-.map-text {font:600 11px Inter,Arial,sans-serif; letter-spacing:0.06em; text-transform:uppercase; color:#e8e3ff; margin-top:-4px;}
-@media screen and (max-width:760px) { .map {width:min(300px, 52vw);} .map #map-icons text {display:none;} }
-@media screen and (max-height:500px) { .map {top:2px; width:min(380px, 46vw);} .map-text {display:none;} }
+.map #map-camel path {fill:#F7B13F; stroke:#3a2410; stroke-width:0.6;}
+.map-text {font:500 12px Inter,Arial,sans-serif; letter-spacing:0.03em; color:#e8e3ff; margin-top:-2px;}
+.map-text b {font-weight:600; color:#FFDB59;}
+/* the map carries the date, so the corner date only shows when the header is tucked away */
+body:not(.tucked):not(.is-full) .when {display:none;}
+@media screen and (max-width:760px) { .map {width:min(320px, 56vw);} .map-text {font-size:10px;} }
+@media screen and (max-height:500px) { .map {top:2px; width:min(400px, 50vw);} .map-text {font-size:10px;} }
 .pip-key {position:absolute; left:-9999px;}
 .pip-key:focus {left:20px; top:150px; z-index:5; background:#FFDB59; color:#070b22; border:0; border-radius:6px; padding:8px 12px;}
 .pip-card {position:absolute; left:50%; top:24%; transform:translateX(-50%); width:min(440px, 86%); background:#fbf3e1; color:#2a2140; border-radius:14px; padding:18px 22px 16px; box-shadow:0 10px 40px rgba(0,0,0,0.45); text-align:center; z-index:4; animation: pip-pop 0.35s ease-out;}
@@ -191,13 +194,12 @@ header, .player, .rotate {transition:transform 0.5s ease, opacity 0.5s ease;}
 	<header>
 		<a href="/"><img src="/assets/images/global/yellow-logo-partial.png" alt="Follow the Star logo" width="120" height="96" class="logo"></a>
 		<div class="map" id="map" role="img" aria-label="Map of the journey">
-			<svg viewBox="0 0 520 54" aria-hidden="true">
-				<path id="map-out" d="M18 28 C 90 10, 160 34, 240 22 S 400 12, 470 22"/>
-				<path id="map-home" d="M470 22 C 470 40, 380 46, 260 44 S 70 46, 18 28"/>
-				<g id="map-done"></g>
+			<svg viewBox="0 0 520 44" aria-hidden="true">
+				<path id="map-road" d="M20 30 C 120 22, 200 34, 290 27 S 420 20, 482 26"/>
+				<path id="map-done" d=""/>
 				<g id="map-icons"></g>
 				<g id="map-paws"></g>
-				<circle id="map-dot" r="5"/>
+				<g id="map-camel"><path d="M-9 0 L-8.5 -5 Q-10 -6 -10.5 -8 Q-8 -8 -6.5 -9 Q-3.5 -16 0.5 -9.5 Q3 -9 4.5 -10 Q5.5 -15 7.5 -16.5 L10 -16 L10.5 -15 L8.6 -14.6 Q8 -11 6.5 -7 L7.5 0 L5.8 0 L4.6 -4.5 L-3.5 -4.5 L-5.6 0 L-7.4 0 L-7 -4.6 Z"/></g>
 			</svg>
 			<div class="map-text" id="map-text"></div>
 		</div>

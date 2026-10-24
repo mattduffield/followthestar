@@ -1357,7 +1357,7 @@
 				if (clock > pip.until) { pip.target = LEAD_X + PIP_SPOTS[Math.floor(pip.rng() * PIP_SPOTS.length)]; pip.state = 'trot'; }
 			} else {
 				var dd = Math.sign(pip.target - sx), st = 520 * dt;
-				pip.dir = dd || pip.dir;
+				pip.dir = 1;   // always facing the way they travel (dropping back just means he's slower than the camels)
 				if (Math.abs(pip.target - sx) <= st) { sx = pip.target; pip.state = 'sit'; pip.until = clock + 1.2 + pip.rng() * 1.8; }
 				else sx += dd * st;
 			}
@@ -1399,7 +1399,8 @@
 		var waving = false;   // (always the original Pip)
 		var im = waving ? art('jr-pip-wave') : art('jr-cr-sand-mouse');
 		if (!im) return;
-		var h = waving ? 26 : 20, w = h * im.width / im.height, dir = moving ? pip.dir : (hash(night.day) < 0.5 ? 1 : -1);
+		var lapse = show && show.mode === 'sofar' && evening() === 0;
+		var h = waving ? 26 : 20, w = h * im.width / im.height, dir = lapse ? 1 : moving ? pip.dir : (hash(night.day) < 0.5 ? 1 : -1);
 		// his shadow, smaller and fainter the higher he is
 		var sh = 1 - Math.min(1, hop / 34);
 		ctx.fillStyle = 'rgba(70,35,10,' + (0.28 * sh).toFixed(3) + ')';
@@ -1437,51 +1438,72 @@
 	});
 	document.getElementById('pip-key').addEventListener('click', findPip);   // for keyboard users
 
-	// ----- the journey map in the header: the way there along the top, the way home along the bottom -----
-	var mapOut = document.getElementById('map-out'), mapHome = document.getElementById('map-home');
-	var mapDot = document.getElementById('map-dot'), mapText = document.getElementById('map-text'), mapDone = document.getElementById('map-done');
+	// ----- the journey map in the header: one road with picture milestones, evenly spaced by stage of the story,
+	// a little camel walking along it (turning round after Christmas), and the Star over Bethlehem growing brighter
 	var SVGNS = 'http://www.w3.org/2000/svg';
-	function mapPoint(day) {   // where a moment of the journey sits on the map
-		if (day <= TOTAL) { var L = mapOut.getTotalLength(); return mapOut.getPointAtLength(L * clamp((day + PROLOGUE) / (TOTAL + PROLOGUE), 0, 1)); }
-		var H = mapHome.getTotalLength(); return mapHome.getPointAtLength(H * clamp((day - TOTAL) / (END - TOTAL), 0, 1));
+	var mapRoad = document.getElementById('map-road'), mapDone = document.getElementById('map-done'), mapCamel = document.getElementById('map-camel'), mapText = document.getElementById('map-text');
+	var MILES = [   // [day, icon, name]
+		[-PROLOGUE, 'palace', 'Home'], [dayOf('10-04'), 'river', 'The river'], [dayOf('11-01'), 'palm', 'The oasis'],
+		[dayOf('11-27'), 'hills', 'The pass'], [dayOf('12-21'), 'walls', 'Jerusalem'], [TOTAL, 'star', 'Bethlehem']];
+	var ICONS = {   // little line drawings, about 14 units tall, sitting on (0, 0)
+		palace: 'M-7 0 V-6 H7 V0 M-4 -6 V-9 A4 4 0 0 1 4 -9 V-6 M0 -13 V-15',
+		river: 'M-8 -3 Q-4 -6 0 -3 T8 -3 M-8 -8 Q-4 -11 0 -8 T8 -8',
+		palm: 'M0 0 Q1 -6 0 -11 M0 -11 Q-5 -13 -8 -9 M0 -11 Q5 -13 8 -9 M0 -11 Q-3 -15 -6 -15 M0 -11 Q3 -15 6 -15',
+		hills: 'M-9 0 L-4 -9 L-1 -4 L3 -12 L9 0',
+		walls: 'M-8 0 V-8 H-6 V-10 H-4 V-8 H-1 V-10 H1 V-8 H4 V-10 H6 V-8 H8 V0 M-2 0 V-4 A2 2 0 0 1 2 -4 V0'
+	};
+	function mapX(day) {   // evenly spaced milestones; the days in between share the road between them
+		var L = mapRoad.getTotalLength(), n = MILES.length - 1;
+		if (day > TOTAL) return L * (1 - clamp((day - TOTAL) / (END - TOTAL), 0, 1));   // the way home: back along the road
+		for (var i = 0; i < n; i++) {
+			if (day <= MILES[i + 1][0]) return L * (i + clamp((day - MILES[i][0]) / (MILES[i + 1][0] - MILES[i][0]), 0, 1)) / n;
+		}
+		return L;
 	}
 	function mapSetup() {
-		if (!mapOut) return;
-		var icons = document.getElementById('map-icons');
-		var marks = [[-PROLOGUE, 'Home', 1], [dayOf('10-04'), 'River', 0, 1], [dayOf('11-01'), 'Oasis'], [dayOf('11-27'), 'Pass'], [dayOf('12-21'), 'Jerusalem', 1, 1], [TOTAL, 'Bethlehem', 1]];
-		marks.forEach(function(m) {
-			var p = mapPoint(m[0]), c = document.createElementNS(SVGNS, 'circle');
-			c.setAttribute('cx', p.x); c.setAttribute('cy', p.y); c.setAttribute('r', m[2] ? 3.5 : 2.2); if (m[2]) c.setAttribute('class', 'big');
-			icons.appendChild(c);
-			var t = document.createElementNS(SVGNS, 'text'); t.setAttribute('x', p.x); t.setAttribute('y', m[3] ? p.y + 13 : p.y - 7); t.textContent = m[1];
-			icons.appendChild(t);
+		if (!mapRoad) return;
+		var g = document.getElementById('map-icons');
+		MILES.forEach(function(m) {
+			var p = mapRoad.getPointAtLength(mapX(m[0]));
+			if (m[1] === 'star') {
+				var glow = document.createElementNS(SVGNS, 'circle'); glow.setAttribute('id', 'map-star-glow'); glow.setAttribute('cx', p.x); glow.setAttribute('cy', p.y - 9); glow.setAttribute('r', 8); glow.setAttribute('fill', 'rgba(255,219,89,0.25)'); g.appendChild(glow);
+				var st = document.createElementNS(SVGNS, 'path'); st.setAttribute('class', 'star');
+				st.setAttribute('d', 'M0 -6 L1.4 -1.4 L6 0 L1.4 1.4 L0 6 L-1.4 1.4 L-6 0 L-1.4 -1.4 Z'); st.setAttribute('transform', 'translate(' + p.x + ',' + (p.y - 9) + ')');
+				g.appendChild(st);
+			} else {
+				var ic = document.createElementNS(SVGNS, 'path'); ic.setAttribute('class', 'ico'); ic.setAttribute('d', ICONS[m[1]]);
+				ic.setAttribute('transform', 'translate(' + p.x + ',' + (p.y - 4) + ')'); ic.dataset.day = m[0];
+				var t = document.createElementNS(SVGNS, 'title'); t.textContent = m[2]; ic.appendChild(t);
+				g.appendChild(ic);
+			}
 		});
-		var star = document.createElementNS(SVGNS, 'text'), sp = mapPoint(TOTAL);   // the Star over Bethlehem
-		star.setAttribute('x', sp.x + 12); star.setAttribute('y', sp.y + 3); star.textContent = '✦'; star.setAttribute('style', 'fill:#FFDB59;font-size:11px');
-		icons.appendChild(star);
 		mapPaws();
 	}
-	function mapPaws() {   // the nights Pip has been found
-		var g = document.getElementById('map-paws'); if (!g) return;
+	function mapPaws() {   // the nights Pip has been found: tiny paw dots under the road
+		var g = document.getElementById('map-paws'); if (!g || !mapRoad) return;
 		g.innerHTML = '';
 		pipFound().forEach(function(key) {
-			var k = dayOf(key), p = mapPoint(k + 0.5), c = document.createElementNS(SVGNS, 'circle');
-			c.setAttribute('cx', p.x); c.setAttribute('cy', p.y + (k > TOTAL ? 6 : -6)); c.setAttribute('r', 1.6); g.appendChild(c);
+			var p = mapRoad.getPointAtLength(mapX(dayOf(key) + 0.4)), c = document.createElementNS(SVGNS, 'circle');
+			c.setAttribute('cx', p.x); c.setAttribute('cy', p.y + 6); c.setAttribute('r', 1.4); g.appendChild(c);
 		});
 	}
 	var mapLast = -99;
 	function mapUpdate() {
-		if (!mapOut || Math.abs(cam - mapLast) < 0.002) return;
+		if (!mapRoad || Math.abs(cam - mapLast) < 0.002) return;
 		mapLast = cam;
-		var p = mapPoint(cam); mapDot.setAttribute('cx', p.x); mapDot.setAttribute('cy', p.y);
-		// the road travelled, in gold
-		mapDone.innerHTML = '';
-		var outL = mapOut.getTotalLength(), done = clamp((Math.min(cam, TOTAL) + PROLOGUE) / (TOTAL + PROLOGUE), 0, 1) * outL;
-		var pts = []; for (var t = 0; t <= done; t += 4) { var q = mapOut.getPointAtLength(t); pts.push(q.x.toFixed(1) + ' ' + q.y.toFixed(1)); }
-		if (cam > TOTAL) { var hl = mapHome.getTotalLength(), hd = clamp((cam - TOTAL) / (END - TOTAL), 0, 1) * hl; for (t = 0; t <= hd; t += 4) { q = mapHome.getPointAtLength(t); pts.push(q.x.toFixed(1) + ' ' + q.y.toFixed(1)); } }
-		if (pts.length > 1) { var path = document.createElementNS(SVGNS, 'path'); path.setAttribute('d', 'M' + pts.join(' L')); mapDone.appendChild(path); }
-		var k = show && show.mode === 'sofar' ? clamp(Math.floor(cam + 0.15), 0, realToday) : viewIdx, left = TOTAL - k;
-		mapText.textContent = 'Day ' + (k + 1) + ' · ' + (left > 1 ? left + ' nights to Bethlehem' : left === 1 ? '1 night to Bethlehem' : left === 0 ? 'Bethlehem' : (END - k > 0 ? (END - k) + (END - k === 1 ? ' night' : ' nights') + ' to home' : 'Home again'));
+		var L = mapRoad.getTotalLength(), at = mapX(cam), home = cam > TOTAL;
+		var done = home ? L : at, pts = [];
+		for (var t = 0; t <= done; t += 4) { var q = mapRoad.getPointAtLength(t); pts.push(q.x.toFixed(1) + ' ' + q.y.toFixed(1)); }
+		mapDone.setAttribute('d', pts.length > 1 ? 'M' + pts.join(' L') : '');
+		var p = mapRoad.getPointAtLength(at), a = mapRoad.getPointAtLength(Math.min(L, at + 2)), b = mapRoad.getPointAtLength(Math.max(0, at - 2));
+		var ang = Math.atan2(a.y - b.y, a.x - b.x) * 180 / Math.PI;
+		mapCamel.setAttribute('transform', 'translate(' + p.x.toFixed(1) + ',' + (p.y - 1).toFixed(1) + ') rotate(' + ang.toFixed(1) + ') scale(' + (home ? -1 : 1) + ',1)');
+		document.querySelectorAll('#map-icons .ico').forEach(function(ic) { ic.classList.toggle('done', cam >= +ic.dataset.day - 0.05); });
+		var sg = document.getElementById('map-star-glow');   // the Star brightens as Christmas nears
+		if (sg) { var pr = clamp((cam + PROLOGUE) / (TOTAL + PROLOGUE), 0, 1); sg.setAttribute('r', (6 + 8 * pr).toFixed(1)); sg.setAttribute('fill', 'rgba(255,219,89,' + (0.15 + 0.35 * pr).toFixed(2) + ')'); }
+		var k = show && show.mode === 'sofar' ? clamp(Math.floor(cam + 0.15), 0, realToday) : viewIdx, left = TOTAL - k, d = dateOfDay(k);
+		var where = left > 1 ? '<b>' + left + ' nights</b> to Bethlehem' : left === 1 ? '<b>1 night</b> to Bethlehem' : left === 0 ? '<b>Bethlehem</b>' : (END - k > 0 ? '<b>' + (END - k) + (END - k === 1 ? ' night' : ' nights') + '</b> to home' : '<b>Home again</b>');
+		mapText.innerHTML = d.toLocaleDateString('en-US', {weekday: 'long', month: 'long', day: 'numeric'}) + ' · Day ' + (k + 1) + ' of ' + (END + 1) + ' · ' + where;
 	}
 
 	function paint() {
