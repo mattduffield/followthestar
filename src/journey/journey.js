@@ -41,7 +41,7 @@
 	function now() { return forced || new Date(); }
 
 	var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-	var sound = window.JourneySound || {update: function() {}, thunder: function() {}, hoot: function() {}, animal: function() {}, music: function() {}, toggle: function() { return false; }, wanted: function() { return false; }, hasAny: function() { return false; }};
+	var sound = window.JourneySound || {preload: function() {}, update: function() {}, thunder: function() {}, hoot: function() {}, animal: function() {}, music: function() {}, toggle: function() { return false; }, wanted: function() { return false; }, hasAny: function() { return false; }};
 
 	// ----- seeded randomness: the same night always looks the same -----
 	function rng(seed) {
@@ -1503,7 +1503,12 @@
 		night = nightFor(k);
 		makeStars();
 		sound.music(k, k === TOTAL);
-		PIECES.forEach(function(p) { p.heard = false; p.seen = null; });
+		PIECES.forEach(function(p) { p.heard = false; p.seen = null; p.nextCall = 0; });
+		setNightSounds = function() {
+		var kinds = PIECES.filter(function(p) { return p.night === k; }).map(function(p) { return p.kind + ' ' + p.key; }).join(' ');
+		sound.preload([/sheep|shepherds/.test(kinds) ? 'sheep' : '', /sheep|shepherds/.test(kinds) ? 'lamb' : '', /herder/.test(kinds) ? 'goat' : '', /donkey/.test(kinds) ? 'donkey' : '', /jerusalem-gate|herod/.test(kinds) ? 'shofar' : ''].filter(Boolean));
+		};
+		setNightSounds();
 		if (pipCard) { pipCard.hidden = true; verseEl.style.visibility = ''; pip.card = false; }
 		pipReset();
 		critters = []; prints = []; wx.drops = []; wx.dust = []; wx.streaks = []; wx.bolt = null; wx.flash = 0;
@@ -1523,11 +1528,20 @@
 	}
 	function playSoFar() {
 		setNight(realToday);
-		night.weather = 'clear';
 		var to = stretch(realToday)[1], days = to + PROLOGUE;
-		show = {from: -PROLOGUE, to: to, seconds: Math.min(90, 12 + days * 1.4), elapsed: 0, delay: 0.6, mode: 'sofar', spawns: []};
+		show = {from: -PROLOGUE, to: to, seconds: Math.min(90, 12 + days * 1.4), elapsed: 0, delay: 0.6, mode: 'sofar', spawns: [], k: -1};
+		soFarDay(0);
 		cam = -PROLOGUE; restAt = to;
 		playing = true; updateControls();
+	}
+	// in the time-lapse, each day brings its own sky, moon, weather and critters as it passes
+	function soFarDay(k) {
+		if (!show || show.mode !== 'sofar' || show.k === k) return;
+		show.k = k;
+		night = nightFor(k);
+		makeStars();
+		wx.drops = []; wx.dust = []; wx.streaks = []; wx.bolt = null; wx.flash = 0;
+		(night.plan.critters || []).forEach(function(c, i) { setTimeout(function() { if (show && show.mode === 'sofar' && show.k === k) spawnCritter(c); }, 250 + i * 400); });
 	}
 	function showTail() { return show && show.mode === 'night' && charsReady() ? EVENING : 0; }   // the evening after they stop
 	function showDone() { return !show || show.elapsed >= show.seconds + showTail(); }
@@ -1539,6 +1553,7 @@
 		var t = Math.min(1, show.elapsed / show.seconds);
 		cam = show.from + (show.to - show.from) * easeWalk(t);
 		show.spawns.forEach(function(s) { if (!s.done && t >= s.at) { s.done = true; spawnCritter(s.kind); } });
+		if (show.mode === 'sofar') soFarDay(clamp(Math.floor(cam + 0.15), 0, END));
 		if (show.elapsed >= show.seconds + showTail()) { playing = false; updateControls(); }
 	}
 
@@ -1579,6 +1594,7 @@
 	}
 
 	// ----- controls: earlier nights, pause, watch again, the journey so far -----
+	var setNightSounds = function() {};
 	var prevBtn = document.getElementById('prev'), nextBtn = document.getElementById('next'), playBtn = document.getElementById('play');
 	var soFarBtn = document.getElementById('sofar'), tonightBtn = document.getElementById('tonight-btn'), dayEl = document.getElementById('ctl-day');
 	function updateControls() {
@@ -1605,7 +1621,7 @@
 	soFarBtn.addEventListener('click', playSoFar);
 	var soundBtn = document.getElementById('sound');
 	function soundLabel(on) { soundBtn.textContent = on ? 'Sound on' : 'Sound off'; soundBtn.setAttribute('aria-pressed', on ? 'true' : 'false'); }
-	soundBtn.addEventListener('click', function() { soundLabel(sound.toggle()); sound.music(viewIdx, viewIdx === TOTAL); });
+	soundBtn.addEventListener('click', function() { soundLabel(sound.toggle()); sound.music(viewIdx, viewIdx === TOTAL); setNightSounds(); });
 	soundLabel(false);
 	soundBtn.hidden = !sound.hasAny();   // no button until there are recordings to play
 	if (sound.wanted()) soundBtn.classList.add('remembered');   // they had it on last time: browsers still need a click to start it
@@ -1672,7 +1688,9 @@
 		gaitDist += show && show.mode === 'sofar' ? Math.min(moved, WALK * 2.5 * dt) : moved;   // time-lapse: legs at a brisk pace, not a blur
 		var moving = moved / Math.max(dt, 0.001) > 3;
 		walk += ((moving ? 1 : 0) - walk) * Math.min(1, dt * (moving ? 5 : 2.5));
-		stepWeather(dt, show ? clamp(show.elapsed / show.seconds, 0, 1) : 1);
+		// weather follows the night; in the time-lapse, each day's weather plays out within that day
+		var wt = show && show.mode === 'sofar' ? clamp(cam - (Math.floor(cam + 0.15) - 0.15), 0, 1) : show ? clamp(show.elapsed / show.seconds, 0, 1) : 1;
+		stepWeather(dt, wt);
 		stepCritters(dt);
 		soundClock -= dt;
 		if (soundClock <= 0) {   // the soundscape follows the weather, a few times a second
@@ -1683,14 +1701,16 @@
 			sound.update({wind: night.wind * (w === 'wind' ? 1 : 0.4), rain: w === 'rain' || w === 'storm' ? lv : 0, sandstorm: w === 'sandstorm' ? lv : 0,
 				storm: w === 'storm' ? lv : 0, clear: (w === 'clear' || w === 'haze') && night.day !== TOTAL, camp: !!night.plan.camp && t > 0.85,
 				water: nearBy(['river', 'oasis', 'heron', 'well']), sheep: nearBy(['shepherds', 'sheep']), walking: walk});
-			var passing = PIECES.filter(function(p) { return Math.abs(cam - p.pass) < 0.03 && !p.heard; })[0];
-			if (passing && playing) {
-				passing.heard = true;
-				if (/sheep|shepherds/.test(passing.kind)) { sound.animal('sheep'); setTimeout(function() { sound.animal('lamb'); }, 900); }
-				if (passing.kind === 'herder') sound.animal('goat');
-				if (passing.kind === 'donkey') sound.animal('donkey');
-				if (/jerusalem-gate|herod/.test(passing.key)) sound.animal('shofar');   // a ram's horn as they reach Jerusalem
-			}
+			// the animals they pass call out now and then while they're in view (sheep and lambs, goats, a donkey)
+			PIECES.forEach(function(p) {
+				if (!playing || cam < p.pass - 0.16 || cam > p.pass + 0.12) return;
+				var calls = /sheep|shepherds/.test(p.kind) ? ['sheep', 'lamb'] : p.kind === 'herder' ? ['goat', 'goat', 'sheep'] : p.kind === 'donkey' ? ['donkey'] : null;
+				if (calls && clock > (p.nextCall || 0)) {
+					if (p.nextCall) sound.animal(calls[Math.floor(Math.random() * calls.length)]);
+					p.nextCall = clock + (p.nextCall ? 4 + Math.random() * 5 : 0.8);
+				}
+				if (/jerusalem-gate|herod/.test(p.key) && !p.heard && Math.abs(cam - p.pass) < 0.03) { p.heard = true; sound.animal('shofar'); }   // a ram's horn at Jerusalem
+			});
 		}
 		meteors.forEach(function(m) { m.t += dt * 1.5; });
 		paint();

@@ -34,6 +34,7 @@ var JourneySound = (function() {
 		musicGain = ac.createGain(); musicGain.gain.value = MUSIC_LEVEL; musicGain.connect(master);
 		// only what every night needs straight away; the rest load the first time they're wanted (saves data on phones)
 		['amb-night', 'amb-camel-bells', 'amb-footsteps'].forEach(load);
+		variants('camel-grunt').forEach(load);
 	}
 
 	// a background loop: starts silently the first time it's wanted, then just fades up and down
@@ -79,9 +80,11 @@ var JourneySound = (function() {
 		bed('amb-camel-bells', BEDS['amb-camel-bells'] * state.walking);
 		bed('amb-footsteps', BEDS['amb-footsteps'] * state.walking);
 		// a camel grumbles now and then while they walk
+		// a camel grumbles now and then while they walk: the first a few seconds in, then every 12 to 25 seconds
+		if (!nextGrunt) nextGrunt = ac.currentTime + 4 + Math.random() * 5;
 		if (state.walking > 0.8 && ac.currentTime > nextGrunt) {
-			if (nextGrunt) once('camel-grunt', 0.3);
-			nextGrunt = ac.currentTime + 25 + Math.random() * 35;
+			once('camel-grunt', 0.3);
+			nextGrunt = ac.currentTime + 12 + Math.random() * 13;
 		}
 	}
 	function thunder(near) {
@@ -92,6 +95,8 @@ var JourneySound = (function() {
 	}
 	function hoot() { once('owl', 0.4, 0.6); }
 	function animal(kind) { once(kind, 0.35, 0.3); }
+	// fetch tonight's animal sounds ahead of time, so the first bleat isn't lost while it downloads
+	function preload(prefixes) { if (!ac) return; prefixes.forEach(function(p) { variants(p).forEach(load); }); }
 
 	// music: one piece per night, looped and faded in
 	function setMusic(nightIndex, christmas) {
@@ -119,6 +124,6 @@ var JourneySound = (function() {
 	}
 	function wanted() { try { return localStorage.getItem(KEY) === '1'; } catch (e) { return false; } }
 
-	return {toggle: toggle, isOn: function() { return on; }, wanted: wanted, update: update, thunder: thunder, hoot: hoot, animal: animal,
+	return {preload: preload, toggle: toggle, isOn: function() { return on; }, wanted: wanted, update: update, thunder: thunder, hoot: hoot, animal: animal,
 		music: setMusic, step: function() {}, bell: function() {}, hasAny: function() { return READY.length > 0; }};
 })();
