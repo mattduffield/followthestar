@@ -8,7 +8,7 @@
 //   landmark   palace, river, oasis, oasis-2, ruins, inn, inn-2, pass, well, olives, jerusalem-far, jerusalem-gate, herod,
 //              jerusalem, shepherds, bethlehem, stable, angel, home
 //   encounter  gazelles, herder, heron, farm, owl, tents, fox, merchants, hare, stones, ibex, lanterns, sheep, donkey
-//   critters   jerboa, mouse, gecko, hedgehog, scorpion, centipede, spider, beetle, owl (flying over), bats
+//   critters   jerboa, mouse, gecko, hedgehog, scorpion, centipede, spider, beetle, snake, owl (flying over), bats
 //   camp       they stop beside a camp with a fire
 //   note       shown in the night's description (meteor showers are on their real dates)
 //   also drawn automatically from the date: the moon in its real phase (full moons rise big and orange: Oct 26,
@@ -29,7 +29,7 @@ var JOURNEY_PLAN = [
 	{d: '10-09', sky: 'night-2',   weather: 'haze',      encounter: 'tents',    critters: ['jerboa']},
 	{d: '10-10', sky: 'clouds',    weather: 'clouds',    encounter: 'fox',      critters: ['gecko', 'scorpion']},
 	{d: '10-11', sky: 'night',     weather: 'wind',      encounter: 'merchants', critters: ['jerboa'], camp: true},
-	{d: '10-12', sky: 'deep',      weather: 'clear',     encounter: 'gazelles', critters: ['mouse', 'owl']},
+	{d: '10-12', sky: 'deep',      weather: 'clear',     encounter: 'gazelles', critters: ['mouse', 'owl', 'snake']},
 	{d: '10-13', sky: 'dusk',      weather: 'haze',      encounter: 'stones',   critters: ['gecko', 'beetle']},
 	{d: '10-14', sky: 'night',     weather: 'clear',     encounter: 'hare',     critters: ['jerboa']},
 	{d: '10-15', sky: 'sandstorm', weather: 'sandstorm'},
@@ -39,7 +39,7 @@ var JOURNEY_PLAN = [
 	{d: '10-19', sky: 'deep',      weather: 'clear',     encounter: 'owl',      critters: ['jerboa']},
 	{d: '10-20', sky: 'storm',     weather: 'storm'},
 	{d: '10-21', sky: 'night',     weather: 'clear',     encounter: 'stones',   critters: ['jerboa', 'owl'], camp: true, note: 'the Orionid meteor shower'},
-	{d: '10-22', sky: 'deep',      weather: 'clear',     encounter: 'gazelles', critters: ['mouse'], note: 'the Orionid meteor shower'},
+	{d: '10-22', sky: 'deep',      weather: 'clear',     encounter: 'gazelles', critters: ['mouse', 'snake'], note: 'the Orionid meteor shower'},
 	{d: '10-23', sky: 'dusk',      weather: 'haze',      encounter: 'hare',     critters: ['gecko', 'scorpion']},
 	{d: '10-24', sky: 'night-2',   weather: 'clouds',    encounter: 'tents',    critters: ['jerboa'], camp: true},
 	{d: '10-25', sky: 'deep',      weather: 'clear',     encounter: 'fox',      critters: ['mouse', 'owl', 'centipede']},
@@ -54,14 +54,14 @@ var JOURNEY_PLAN = [
 	{d: '11-03', sky: 'night-2',   weather: 'haze',      encounter: 'stones',   critters: ['jerboa'], camp: true},
 	{d: '11-04', sky: 'deep',      weather: 'clear',     encounter: 'gazelles', critters: ['mouse', 'owl', 'scorpion']},
 	{d: '11-05', sky: 'storm',     weather: 'storm'},
-	{d: '11-06', sky: 'clouds',    weather: 'clouds',    encounter: 'owl',      critters: ['jerboa']},
+	{d: '11-06', sky: 'clouds',    weather: 'clouds',    encounter: 'owl',      critters: ['jerboa', 'snake']},
 	{d: '11-07', sky: 'night',     weather: 'wind',      encounter: 'merchants', critters: ['gecko'], camp: true},
 	{d: '11-08', sky: 'deep',      weather: 'clear',     landmark: 'ruins',     critters: ['bats', 'jerboa', 'centipede']},
 	{d: '11-09', sky: 'sandstorm', weather: 'sandstorm'},
 	{d: '11-10', sky: 'dusk-2',    weather: 'haze',      encounter: 'tents',    critters: ['mouse']},
 	{d: '11-11', sky: 'night',     weather: 'clear',     encounter: 'fox',      critters: ['jerboa', 'owl', 'beetle']},
 	{d: '11-12', sky: 'clouds',    weather: 'clouds',    encounter: 'hare',     critters: ['gecko'], camp: true},
-	{d: '11-13', sky: 'night-2',   weather: 'wind',      encounter: 'gazelles', critters: ['jerboa']},
+	{d: '11-13', sky: 'night-2',   weather: 'wind',      encounter: 'gazelles', critters: ['jerboa', 'snake']},
 	{d: '11-14', sky: 'sandstorm', weather: 'sandstorm'},
 	{d: '11-15', sky: 'night',     weather: 'clear',     landmark: 'oasis-2',   critters: ['bats', 'mouse']},
 	{d: '11-16', sky: 'dusk',      weather: 'haze',      encounter: 'stones',   critters: ['gecko', 'scorpion']},
@@ -72,7 +72,7 @@ var JOURNEY_PLAN = [
 	{d: '11-21', sky: 'dusk',      weather: 'wind',      encounter: 'fox',      critters: ['jerboa', 'centipede'], camp: true},
 	{d: '11-22', sky: 'storm',     weather: 'storm'},
 	// ----- rocky country -----
-	{d: '11-23', sky: 'night-2',   weather: 'clouds',    encounter: 'ibex',     critters: ['gecko']},
+	{d: '11-23', sky: 'night-2',   weather: 'clouds',    encounter: 'ibex',     critters: ['gecko', 'snake']},
 	{d: '11-24', sky: 'deep',      weather: 'fog',       encounter: 'herder',   critters: ['owl']},
 	{d: '11-25', sky: 'night',     weather: 'clear',     encounter: 'fox',      critters: ['hedgehog', 'bats', 'scorpion'], camp: true},
 	{d: '11-26', sky: 'clouds',    weather: 'rain',      encounter: 'lanterns', critters: ['hedgehog']},
@@ -81,7 +81,7 @@ var JOURNEY_PLAN = [
 	{d: '11-29', sky: 'night',     weather: 'clear',     encounter: 'merchants', critters: ['mouse', 'owl', 'beetle']},
 	{d: '11-30', sky: 'night-2',   weather: 'haze',      encounter: 'ibex',     critters: ['gecko'], camp: true},
 	{d: '12-01', sky: 'clouds',    weather: 'clouds',    encounter: 'herder',   critters: ['bats', 'centipede']},
-	{d: '12-02', sky: 'deep',      weather: 'fog',       encounter: 'lanterns', critters: ['owl']},
+	{d: '12-02', sky: 'deep',      weather: 'fog',       encounter: 'lanterns', critters: ['owl', 'snake']},
 	{d: '12-03', sky: 'night',     weather: 'clear',     landmark: 'well',      critters: ['mouse', 'gecko', 'spider']},
 	{d: '12-04', sky: 'clouds',    weather: 'rain',      encounter: 'fox',      critters: ['hedgehog']},
 	{d: '12-05', sky: 'dusk-2',    weather: 'clear',     encounter: 'ibex',     critters: ['bats', 'scorpion'], camp: true},
@@ -113,7 +113,7 @@ var JOURNEY_PLAN = [
 	{d: '12-29', sky: 'dusk',      weather: 'wind',      encounter: 'gazelles', critters: ['jerboa', 'scorpion'], camp: true},
 	{d: '12-30', sky: 'sandstorm', weather: 'sandstorm'},
 	{d: '12-31', sky: 'deep',      weather: 'clear',     encounter: 'stones',   critters: ['jerboa', 'owl', 'spider'], note: "New Year's Eve"},
-	{d: '01-01', sky: 'night',     weather: 'clear',     encounter: 'tents',    critters: ['gecko'], camp: true, note: "New Year's Day"},
+	{d: '01-01', sky: 'night',     weather: 'clear',     encounter: 'tents',    critters: ['gecko', 'snake'], camp: true, note: "New Year's Day"},
 	{d: '01-02', sky: 'clouds',    weather: 'rain',      encounter: 'fox',      critters: ['hedgehog']},
 	{d: '01-03', sky: 'deep',      weather: 'clear',     encounter: 'merchants', critters: ['jerboa', 'beetle'], note: 'the Quadrantid meteor shower'},
 	{d: '01-04', sky: 'night-2',   weather: 'haze',      landmark: 'oasis-2',   critters: ['mouse']},

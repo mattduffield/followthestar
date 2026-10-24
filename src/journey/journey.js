@@ -602,7 +602,7 @@
 		else {
 			var sx = dir < 0 ? VW + 40 : -40;
 			c.u = sx - LEAD_X + cam * DAYW; c.depth = 16 + Math.random() * 18;
-			c.v = {jerboa: 150, mouse: 190, gecko: 220, hedgehog: 34, scorpion: 55, centipede: 70, spider: 120, beetle: 40}[kind] * (0.85 + Math.random() * 0.3);
+			c.v = {jerboa: 150, mouse: 190, gecko: 220, hedgehog: 34, scorpion: 55, centipede: 70, spider: 120, beetle: 40, snake: 60}[kind] * (0.85 + Math.random() * 0.3);
 			if (kind === 'hedgehog') { c.u = cam * DAYW + (Math.random() < 0.5 ? 420 : -500); c.dir = 1; }
 		}
 		critters.push(c);
@@ -632,7 +632,7 @@
 	// the small things that scuttle across the sand, drawn in code: a scorpion, a centipede, a spider, a beetle.
 	// Kept small and dark (shapes in the night, not close-ups) so they're interesting rather than creepy.
 	function drawBug(c) {
-		if (!/scorpion|centipede|spider|beetle/.test(c.kind)) return false;
+		if (!/scorpion|centipede|spider|beetle|snake/.test(c.kind)) return false;
 		var t = c.t * (c.moving ? 18 : 0), col = '#2a1c22';
 		ctx.scale(1.35, 1.35);   // (the caller restores)
 		ctx.fillStyle = col; ctx.strokeStyle = col; ctx.lineCap = 'round';
@@ -644,6 +644,25 @@
 			ctx.bezierCurveTo(-9, -4, -10, -11, -5, -11.5); ctx.stroke();
 			ctx.beginPath(); ctx.arc(-4.2, -11.2, 1.1, 0, Math.PI * 2); ctx.fill();
 			ctx.lineWidth = 1.1; [-1, 1].forEach(function(sd) { ctx.beginPath(); ctx.moveTo(4, -3); ctx.lineTo(7, -3 + sd * 1.5); ctx.lineTo(8.5, -3 + sd * 0.6); ctx.stroke(); });   // pincers
+			return true;
+		}
+		if (c.kind === 'snake') {
+			// a desert snake slithering along in an S, its body flowing through the curve
+			ctx.scale(1 / 1.35, 1 / 1.35);
+			var segs = 26, len = 46, wave = c.t * 7;
+			ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+			for (var pass = 0; pass < 2; pass++) {
+				ctx.strokeStyle = pass ? '#8a6a3e' : '#3a2a1c'; ctx.lineWidth = pass ? 1.4 : 3.4;
+				ctx.beginPath();
+				for (var q = 0; q <= segs; q++) {
+					var f = q / segs, px = -f * len, py = -2 + Math.sin(wave - f * 7) * 3.2 * (0.4 + 0.6 * f) * (c.moving ? 1 : 0.4);
+					if (q) ctx.lineTo(px, py); else ctx.moveTo(px, py);
+				}
+				ctx.stroke();
+			}
+			var hy = -2 + Math.sin(wave) * 1.3 * (c.moving ? 1 : 0.4);
+			ctx.fillStyle = '#3a2a1c'; ctx.beginPath(); ctx.ellipse(2, hy, 3.2, 2.1, 0, 0, Math.PI * 2); ctx.fill();
+			if (Math.sin(c.t * 3) > 0.7) { ctx.strokeStyle = '#a3402e'; ctx.lineWidth = 0.6; ctx.beginPath(); ctx.moveTo(5, hy); ctx.lineTo(8, hy - 0.6); ctx.moveTo(7, hy - 0.4); ctx.lineTo(8.4, hy + 0.6); ctx.stroke(); }   // a flick of the tongue
 			return true;
 		}
 		if (c.kind === 'centipede') {
@@ -1936,7 +1955,7 @@
 			pip: function() { return pip.box; },
 			findPip: function() { findPip(); },
 			owl: function() { spawnCritter('owl'); },
-			bugs: function() { return critters.filter(function(c) { return /scorpion|centipede|spider|beetle/.test(c.kind); }).map(function(c) { return [c.u - cam * DAYW + LEAD_X, roadY(c.u) + c.depth]; }); },
+			bugs: function() { return critters.filter(function(c) { return /scorpion|centipede|spider|beetle|snake/.test(c.kind); }).map(function(c) { return [c.u - cam * DAYW + LEAD_X, roadY(c.u) + c.depth]; }); },
 			spawn: function(k) { spawnCritter(k); var c = critters[critters.length - 1]; c.u = cam * DAYW + 120 + critters.length * 40; c.dir = -1; return critters.length; },
 			// every piece: which night, when it passes (0..1 of the night) and where it is on screen then
 			pieces: function() {
