@@ -215,7 +215,7 @@
 		if (!p.howl || /rain|storm|sandstorm/.test(p.weather)) return;   // not out howling in the rain
 		var k = dayOf(p.d), st = stretch(k);
 		PIECES.push({night: k, key: 'howl', kind: 'howl', who: p.howl, art: 'jr-howl-' + p.howl, caption: p.howl === 'wolf' ? 'A wolf howls far away' : 'Jackals calling in the night',
-			h: p.howl === 'wolf' ? 24 : 20, layer: 'far', pass: st[0] + 0.45 * (st[1] - st[0]), off: 380, small: true});
+			h: p.howl === 'wolf' ? 40 : 34, layer: 'mid', pass: st[0] + 0.45 * (st[1] - st[0]), off: 380, small: true});
 	});
 	// far off in the first week: a great snow-capped mountain in the lands of the East, smoking gently
 	PIECES.push({night: 2, key: 'volcano', kind: 'volcano', art: 'jr-far-volcano', caption: '', h: 150, layer: 'far', pass: 2.6, off: 0});
@@ -1015,7 +1015,7 @@
 				if (p.flip) { ctx.translate(x, 0); ctx.scale(-1, 1); ctx.translate(-x, 0); }
 				if (p.kind === 'howl') {
 					// far off in the moonlight: dimmed and cooled to match the distant hills; jackals call in a pair
-					ctx.filter = 'brightness(0.62) saturate(0.75) hue-rotate(-8deg)';
+					ctx.filter = 'brightness(0.78) saturate(0.85) hue-rotate(-6deg)';
 					if (p.who === 'jackal') { ctx.save(); ctx.translate(x - w * 1.25, 0); ctx.scale(-1, 1); ctx.drawImage(im, -w * 0.44, top + h * 0.12, w * 0.88, h * 0.88); ctx.restore(); }   // a second, facing the other way
 					ctx.drawImage(im, x - w / 2, top, w, h);
 					ctx.filter = 'none';
@@ -1106,6 +1106,78 @@
 		var c = [1, 3, 5].map(function(p) { return parseInt(hex.substr(p, 2), 16); }), t = [30, 15, 40];
 		return 'rgb(' + c.map(function(v, i) { return Math.round(v * 0.78 + t[i] * 0.22); }).join(',') + ')';
 	}
+	// A little life in the camels' faces, from the same pictures: the neck bends so the head nods with each step (or
+	// looks slowly about at rest), the eyes blink, and the tail swishes. The neck is drawn in thin strips, each turned a
+	// little more about the base of the neck than the one before, so it bends smoothly with no seam. Blinking draws the
+	// fur just above the eye down over it, so the lid is the camel's own colour. All three camels share these points.
+	var CAMEL_FACE = {
+		body: {axis: 'x', a: 470, b: 570, pivot: [505, 290], eye: [619.5, 39.5, 15, 9], tail: [20, 188, 54, 262]},
+		kneel: {axis: 'y', xr: 380, a: 300, b: 120, pivot: [470, 330], eye: [473.5, 40.5, 15, 9]}
+	};
+	var holdBlink = null;   // (test mode: hold every camel's eyes at one point of a blink)
+	function camelBlink(k) {   // 0 open .. 1 shut: a quick blink every few seconds, at different moments for each camel
+		if (holdBlink != null) return holdBlink;
+		var t = clock + k.seed * 13, n = Math.floor(t / 4.5), at = 0.4 + hash(n * 3 + Math.round(k.seed * 100)) * 3.4, q = (t - n * 4.5 - at) / 0.24;
+		return q > 0 && q < 1 ? Math.sin(Math.PI * q) : 0;
+	}
+	function drawCamelFace(im, f, theta, shut, swish) {   // draws the picture at (0, 0) in its own pixels
+		var W = im.width, H = im.height, P = f.pivot;
+		if (reduceMotion) theta = swish = 0;
+		function turned(th, draw) { ctx.save(); ctx.translate(P[0], P[1]); ctx.rotate(th); ctx.translate(-P[0], -P[1]); draw(); ctx.restore(); }
+		if (Math.abs(theta) < 0.0005 && !swish) ctx.drawImage(im, 0, 0);
+		else if (f.axis === 'x') {
+			var t = f.tail;
+			if (t && swish) {   // everything left of the neck but the tail, then the tail, leaning from its root
+				ctx.drawImage(im, t[2], 0, f.a - t[2], H, t[2], 0, f.a - t[2], H);
+				ctx.drawImage(im, 0, 0, t[2], t[1], 0, 0, t[2], t[1]);
+				ctx.drawImage(im, 0, t[3], t[2], H - t[3], 0, t[3], t[2], H - t[3]);
+				ctx.save(); ctx.translate(t[2], t[1]); ctx.transform(1, 0, swish, 1, 0, 0);
+				ctx.drawImage(im, t[0], t[1], t[2] - t[0], t[3] - t[1], t[0] - t[2], 0, t[2] - t[0], t[3] - t[1]);
+				ctx.restore();
+			} else ctx.drawImage(im, 0, 0, f.a, H, 0, 0, f.a, H);
+			for (var x = f.a; x < W; x += 4) {
+				var th = theta * smooth((x + 2 - f.a) / (f.b - f.a)), sw = Math.min(5, W - x);
+				turned(th, function() { ctx.drawImage(im, x, 0, sw, H, x, 0, sw, H); });
+			}
+		} else {
+			ctx.drawImage(im, 0, 0, f.xr, H, 0, 0, f.xr, H);
+			ctx.drawImage(im, f.xr, f.a, W - f.xr, H - f.a, f.xr, f.a, W - f.xr, H - f.a);
+			for (var y = f.a; y > 0; y -= 4) {
+				var th2 = theta * smooth((f.a - y + 2) / (f.a - f.b)), y0 = Math.max(0, y - 4), sh = y - y0 + 1;
+				turned(th2, function() { ctx.drawImage(im, f.xr, y0, W - f.xr, sh, f.xr, y0, W - f.xr, sh); });
+			}
+		}
+		if (shut > 0.05) {   // the lid comes down over the eye, and its lashes with it
+			var e = f.eye;
+			turned(theta, function() {
+				var top = e[1] - e[3] - 2, low = top + (e[3] * 2 + 4) * shut;
+				var lid = lidColors(im, e), g = ctx.createLinearGradient(0, top, 0, top + e[3] * 2 + 4);
+				g.addColorStop(0, lid[0]); g.addColorStop(1, lid[1]);
+				ctx.save(); ctx.beginPath(); ctx.ellipse(e[0], e[1], e[2] + 2, e[3] + 2, 0, 0, Math.PI * 2); ctx.clip();
+				ctx.fillStyle = g; ctx.fillRect(e[0] - e[2] - 3, top - 2, e[2] * 2 + 6, low - top + 2);
+				ctx.restore();
+				ctx.strokeStyle = 'rgba(40,20,30,' + (0.8 * shut).toFixed(2) + ')'; ctx.lineWidth = 3; ctx.lineCap = 'round';
+				ctx.beginPath(); ctx.moveTo(e[0] - e[2], low - 1); ctx.quadraticCurveTo(e[0], low + 3 * shut, e[0] + e[2], low - 1); ctx.stroke();
+			});
+		}
+	}
+	function lidColors(im, e) {   // the fur just above and just below the eye, read once from the picture
+		if (im.lid) return im.lid;
+		var c = document.createElement('canvas'); c.width = im.width; c.height = im.height;
+		var cx = c.getContext('2d'); cx.drawImage(im, 0, 0);
+		function at(x, y) { var d = cx.getImageData(Math.round(x) - 2, Math.round(y) - 2, 5, 5).data, t = [0, 0, 0];
+			for (var i = 0; i < d.length; i += 4) { t[0] += d[i]; t[1] += d[i + 1]; t[2] += d[i + 2]; }
+			return 'rgb(' + t.map(function(v) { return Math.round(v / 25); }).join(',') + ')'; }
+		im.lid = [at(e[0] - e[2] * 0.6, e[1] - e[3] - 7), at(e[0] - e[2] * 0.3, e[1] + e[3] + 7)];
+		return im.lid;
+	}
+	function camelNod(k, f0) {   // the head dips with each step while walking; at rest it looks slowly about
+		return walk * 0.035 * Math.sin(4 * Math.PI * f0 - 0.7) + (1 - walk) * 0.03 * Math.sin(clock * 0.45 + k.seed * 7) * Math.sin(clock * 0.17 + k.seed * 3);
+	}
+	function camelSwish(k) {   // now and then the tail flicks
+		var t = clock * 0.5 + k.seed * 5, burst = Math.max(0, Math.sin(t)) * Math.max(0, Math.sin(t * 0.37 + 1));
+		return 0.35 * burst * Math.sin(clock * 5 + k.seed * 9);
+	}
 	function drawRigCamel(k, name, r, cx, u, opts) {
 		opts = opts || {};
 		var s = k.ah / r.h, info = rigInfo(r);
@@ -1158,12 +1230,16 @@
 			k.wasPlanted[i] = t.planted;
 		}
 		leg(1); leg(3);                                                  // far-side legs, a shade darker, behind the body
-		ctx.drawImage(images[name + '-body'], 0, idle);
+		ctx.save(); ctx.translate(0, idle); drawCamelFace(images[name + '-body'], CAMEL_FACE.body, camelNod(k, f0), camelBlink(k), camelSwish(k)); ctx.restore();
 		leg(0); leg(2);
 		// the king on his saddle, rocking with the camel
 		if (opts.rider && r.saddle) {
 			var ri = opts.rider, rh = opts.riderH ? opts.riderH / s : r.h * RIDE_H, rw = rh * ri.width / ri.height, st = opts.seat || SEAT;
+			// he sways on the saddle a beat behind the camel's step (and sits quietly breathing when it stands)
+			var sway = reduceMotion ? 0 : walk * 0.03 * Math.sin(4 * Math.PI * f0 - 1.6) + (1 - walk) * 0.008 * Math.sin(clock * 1.3 + k.seed * 3);
+			ctx.save(); ctx.translate(r.saddle[0], r.saddle[1] + idle + r.h * 0.03); ctx.rotate(sway); ctx.translate(-r.saddle[0], -r.saddle[1] - idle - r.h * 0.03);
 			ctx.drawImage(ri, r.saddle[0] - rw * st[0], r.saddle[1] + idle - rh * st[1] + r.h * 0.03, rw, rh);
+			ctx.restore();
 		}
 		ctx.restore();
 		return {y: y, s: s, angle: angle};
@@ -1251,7 +1327,10 @@
 		var w = h * im.width / im.height, base = im.base || 1, top = -h * base;
 		ctx.save(); ctx.globalAlpha = a;
 		ctx.translate(x, y - bob); ctx.rotate(tilt); ctx.scale(dir, 1);
-		if (!KING_STRIDE || ph == null) { ctx.drawImage(im, -w / 2, top, w, h); ctx.restore(); return; }
+		if (!KING_STRIDE || ph == null) {
+			if (!bob && !tilt && !reduceMotion) ctx.scale(1, 1 + 0.008 * Math.sin(clock * 1.5 + x * 0.05));   // standing still, he breathes
+			ctx.drawImage(im, -w / 2, top, w, h); ctx.restore(); return;
+		}
 		var split = 0.84, srcSplit = im.height * base * split, srcBottom = im.height * base;
 		var ySplit = top + h * base * split, hLow = h * base * (1 - split), stepAmt = Math.sin(ph), reach = w * 0.045;
 		// the body, down to the knees
@@ -1323,7 +1402,8 @@
 			var kx = ks ? p.seatX - ks[0] * s : p.cx - kw / 2, ky = p.g.y + 4 - (ks ? ks[3] : kh / s * (kim.base || 1)) * s;   // seats lined up
 			if (p.kneelA > 0) {
 				ctx.save(); ctx.globalAlpha = p.kneelA;
-				ctx.drawImage(kim, kx, ky, kw, kh);
+				ctx.translate(kx, ky); ctx.scale(kw / kim.width, kh / kim.height);
+				drawCamelFace(kim, CAMEL_FACE.kneel, (1 - walk) * 0.04 * Math.sin(clock * 0.4 + p.k.seed * 7), camelBlink(p.k), 0);
 				ctx.restore();
 			}
 			if (!riding && p.stand < 1) {   // on the saddle, coming down with the camel, until he stands up
@@ -1785,7 +1865,7 @@
 		var t = nightT(), w = night.weather, a = 0;
 		if (!litSky(night.day)) return;                                  // only while there's daylight left in the sky, never at night
 		if (w === 'storm' || w === 'rain') a = smooth((t - 0.76) / 0.12);
-		else if (w === 'clouds' || (wetBefore(night.day) && night.day > 0)) a = 1 - smooth((t - 0.15) / 0.25);
+		else if (w === 'clouds') a = 1 - smooth((t - 0.15) / 0.25);   // (a clear sky after rain has no shower left to make one)
 		if (a <= 0.01) return;
 		var cx = VW * 0.3, cy = 700, R = Math.min(560, VW * 0.42);   // opposite the setting sun, as a real rainbow is
 		var cols = ['255,90,90', '255,170,80', '255,235,110', '120,220,120', '110,170,255', '150,120,255', '200,130,255'];
@@ -1805,20 +1885,38 @@
 		for (var x = -20; x <= VW + 20; x += 20) ctx.lineTo(x, base - hgt * (0.82 + 0.18 * Math.sin((x + sh) / 90 + clock * 0.6)) );
 		ctx.lineTo(VW + 20, base); ctx.closePath(); ctx.fill();
 	}
-	// snow on the tops of the far mountains in winter
+	// snow on the tops of the far mountains in winter. It is measured on the mountains themselves (every few units
+	// along the ridge, not across the screen), so it travels with them as they scroll instead of rippling; and only a
+	// peak that stands well above its own valleys gets a cap, deeper the higher it rises.
+	var SNOWY_FAR = ['jr-far-mountains', 'jr-far-mountains-2', 'jr-far-rocky-peaks', 'jr-far-judean-hills', 'jr-far-judean-hills-2'];   // the far hills with peaks
 	function paintSnowCaps() {
 		if (!snowSeason(night.day)) return;
-		var sh = shiftOf('far'), ys = [], lo = 1e9, hi = -1e9;
-		for (var x = -20; x <= VW + 20; x += 6) { var y = layerY('far', x - LEAD_X + sh); ys.push([x, y]); lo = Math.min(lo, y); hi = Math.max(hi, y); }
-		var cut = lo + (hi - lo) * 0.4;
-		ctx.save(); ctx.fillStyle = 'rgba(232,238,252,0.8)';
-		ctx.beginPath();
-		ys.forEach(function(p, i) { ctx[i ? 'lineTo' : 'moveTo'](p[0], p[1]); });                 // along the tops...
-		for (var j = ys.length - 1; j >= 0; j--) {                                                  // ...and back, a little lower on the peaks
-			var q = ys[j], depth = Math.max(0, cut - q[1]) * 0.55 + 0.5;
-			ctx.lineTo(q[0], q[1] + depth + Math.sin(q[0] * 0.21) * Math.min(3, depth * 0.3));
+		var sh = shiftOf('far'), STEP = 4, REACH = 40, u0 = Math.floor((-20 - LEAD_X + sh) / STEP) * STEP - REACH * STEP;
+		var n = Math.ceil((VW + 40) / STEP) + REACH * 2, ys = [];
+		for (var i = 0; i <= n; i++) ys.push(layerY('far', u0 + i * STEP));
+		var snowy = SNOWY_FAR.map(art).filter(Boolean), LW = LAYER.far.w;
+		var caps = [];   // [x, top, depth] along the ridge
+		for (var j = REACH; j <= n - REACH; j++) {
+			var low = -1e9;
+			for (var m = j - REACH; m <= j + REACH; m++) low = Math.max(low, ys[m]);   // the valley floor near this point (screen y grows down)
+			var u = u0 + j * STEP, rise = low - ys[j] - 30, depth = rise > 0 ? Math.min(44, rise * 0.45) : 0;
+			if (depth > 0 && hasLayerArt('far') && snowy.indexOf(tileInfo('far', Math.floor(u / LW)).im) < 0) depth = 0;   // flat-topped mesas and plains stay bare
+			if (depth > 0) depth += Math.sin(u * 0.21) * Math.min(3, depth * 0.3);
+			caps.push([u - sh + LEAD_X, ys[j], depth]);
 		}
-		ctx.closePath(); ctx.fill(); ctx.restore();
+		ctx.save(); ctx.fillStyle = 'rgba(232,238,252,0.8)';
+		for (var k = 0; k < caps.length; k++) {   // one shape for each run of snowy ridge
+			if (caps[k][2] <= 0.5) continue;
+			var e = k, most = 0; while (e + 1 < caps.length && caps[e + 1][2] > 0.5) e++;
+			for (var z = k; z <= e; z++) most = Math.max(most, caps[z][2]);
+			if (most < 6) { k = e; continue; }   // too shallow to read as snow: it would only be a thin white line
+			ctx.beginPath(); ctx.moveTo(caps[k][0], caps[k][1]);
+			for (var q = k + 1; q <= e; q++) ctx.lineTo(caps[q][0], caps[q][1]);
+			for (q = e; q >= k; q--) ctx.lineTo(caps[q][0], caps[q][1] + caps[q][2]);
+			ctx.closePath(); ctx.fill();
+			k = e;
+		}
+		ctx.restore();
 	}
 	// little whirlwinds of sand crossing the dunes on windy nights, and ahead of a sandstorm
 	function paintDustDevils() {
@@ -2067,7 +2165,7 @@
 			if (k <= 4) x.push('smoking mountain');
 			if (cometNight(k)) x.push('comet');
 			if (ph > 0.44 && ph < 0.56 && k !== TOTAL) x.push('orange moonrise');
-			if (litSky(k) && (w === 'storm' || w === 'rain')) x.push('rainbow as it clears'); else if (litSky(k) && (w === 'clouds' || wetBefore(k))) x.push('rainbow at first');
+			if (litSky(k) && (w === 'storm' || w === 'rain')) x.push('rainbow as it clears'); else if (litSky(k) && w === 'clouds') x.push('rainbow at first');
 			if (w === 'wind') x.push('dust devils');
 			if (w === 'sandstorm') x.push('wall of dust, dust devils');
 			if (snowSeason(k)) x.push('snow on the peaks');
@@ -2089,6 +2187,7 @@
 			moon: function() { return {phase: night.phase, words: moonWords(night.phase), day: night.day, cover: wx.cover, moonX: night.moonX, sh: shiftOf('sky'), VW: VW}; },
 			pip: function() { return pip.box; },
 			findPip: function() { findPip(); },
+			blink: function(v) { holdBlink = v; },
 			owl: function() { spawnCritter('owl'); },
 			bugs: function() { return critters.filter(function(c) { return /scorpion|centipede|spider|beetle|snake/.test(c.kind); }).map(function(c) { return [c.u - cam * DAYW + LEAD_X, roadY(c.u) + c.depth]; }); },
 			spawn: function(k) { spawnCritter(k); var c = critters[critters.length - 1]; c.u = cam * DAYW + 120 + critters.length * 40; c.dir = -1; return critters.length; },
