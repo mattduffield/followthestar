@@ -1123,33 +1123,43 @@
 	function drawCamelFace(im, f, theta, shut, swish) {   // draws the picture at (0, 0) in its own pixels
 		var W = im.width, H = im.height, P = f.pivot;
 		if (reduceMotion) theta = swish = 0;
-		function turned(th, draw) { ctx.save(); ctx.translate(P[0], P[1]); ctx.rotate(th); ctx.translate(-P[0], -P[1]); draw(); ctx.restore(); }
+		function turned(g, th, draw) { g.save(); g.translate(P[0], P[1]); g.rotate(th); g.translate(-P[0], -P[1]); draw(); g.restore(); }
 		if (Math.abs(theta) < 0.0005 && !swish) ctx.drawImage(im, 0, 0);
-		else if (f.axis === 'x') {
-			var t = f.tail;
-			if (t && swish) {   // everything left of the neck but the tail, then the tail, leaning from its root
-				ctx.drawImage(im, t[2], 0, f.a - t[2], H, t[2], 0, f.a - t[2], H);
-				ctx.drawImage(im, 0, 0, t[2], t[1], 0, 0, t[2], t[1]);
-				ctx.drawImage(im, 0, t[3], t[2], H - t[3], 0, t[3], t[2], H - t[3]);
-				ctx.save(); ctx.translate(t[2], t[1]); ctx.transform(1, 0, swish, 1, 0, 0);
-				ctx.drawImage(im, t[0], t[1], t[2] - t[0], t[3] - t[1], t[0] - t[2], 0, t[2] - t[0], t[3] - t[1]);
-				ctx.restore();
-			} else ctx.drawImage(im, 0, 0, f.a, H, 0, 0, f.a, H);
-			for (var x = f.a; x < W; x += 4) {
-				var th = theta * smooth((x + 2 - f.a) / (f.b - f.a)), sw = Math.min(5, W - x);
-				turned(th, function() { ctx.drawImage(im, x, 0, sw, H, x, 0, sw, H); });
+		else {
+			// the bent camel is put together at the picture's own size first, its strips overlapping well, and then drawn
+			// into the scene in one piece: drawn straight into the scene at its small size, the joins between strips
+			// came out part see-through and the hills showed through the neck
+			var pad = 40, cv = im.bent || (im.bent = document.createElement('canvas'));
+			if (cv.width !== W + pad * 2) { cv.width = W + pad * 2; cv.height = H + pad * 2; }
+			var g = cv.getContext('2d');
+			g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, cv.width, cv.height); g.translate(pad, pad);
+			if (f.axis === 'x') {
+				var t = f.tail;
+				if (t && swish) {   // everything left of the neck but the tail, then the tail, leaning from its root
+					g.drawImage(im, t[2], 0, f.a - t[2], H, t[2], 0, f.a - t[2], H);
+					g.drawImage(im, 0, 0, t[2], t[1], 0, 0, t[2], t[1]);
+					g.drawImage(im, 0, t[3], t[2], H - t[3], 0, t[3], t[2], H - t[3]);
+					g.save(); g.translate(t[2], t[1]); g.transform(1, 0, swish, 1, 0, 0);
+					g.drawImage(im, t[0], t[1], t[2] - t[0], t[3] - t[1], t[0] - t[2], 0, t[2] - t[0], t[3] - t[1]);
+					g.restore();
+				} else g.drawImage(im, 0, 0, f.a + 2, H, 0, 0, f.a + 2, H);
+				for (var x = f.a; x < W; x += 4) {
+					var th = theta * smooth((x + 2 - f.a) / (f.b - f.a)), sw = Math.min(8, W - x);
+					turned(g, th, function() { g.drawImage(im, x, 0, sw, H, x, 0, sw, H); });
+				}
+			} else {
+				g.drawImage(im, 0, 0, f.xr, H, 0, 0, f.xr, H);
+				g.drawImage(im, f.xr, f.a - 2, W - f.xr, H - f.a + 2, f.xr, f.a - 2, W - f.xr, H - f.a + 2);
+				for (var y = f.a; y > 0; y -= 4) {
+					var th2 = theta * smooth((f.a - y + 2) / (f.a - f.b)), y0 = Math.max(0, y - 4), sh = Math.min(H, y + 4) - y0;
+					turned(g, th2, function() { g.drawImage(im, f.xr, y0, W - f.xr, sh, f.xr, y0, W - f.xr, sh); });
+				}
 			}
-		} else {
-			ctx.drawImage(im, 0, 0, f.xr, H, 0, 0, f.xr, H);
-			ctx.drawImage(im, f.xr, f.a, W - f.xr, H - f.a, f.xr, f.a, W - f.xr, H - f.a);
-			for (var y = f.a; y > 0; y -= 4) {
-				var th2 = theta * smooth((f.a - y + 2) / (f.a - f.b)), y0 = Math.max(0, y - 4), sh = y - y0 + 1;
-				turned(th2, function() { ctx.drawImage(im, f.xr, y0, W - f.xr, sh, f.xr, y0, W - f.xr, sh); });
-			}
+			ctx.drawImage(cv, -pad, -pad);
 		}
 		if (shut > 0.05) {   // the lid comes down over the eye, and its lashes with it
 			var e = f.eye;
-			turned(theta, function() {
+			turned(ctx, theta, function() {
 				var top = e[1] - e[3] - 2, low = top + (e[3] * 2 + 4) * shut;
 				var lid = lidColors(im, e), g = ctx.createLinearGradient(0, top, 0, top + e[3] * 2 + 4);
 				g.addColorStop(0, lid[0]); g.addColorStop(1, lid[1]);
