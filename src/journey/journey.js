@@ -165,7 +165,7 @@
 		ruins:     {kind: 'ruins', art: 'jr-lm-ruins', caption: 'Past ancient ruins', h: 165},
 		inn:       {kind: 'inn', art: 'jr-lm-caravanserai', caption: 'An inn for travelers', h: 165},
 		'inn-2':   {kind: 'inn', art: 'jr-lm-caravanserai-2', caption: 'Rest at a roadside inn', h: 140},
-		pass:      {kind: 'pass', art: 'jr-lm-mountain-pass', caption: 'Through the mountain pass', h: 300},
+		pass:      {kind: 'pass', art: 'jr-far-pass', alt: 'jr-lm-mountain-pass', caption: 'Through the mountain pass', h: 250, layer: 'far', at: 0.4, off: 120},
 		well:      {kind: 'well', art: 'jr-lm-well', caption: 'A well by the road', h: 110, layer: 'road', off: 420},
 		olives:    {kind: 'olives', art: 'jr-lm-olive-grove', caption: 'Olive groves of Judea', h: 170},
 		'jerusalem-far':  {kind: 'jerusalem', art: 'jr-lm-jerusalem', caption: 'Jerusalem on the hills ahead', h: 120, layer: 'far', at: 0.55},
@@ -301,6 +301,19 @@
 		var sx = 0, sy = 0, n = 0;
 		for (var i = 0; i < w * h; i += 3) { var o = i * 4; if (d[o + 3] > 200 && d[o] > 235 && d[o + 1] > 170 && d[o + 2] < 150) { sx += i % w; sy += Math.floor(i / w); n++; } }
 		if (n > 25) im.fire = [sx / n / w, sy / n / h];
+	}
+	// a copy whose edges fade away (left, right and bottom), so a cut-out blends into the land around it
+	function feathered(im) {
+		var c = document.createElement('canvas'); c.width = im.width; c.height = im.height;
+		var x = c.getContext('2d'); x.drawImage(im, 0, 0);
+		x.globalCompositeOperation = 'destination-in';
+		var gx = x.createLinearGradient(0, 0, c.width, 0);
+		gx.addColorStop(0, 'rgba(0,0,0,0)'); gx.addColorStop(0.32, 'rgba(0,0,0,1)'); gx.addColorStop(0.68, 'rgba(0,0,0,1)'); gx.addColorStop(1, 'rgba(0,0,0,0)');
+		x.fillStyle = gx; x.fillRect(0, 0, c.width, c.height);
+		var gy = x.createLinearGradient(0, 0, 0, c.height);
+		gy.addColorStop(0, 'rgba(0,0,0,1)'); gy.addColorStop(0.7, 'rgba(0,0,0,1)'); gy.addColorStop(1, 'rgba(0,0,0,0)');
+		x.fillStyle = gy; x.fillRect(0, 0, c.width, c.height);
+		return c;
 	}
 	// a darker copy, for the far-side legs
 	function tinted(im, k) {
@@ -1006,6 +1019,13 @@
 					if (p.who === 'jackal') { ctx.save(); ctx.translate(x - w * 1.25, 0); ctx.scale(-1, 1); ctx.drawImage(im, -w * 0.44, top + h * 0.12, w * 0.88, h * 0.88); ctx.restore(); }   // a second, facing the other way
 					ctx.drawImage(im, x - w / 2, top, w, h);
 					ctx.filter = 'none';
+				} else if (p.kind === 'pass') {
+					// a distant range the road winds into: its edges feathered into the hills and sky, hazed like the far
+					// hills, and sunk so the middle hills in front hide where it meets the ground
+					if (!im.soft) im.soft = feathered(im);
+					ctx.filter = 'brightness(0.72) saturate(0.8)';
+					ctx.drawImage(im.soft, x - w / 2, top + h * 0.18, w, h);
+					ctx.filter = 'none';
 				} else
 				ctx.drawImage(dark ? (im.dark || (im.dark = tinted(im, 0.45))) : im, x - w / 2, top, w, h);
 				ctx.restore();
@@ -1687,6 +1707,28 @@
 		});
 	}
 	var mapLast = -99;
+	function mapDayAt(clientX, clientY) {   // the night nearest a point on the map's road
+		var svgEl = mapRoad.ownerSVGElement, pt = svgEl.createSVGPoint(); pt.x = clientX; pt.y = clientY;
+		var p = pt.matrixTransform(svgEl.getScreenCTM().inverse()), best = 0, bd = 1e9;
+		for (var k = 0; k <= TOTAL; k++) { var q = mapRoad.getPointAtLength(mapX(k + 0.5)), d = Math.abs(q.x - p.x) + Math.abs(q.y - p.y) * 0.5; if (d < bd) { bd = d; best = k; } }
+		return bd < 30 ? best : -1;
+	}
+	if (mapRoad) {
+		var mapEl2 = document.getElementById('map'), mapTip = document.getElementById('map-tip');
+		mapEl2.addEventListener('mousemove', function(e) {
+			var k = mapDayAt(e.clientX, e.clientY), open = k >= 0 && k <= lastOpen;
+			mapEl2.style.cursor = open ? 'pointer' : '';
+			if (k >= 0) { mapTip.textContent = dateOfDay(k).toLocaleDateString('en-US', {month: 'short', day: 'numeric'}) + (open ? '' : ' · not yet'); mapTip.style.left = e.clientX - mapEl2.getBoundingClientRect().left + 'px'; mapTip.hidden = false; }
+			else mapTip.hidden = true;
+		});
+		mapEl2.addEventListener('mouseleave', function() { mapTip.hidden = true; });
+		mapEl2.addEventListener('click', function(e) {
+			var k = mapDayAt(e.clientX, e.clientY);
+			if (k < 0) return;
+			if (k > lastOpen) { mapTip.textContent = 'Not yet · come back on ' + dateOfDay(k).toLocaleDateString('en-US', {month: 'long', day: 'numeric'}); mapTip.hidden = false; return; }
+			playNight(k, 0.3);
+		});
+	}
 	function mapUpdate() {
 		if (!mapRoad || Math.abs(cam - mapLast) < 0.002) return;
 		mapLast = cam;
@@ -2068,8 +2110,8 @@
 				var calls = /sheep|shepherds/.test(p.kind) ? ['sheep', 'lamb'] : p.kind === 'herder' ? ['goat', 'goat', 'sheep'] : p.kind === 'donkey' ? ['donkey'] : p.kind === 'caravan' ? ['camel-grunt', 'camel-grunt', 'donkey', 'camel-grunt'] : p.kind === 'howl' ? [p.who] : p.kind === 'fox' ? ['fox'] : null;
 				if (calls && clock > (p.nextCall || 0)) {
 					var lapse = show && show.mode === 'sofar';
-					if (p.nextCall || lapse) sound.animal(calls[Math.floor(Math.random() * calls.length)], p.kind === 'caravan' ? 0.22 : 0.35);
-					p.nextCall = clock + (p.nextCall ? (p.kind === 'caravan' ? 2.5 + Math.random() * 3 : p.who === 'wolf' ? 6 + Math.random() * 4 : 4 + Math.random() * 5) / (show && show.mode === 'sofar' ? 2.5 : 1) : 0.4);
+					if (p.nextCall || lapse) sound.animal(calls[Math.floor(Math.random() * calls.length)], p.kind === 'caravan' ? 0.22 : p.kind === 'fox' ? 0.16 : p.kind === 'howl' ? 0.26 : 0.35);   // (far off, and the fox's cry kept soft)
+					p.nextCall = clock + (p.nextCall ? (p.kind === 'caravan' ? 2.5 + Math.random() * 3 : p.who === 'wolf' ? 6 + Math.random() * 4 : p.kind === 'fox' ? 12 + Math.random() * 6 : p.kind === 'howl' ? 7 + Math.random() * 5 : 4 + Math.random() * 5) / (show && show.mode === 'sofar' ? 2.5 : 1) : 0.4);
 				}
 				if (/jerusalem-gate|herod/.test(p.key) && !p.heard && Math.abs(cam - p.pass) < 0.03) { p.heard = true; sound.animal('shofar'); }   // a ram's horn at Jerusalem
 			});

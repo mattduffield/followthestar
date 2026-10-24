@@ -63,7 +63,8 @@ main {overflow:visible;}
 .verse-end.on {opacity:1;}
 /* the journey map, top centre in the header */
 header {position:fixed;}
-.map {position:absolute; left:50%; top:6px; transform:translateX(-50%); width:min(540px, 48vw); text-align:center; pointer-events:none;}
+.map {position:absolute; left:50%; top:6px; transform:translateX(-50%); width:min(540px, 48vw); text-align:center;}
+.map-tip {position:absolute; top:42px; transform:translateX(-50%); background:rgba(7,11,34,0.9); border:1px solid rgba(255,219,89,0.5); color:#FFDB59; border-radius:10px; padding:3px 9px; font:500 11px Inter,Arial,sans-serif; white-space:nowrap; pointer-events:none;}
 .map svg {display:block; width:100%; height:auto; overflow:visible;}
 .map #map-road {fill:none; stroke:rgba(255,255,255,0.22); stroke-width:2; stroke-dasharray:2 5; stroke-linecap:round;}
 .map #map-done {fill:none; stroke:#FFDB59; stroke-width:2.5; stroke-linecap:round; filter:drop-shadow(0 0 3px rgba(255,219,89,0.6));}
@@ -202,6 +203,7 @@ header, .player, .rotate {transition:transform 0.5s ease, opacity 0.5s ease;}
 				<g id="map-camel"><path d="M-9 0 L-8.5 -5 Q-10 -6 -10.5 -8 Q-8 -8 -6.5 -9 Q-3.5 -16 0.5 -9.5 Q3 -9 4.5 -10 Q5.5 -15 7.5 -16.5 L10 -16 L10.5 -15 L8.6 -14.6 Q8 -11 6.5 -7 L7.5 0 L5.8 0 L4.6 -4.5 L-3.5 -4.5 L-5.6 0 L-7.4 0 L-7 -4.6 Z"/></g>
 			</svg>
 			<div class="map-text" id="map-text"></div>
+			<div class="map-tip" id="map-tip" hidden></div>
 		</div>
 
 		<div class="buttons">
@@ -307,14 +309,14 @@ header, .player, .rotate {transition:transform 0.5s ease, opacity 0.5s ease;}
 	</footer>
 
 	<script src="/assets/js/site.js" defer></script>
-	<script src="/journey/camels.js?v=202610241250" defer></script>
-	<script src="/journey/camel-rig.js?v=202610241250" defer></script>
-	<script src="/journey/art-ready.js?v=202610241250" defer></script>
-	<script src="/journey/readings.js?v=202610241250" defer></script>
-	<script src="/journey/pip.js?v=202610241250" defer></script>
-	<script src="/journey/plan.js?v=202610241250" defer></script>
-	<script src="/journey/audio-ready.js?v=202610241250" defer></script>
-	<script src="/journey/sound.js?v=202610241250" defer></script>
-	<script src="/journey/journey.js?v=202610241250" defer></script>
+	<script src="/journey/camels.js?v=202610241307" defer></script>
+	<script src="/journey/camel-rig.js?v=202610241307" defer></script>
+	<script src="/journey/art-ready.js?v=202610241307" defer></script>
+	<script src="/journey/readings.js?v=202610241307" defer></script>
+	<script src="/journey/pip.js?v=202610241307" defer></script>
+	<script src="/journey/plan.js?v=202610241307" defer></script>
+	<script src="/journey/audio-ready.js?v=202610241307" defer></script>
+	<script src="/journey/sound.js?v=202610241307" defer></script>
+	<script src="/journey/journey.js?v=202610241307" defer></script>
 </body>
 </html>
