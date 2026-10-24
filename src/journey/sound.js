@@ -84,7 +84,7 @@ var JourneySound = (function() {
 		if (!nextGrunt) nextGrunt = ac.currentTime + 4 + Math.random() * 5;
 		if (state.walking > 0.8 && ac.currentTime > nextGrunt) {
 			once('camel-grunt', 0.3);
-			nextGrunt = ac.currentTime + 12 + Math.random() * 13;
+			nextGrunt = ac.currentTime + (12 + Math.random() * 13) / (state.fast || 1);   // more often in the time-lapse
 		}
 	}
 	function thunder(near) {

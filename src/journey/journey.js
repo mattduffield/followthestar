@@ -1049,7 +1049,7 @@
 		return order;
 	}
 	var EVENING = 15;   // seconds after they stop
-	function evening() { return show && show.mode === 'night' ? clamp(show.elapsed - show.seconds, 0, EVENING) : 0; }
+	function evening() { return show && (show.mode === 'night' || show.mode === 'sofar') ? clamp(show.elapsed - show.seconds, 0, EVENING) : 0; }
 	function eveningKind() {
 		var lm = night.plan.landmark;
 		return lm === 'stable' ? 'manger' : lm === 'herod' || lm === 'home' ? 'palace' : 'fire';
@@ -1553,7 +1553,7 @@
 		wx.drops = []; wx.dust = []; wx.streaks = []; wx.bolt = null; wx.flash = 0;
 		(night.plan.critters || []).forEach(function(c, i) { setTimeout(function() { if (show && show.mode === 'sofar' && show.k === k) spawnCritter(c); }, 250 + i * 400); });
 	}
-	function showTail() { return show && show.mode === 'night' && charsReady() ? EVENING : 0; }   // the evening after they stop
+	function showTail() { return show && (show.mode === 'night' || show.mode === 'sofar') && charsReady() ? EVENING : 0; }   // the evening after they stop
 	function showDone() { return !show || show.elapsed >= show.seconds + showTail(); }
 	function advanceShow(dt) {
 		if (!show || !playing) return;
@@ -1585,7 +1585,7 @@
 		else if (show && show.mode === 'night' && wd.clears && t > 0.84 && t < 0.97) cap = wd.clears;
 		// at the end of the night: a few words about where they rest, then the day's reading fades in
 		var after = show ? show.elapsed - show.seconds : -1, tail = showTail();
-		var verseOn = show && show.mode === 'night' && (tail ? after >= 8 : showDone() && after >= 0);
+		var verseOn = show && (show.mode === 'night' || show.mode === 'sofar') && (tail ? after >= 8 : showDone() && after >= 0);
 		if (!verseOn && show && after >= (tail ? 2.5 : 0) && after < (tail ? 7 : 99) && viewIdx !== TOTAL && viewIdx !== END)
 			cap = show.mode === 'sofar' ? 'Tonight they rest here' : night.plan.camp ? 'They make camp for the night' : tail ? 'They rest by the fire' : 'They rest for the night';
 		if (verseOn) cap = '';
@@ -1742,17 +1742,18 @@
 			var w = night.weather, lv = wx.level, t = show ? show.elapsed / show.seconds : 1;
 			// what they're passing: water near the river and oases, sheep near the shepherds
 			var nearBy = function(kinds) { return PIECES.some(function(p) { return kinds.indexOf(p.kind) >= 0 && Math.abs(cam - p.pass) < 0.18; }) ? 1 : 0; };
-			sound.update({wind: night.wind * (w === 'wind' ? 1 : 0.4), rain: w === 'rain' || w === 'storm' ? lv : 0, sandstorm: w === 'sandstorm' ? lv : 0,
-				storm: w === 'storm' ? lv : 0, clear: (w === 'clear' || w === 'haze') && night.day !== TOTAL, camp: !!night.plan.camp && t > 0.85,
+			sound.update({fast: show && show.mode === 'sofar' && playing && evening() === 0 ? 3 : 1, wind: night.wind * (w === 'wind' ? 1 : 0.4), rain: w === 'rain' || w === 'storm' ? lv : 0, sandstorm: w === 'sandstorm' ? lv : 0,
+				storm: w === 'storm' ? lv : 0, clear: (w === 'clear' || w === 'haze') && night.day !== TOTAL, camp: eveningKind() === 'fire' && evening() > 1.8,
 				water: nearBy(['river', 'oasis', 'heron', 'well']), sheep: nearBy(['shepherds', 'sheep']), walking: walk});
 			// the animals they pass call out now and then while they're in view (sheep and lambs, goats, a donkey)
 			PIECES.forEach(function(p) {
 				if (!playing || cam < p.pass - 0.16 || cam > p.pass + 0.12) return;
+				if (show && show.mode === 'sofar') sound.preload(/sheep|shepherds/.test(p.kind) ? ['sheep', 'lamb'] : p.kind === 'herder' ? ['goat'] : ['donkey']);
 				// (the merchants' caravan: their camels grumbling and a donkey braying, a little quieter as they're farther off)
 				var calls = /sheep|shepherds/.test(p.kind) ? ['sheep', 'lamb'] : p.kind === 'herder' ? ['goat', 'goat', 'sheep'] : p.kind === 'donkey' ? ['donkey'] : p.kind === 'caravan' ? ['camel-grunt', 'camel-grunt', 'donkey', 'camel-grunt'] : null;
 				if (calls && clock > (p.nextCall || 0)) {
 					if (p.nextCall) sound.animal(calls[Math.floor(Math.random() * calls.length)], p.kind === 'caravan' ? 0.22 : 0.35);
-					p.nextCall = clock + (p.nextCall ? (p.kind === 'caravan' ? 2.5 + Math.random() * 3 : 4 + Math.random() * 5) : 0.8);
+					p.nextCall = clock + (p.nextCall ? (p.kind === 'caravan' ? 2.5 + Math.random() * 3 : 4 + Math.random() * 5) / (show && show.mode === 'sofar' ? 2.5 : 1) : 0.4);
 				}
 				if (/jerusalem-gate|herod/.test(p.key) && !p.heard && Math.abs(cam - p.pass) < 0.03) { p.heard = true; sound.animal('shofar'); }   // a ram's horn at Jerusalem
 			});
