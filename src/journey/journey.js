@@ -1460,7 +1460,7 @@
 		var pts = []; for (var t = 0; t <= done; t += 4) { var q = mapOut.getPointAtLength(t); pts.push(q.x.toFixed(1) + ' ' + q.y.toFixed(1)); }
 		if (cam > TOTAL) { var hl = mapHome.getTotalLength(), hd = clamp((cam - TOTAL) / (END - TOTAL), 0, 1) * hl; for (t = 0; t <= hd; t += 4) { q = mapHome.getPointAtLength(t); pts.push(q.x.toFixed(1) + ' ' + q.y.toFixed(1)); } }
 		if (pts.length > 1) { var path = document.createElementNS(SVGNS, 'path'); path.setAttribute('d', 'M' + pts.join(' L')); mapDone.appendChild(path); }
-		var k = clamp(Math.floor(cam + 0.15), 0, END), left = TOTAL - k;
+		var k = show && show.mode === 'sofar' ? clamp(Math.floor(cam + 0.15), 0, realToday) : viewIdx, left = TOTAL - k;
 		mapText.textContent = 'Day ' + (k + 1) + ' · ' + (left > 1 ? left + ' nights to Bethlehem' : left === 1 ? '1 night to Bethlehem' : left === 0 ? 'Bethlehem' : (END - k > 0 ? (END - k) + (END - k === 1 ? ' night' : ' nights') + ' to home' : 'Home again'));
 	}
 
@@ -1563,7 +1563,7 @@
 		var t = Math.min(1, show.elapsed / show.seconds);
 		cam = show.from + (show.to - show.from) * easeWalk(t);
 		show.spawns.forEach(function(s) { if (!s.done && t >= s.at) { s.done = true; spawnCritter(s.kind); } });
-		if (show.mode === 'sofar') soFarDay(clamp(Math.floor(cam + 0.15), 0, END));
+		if (show.mode === 'sofar') soFarDay(clamp(Math.floor(cam + 0.15), 0, realToday));   // (it ends on tonight)
 		if (show.elapsed >= show.seconds + showTail()) { playing = false; updateControls(); document.body.classList.remove('tucked'); }
 	}
 
@@ -1572,7 +1572,7 @@
 	var lastWhen = '', lastCaption = '', firstShow = true, lastVerse = false, verseEl = document.getElementById('verse-end');
 	function readingFor(d) { var from = new Date(JOURNEY_READINGS_FROM + 'T00:00:00'); return JOURNEY_READINGS[clamp(Math.round((startOfDay(d) - from) / DAY), 0, JOURNEY_READINGS.length - 1)]; }
 	function updateOverlay() {
-		var k = show && show.mode === 'sofar' ? clamp(Math.floor(cam + 0.15), 0, END) : viewIdx;
+		var k = show && show.mode === 'sofar' ? clamp(Math.floor(cam + 0.15), 0, realToday) : viewIdx;
 		var when = 'Day ' + (k + 1) + ' of ' + (END + 1) + '<b>' + longDate(dateOfDay(k)) + '</b>';
 		if (when !== lastWhen) { whenEl.innerHTML = when; lastWhen = when; }
 		var t = show ? show.elapsed / show.seconds : 1, wd = WEATHER[night.weather], cap = '';
@@ -1752,7 +1752,8 @@
 				// (the merchants' caravan: their camels grumbling and a donkey braying, a little quieter as they're farther off)
 				var calls = /sheep|shepherds/.test(p.kind) ? ['sheep', 'lamb'] : p.kind === 'herder' ? ['goat', 'goat', 'sheep'] : p.kind === 'donkey' ? ['donkey'] : p.kind === 'caravan' ? ['camel-grunt', 'camel-grunt', 'donkey', 'camel-grunt'] : null;
 				if (calls && clock > (p.nextCall || 0)) {
-					if (p.nextCall) sound.animal(calls[Math.floor(Math.random() * calls.length)], p.kind === 'caravan' ? 0.22 : 0.35);
+					var lapse = show && show.mode === 'sofar';
+					if (p.nextCall || lapse) sound.animal(calls[Math.floor(Math.random() * calls.length)], p.kind === 'caravan' ? 0.22 : 0.35);
 					p.nextCall = clock + (p.nextCall ? (p.kind === 'caravan' ? 2.5 + Math.random() * 3 : 4 + Math.random() * 5) / (show && show.mode === 'sofar' ? 2.5 : 1) : 0.4);
 				}
 				if (/jerusalem-gate|herod/.test(p.key) && !p.heard && Math.abs(cam - p.pass) < 0.03) { p.heard = true; sound.animal('shofar'); }   // a ram's horn at Jerusalem
