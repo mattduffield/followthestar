@@ -13,7 +13,7 @@
 //   note       shown in the night's description (meteor showers are on their real dates)
 //   also drawn automatically from the date: the moon in its real phase (full moons rise big and orange: Oct 26,
 //   Nov 24, Dec 24), a comet Nov 6-12, a smoking snow-capped mountain far to the north in the first week, snow on
-//   the far mountains from December 1, a pale rainbow as rain or a storm clears (and into the next night),
+//   the far mountains from December 1, a pale rainbow as rain clears or on a cloudy evening, only when there's still evening light in the sky (dusk skies),
 //   whirlwinds of sand on windy nights, and a wall of dust rolling in before each sandstorm
 var JOURNEY_PLAN = [
 	// ----- the lands of the East -----
@@ -21,7 +21,7 @@ var JOURNEY_PLAN = [
 	{d: '10-02', sky: 'dusk',      weather: 'haze',      encounter: 'herder',   critters: ['mouse']},
 	{d: '10-03', sky: 'night-2',   weather: 'clouds',    encounter: 'farm',     critters: ['hedgehog'], camp: true},
 	{d: '10-04', sky: 'deep',      weather: 'fog',       landmark: 'river',     critters: ['owl']},
-	{d: '10-05', sky: 'clouds',    weather: 'rain',      encounter: 'heron',    critters: ['hedgehog']},
+	{d: '10-05', sky: 'dusk-2',    weather: 'rain',      encounter: 'heron',    critters: ['hedgehog']},
 	{d: '10-06', sky: 'dusk',      weather: 'clear',     encounter: 'gazelles', critters: ['mouse', 'owl']},
 	{d: '10-07', sky: 'night',     weather: 'wind',      encounter: 'donkey',   critters: ['gecko'], camp: true},
 	{d: '10-08', sky: 'deep',      weather: 'clear',     encounter: 'owl',      critters: ['jerboa'], note: 'the Draconid meteor shower'},
@@ -67,7 +67,7 @@ var JOURNEY_PLAN = [
 	{d: '11-16', sky: 'dusk',      weather: 'haze',      encounter: 'stones',   critters: ['gecko', 'scorpion']},
 	{d: '11-17', sky: 'deep',      weather: 'clear',     encounter: 'owl',      critters: ['jerboa'], camp: true, note: 'the Leonid meteor shower'},
 	{d: '11-18', sky: 'deep',      weather: 'clear',     encounter: 'merchants', critters: ['jerboa', 'owl', 'spider'], note: 'the Leonid meteor shower'},
-	{d: '11-19', sky: 'clouds',    weather: 'rain',      encounter: 'tents',    critters: ['hedgehog']},
+	{d: '11-19', sky: 'dusk',      weather: 'rain',      encounter: 'tents',    critters: ['hedgehog']},
 	{d: '11-20', sky: 'night',     weather: 'clouds',    landmark: 'inn',       critters: ['mouse']},
 	{d: '11-21', sky: 'dusk',      weather: 'wind',      encounter: 'fox',      critters: ['jerboa', 'centipede'], camp: true},
 	{d: '11-22', sky: 'storm',     weather: 'storm'},
@@ -97,7 +97,7 @@ var JOURNEY_PLAN = [
 	{d: '12-14', sky: 'deep',      weather: 'clear',     landmark: 'olives',    critters: ['mouse'], note: 'the Geminid meteor shower'},
 	{d: '12-15', sky: 'night-2',   weather: 'fog',       encounter: 'sheep',    critters: ['owl']},
 	{d: '12-16', sky: 'storm',     weather: 'storm'},
-	{d: '12-17', sky: 'clouds',    weather: 'rain',      encounter: 'lanterns', critters: ['hedgehog']},
+	{d: '12-17', sky: 'dusk-2',    weather: 'rain',      encounter: 'lanterns', critters: ['hedgehog']},
 	{d: '12-18', sky: 'dusk',      weather: 'clouds',    encounter: 'farm',     critters: ['bats'], camp: true},
 	{d: '12-19', sky: 'night',     weather: 'clear',     landmark: 'jerusalem-far', critters: ['mouse', 'owl']},
 	{d: '12-20', sky: 'deep',      weather: 'fog',       landmark: 'jerusalem-gate', camp: true},

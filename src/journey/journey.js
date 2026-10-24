@@ -464,6 +464,7 @@
 		var start = !show ? cam : show.mode === 'sofar' ? Math.floor(cam + 0.15) - 0.15 : show.from;
 		return (cam - start) * DAYW * SPEED.sky;
 	}
+	function litSky(k) { return /dusk|predawn/.test(planFor(k).sky || ''); }   // evening or dawn light: the only skies a rainbow can appear in
 	function cometNight(k) { return k >= dayOf('11-06') && k <= dayOf('11-12'); }   // a comet hangs in the sky for a week in November
 	function snowSeason(k) { return k >= dayOf('12-01'); }                           // winter snow on the far mountains
 	function wetBefore(k) { var p = planFor(k - 1); return p.weather === 'storm' || p.weather === 'rain'; }
@@ -1649,8 +1650,9 @@
 	// a pale rainbow as a storm or rain clears, and lingering at the start of the next night
 	function paintRainbow() {
 		var t = nightT(), w = night.weather, a = 0;
+		if (!litSky(night.day)) return;                                  // only while there's daylight left in the sky, never at night
 		if (w === 'storm' || w === 'rain') a = smooth((t - 0.76) / 0.12);
-		else if (wetBefore(night.day) && night.day > 0) a = 1 - smooth((t - 0.15) / 0.25);
+		else if (w === 'clouds' || (wetBefore(night.day) && night.day > 0)) a = 1 - smooth((t - 0.15) / 0.25);
 		if (a <= 0.01) return;
 		var cx = VW * 0.62, cy = 700, R = Math.min(560, VW * 0.42);
 		var cols = ['255,90,90', '255,170,80', '255,235,110', '120,220,120', '110,170,255', '150,120,255', '200,130,255'];
@@ -1932,7 +1934,7 @@
 			if (k <= 4) x.push('smoking mountain');
 			if (cometNight(k)) x.push('comet');
 			if (ph > 0.44 && ph < 0.56 && k !== TOTAL) x.push('orange moonrise');
-			if (w === 'storm' || w === 'rain') x.push('rainbow as it clears'); else if (wetBefore(k)) x.push('rainbow at first');
+			if (litSky(k) && (w === 'storm' || w === 'rain')) x.push('rainbow as it clears'); else if (litSky(k) && (w === 'clouds' || wetBefore(k))) x.push('rainbow at first');
 			if (w === 'wind') x.push('dust devils');
 			if (w === 'sandstorm') x.push('wall of dust, dust devils');
 			if (snowSeason(k)) x.push('snow on the peaks');
