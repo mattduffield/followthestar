@@ -1,7 +1,7 @@
 // Sound for The Journey: real recordings, mixed low, off until the visitor turns it on.
 //
 //   amb-*     background loops, faded in and out with the weather and what they're passing
-//   one-shot  thunder, an owl, a sheep, goat or donkey now and then
+//   one-shot  thunder, a camel's grumble, an owl, a sheep, lamb, goat or donkey, the shofar at Jerusalem
 //   music-*   background music, a different piece on different nights
 //
 // Files live in /journey/audio/ (made by docs/sound/process-audio.py, which also writes audio-ready.js).
@@ -80,6 +80,7 @@ var JourneySound = (function() {
 		bed('amb-footsteps', BEDS['amb-footsteps'] * state.walking);
 		// a camel grumbles now and then while they walk
 		if (state.walking > 0.8 && ac.currentTime > nextGrunt) {
+			if (nextGrunt) once('camel-grunt', 0.3);
 			nextGrunt = ac.currentTime + 25 + Math.random() * 35;
 		}
 	}

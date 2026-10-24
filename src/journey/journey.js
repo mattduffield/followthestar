@@ -1320,37 +1320,65 @@
 	}
 
 	// ----- Pip: a little mouse who travels with the wise men every night. Find him (click or tap) for a surprise -----
-	// While they walk he trots along behind the last camel, so he's always on screen; when they stop he scurries off and
-	// hides somewhere in the camp, and stays there for as long as the scene is open.
+	// While they walk he roams: he sits somewhere on the sand for a while (and gets left behind as the caravan moves
+	// on), then trots off to a new spot near the camels: ahead, between them, or behind. Tonight's spots come from the
+	// date, so a night always plays the same. When they stop he scurries off and hides in the camp, and stays there.
 	var PIP_KEY = 'journey-pip-found';
-	var pip = {x: 0, y: 0, hop: -1, hopT: 0, near: false, box: null};
+	var pip = {box: null, near: false, hop: -1, hopT: 0, u: null, state: 'trot', target: 0, until: 0, rng: null, last: 0, dir: 1, card: false};
 	function pipFound() { try { return JSON.parse(localStorage.getItem(PIP_KEY) || '[]'); } catch (e) { return []; } }
 	function pipHide() {   // where Pip hides tonight, once they've stopped (scene x)
 		if (eveningKind() === 'manger') return screenX('road', pieceU(STABLE)) - 150;
 		var r = Math.floor(hash(night.day * 13 + 5) * 4);
 		return [fireX() + 30, LEAD_X + 105, LEAD_X - 330, LEAD_X - CHAR_BACK[2] - 120][r];
 	}
+	var PIP_SPOTS = [130, -110, -330, 250, -470, 60];          // around the caravan, from the lead camel (scene units)
+	function pipReset() {
+		pip.rng = rng(night.day * 977 + 31); pip.u = null; pip.state = 'trot'; pip.until = 0; pip.hop = -1; pip.last = clock;
+	}
+	function pipStep(dt) {
+		var base = cam * DAYW - LEAD_X;                          // world position of the screen's left edge
+		if (pip.u == null) { pip.u = base + Math.max(40, LEAD_X - CHAR_BACK[2] - 160); pip.target = pip.u; pip.state = 'sit'; pip.until = clock + 3 + pip.rng() * 3; }
+		var e = evening();
+		if (e > 2.9) {                                          // evening: off to tonight's hiding place, and stay there
+			var hideU = base + pipHide();
+			if (Math.abs(hideU - pip.u) > 2) { pip.state = 'trot'; var d = Math.sign(hideU - pip.u); pip.dir = d; pip.u += d * Math.min(Math.abs(hideU - pip.u), 150 * dt); }
+			else pip.state = 'sit';
+			return;
+		}
+		var sx = pip.u - base;
+		if (pip.state === 'sit') {
+			// he sits a while; if the caravan has left him far behind, he sets off sooner
+			if (clock > pip.until || sx < 30 || sx > VW - 30) {
+				var off = PIP_SPOTS[Math.floor(pip.rng() * PIP_SPOTS.length)];
+				pip.target = cam * DAYW + off + (walk > 0.5 ? 60 : 0);    // a little ahead of where that spot is now, as they're moving
+				pip.state = 'trot';
+			}
+		} else {
+			var tgt = pip.target, d2 = Math.sign(tgt - pip.u), step = 150 * dt;
+			pip.dir = d2 || pip.dir;
+			if (Math.abs(tgt - pip.u) <= step) { pip.u = tgt; pip.state = 'sit'; pip.until = clock + 5 + pip.rng() * 5; }
+			else pip.u += d2 * step;
+		}
+		pip.u = clamp(pip.u, base + 24, base + VW - 24);             // always on screen
+	}
 	function paintPip() {
 		if (!charsReady()) { pip.box = null; return; }
-		var e = evening(), walkX = Math.max(30, LEAD_X - CHAR_BACK[2] - 150), hideX = pipHide();
-		var go = smooth((e - 2.9) / 1.6), x = walkX + (hideX - walkX) * go;
-		var moving = (walk > 0.3 && go === 0) || (go > 0 && go < 1);
-		var y = groundY(x - LEAD_X + cam * DAYW) + 6;
-		var hop = 0;
-		if (moving) hop = Math.abs(Math.sin(clock * 14)) * 3;
-		if (pip.hop >= 0) { pip.hopT += 1 / 60; hop = Math.sin(Math.min(1, pip.hopT / 0.6) * Math.PI) * 26; if (pip.hopT > 0.6) pip.hop = -1; }
-		else if (pip.near && !moving) hop = 4;                       // he sits up when a pointer comes near
-		var im = art('jr-pip-sit') || art('jr-cr-sand-mouse'), h = 20;
-		pip.x = x; pip.y = y;
+		if (pip.rng == null) pipReset();
+		var dt = Math.min(0.1, clock - pip.last); pip.last = clock;
+		if (playing || evening() > 0) pipStep(dt);
+		var x = pip.u - (cam * DAYW - LEAD_X), y = groundY(pip.u) + 6;
+		var trotting = pip.state === 'trot', frames = animFrames('jr-pip-trot-', 4), hop = 0, im, h = 22;
+		if (pip.hop >= 0) { pip.hopT += dt; hop = Math.sin(Math.min(1, pip.hopT / 0.6) * Math.PI) * 26; if (pip.hopT > 0.6) pip.hop = -1; }
+		if (pip.hop >= 0) im = art('jr-pip-hop');
+		else if (pip.card || (pip.near && !trotting)) im = art('jr-pip-wave');      // he waves when you come close, and while his card is open
+		else if (trotting && frames) { im = frames[Math.floor(clock * 10) % 4]; h = 17; hop = Math.abs(Math.sin(clock * 15)) * 2; }
+		else im = art('jr-pip-sit');
+		if (!im) im = art('jr-cr-sand-mouse');
 		if (!im) return;
-		var w = h * im.width / im.height, dir = moving ? 1 : (hash(night.day) < 0.5 ? 1 : -1);
+		var w = h * im.width / im.height, dir = trotting ? pip.dir : (hash(night.day) < 0.5 ? 1 : -1);
 		ctx.save();
 		ctx.translate(x, y - hop); ctx.scale(dir, 1);
-		if (!art('jr-pip-sit')) ctx.filter = 'sepia(0.6) saturate(1.6) brightness(1.15)';   // a warm golden mouse until his own art is in
 		ctx.drawImage(im, -w / 2, -h * (im.base || 1), w, h);
-		ctx.filter = 'none';
-		// a twitch now and then: ears and a little blink of light in his eye
-		if (!moving && Math.sin(clock * 0.9 + night.day) > 0.985) { ctx.fillStyle = 'rgba(255,240,200,0.9)'; ctx.fillRect(w * 0.28, -h * 0.72, 1.6, 1.6); }
 		ctx.restore();
 		pip.box = {x: x, y: y - h / 2 - hop};
 	}
@@ -1364,20 +1392,67 @@
 	function findPip() {
 		pip.hop = 0; pip.hopT = 0;
 		var key = String(dateOfDay(viewIdx).getMonth() + 1).padStart(2, '0') + '-' + String(dateOfDay(viewIdx).getDate()).padStart(2, '0');
-		var found = pipFound(); if (found.indexOf(key) < 0) { found.push(key); try { localStorage.setItem(PIP_KEY, JSON.stringify(found)); } catch (e) {} }
+		var found = pipFound(); if (found.indexOf(key) < 0) { found.push(key); try { localStorage.setItem(PIP_KEY, JSON.stringify(found)); } catch (e) {} mapPaws(); }
 		pipCard.querySelector('p').textContent = (window.PIP_CARDS || {})[key] || '';
 		pipCard.querySelector('.pip-count').textContent = 'You’ve found Pip on ' + found.length + (found.length === 1 ? ' night' : ' nights') + ' of ' + (END + 1) + '.';
-		pip.wasPlaying = playing; playing = false; updateControls();   // the scene waits while the card is open
+		pip.wasPlaying = playing; playing = false; pip.card = true; updateControls();   // the scene waits while the card is open
 		pipCard.hidden = false; verseEl.style.visibility = 'hidden'; pipCard.querySelector('button').focus();
 	}
 	canvas.addEventListener('click', function(evt) { if (nearPip(evt, evt.pointerType === 'touch' ? 40 : 26)) findPip(); });
 	canvas.addEventListener('pointerdown', function(evt) { if (evt.pointerType === 'touch' && nearPip(evt, 40)) { evt.preventDefault(); findPip(); } });
 	canvas.addEventListener('mousemove', function(evt) { pip.near = nearPip(evt, 70); canvas.style.cursor = nearPip(evt, 26) ? 'pointer' : ''; });
 	document.getElementById('pip-close').addEventListener('click', function() {
-		pipCard.hidden = true; verseEl.style.visibility = '';
+		pipCard.hidden = true; verseEl.style.visibility = ''; pip.card = false;
 		if (pip.wasPlaying) { pip.wasPlaying = false; playing = true; updateControls(); }
 	});
 	document.getElementById('pip-key').addEventListener('click', findPip);   // for keyboard users
+
+	// ----- the journey map in the header: the way there along the top, the way home along the bottom -----
+	var mapOut = document.getElementById('map-out'), mapHome = document.getElementById('map-home');
+	var mapDot = document.getElementById('map-dot'), mapText = document.getElementById('map-text'), mapDone = document.getElementById('map-done');
+	var SVGNS = 'http://www.w3.org/2000/svg';
+	function mapPoint(day) {   // where a moment of the journey sits on the map
+		if (day <= TOTAL) { var L = mapOut.getTotalLength(); return mapOut.getPointAtLength(L * clamp((day + PROLOGUE) / (TOTAL + PROLOGUE), 0, 1)); }
+		var H = mapHome.getTotalLength(); return mapHome.getPointAtLength(H * clamp((day - TOTAL) / (END - TOTAL), 0, 1));
+	}
+	function mapSetup() {
+		if (!mapOut) return;
+		var icons = document.getElementById('map-icons');
+		var marks = [[-PROLOGUE, 'Home', 1], [dayOf('10-04'), 'River', 0, 1], [dayOf('11-01'), 'Oasis'], [dayOf('11-27'), 'Pass'], [dayOf('12-21'), 'Jerusalem', 1, 1], [TOTAL, 'Bethlehem', 1]];
+		marks.forEach(function(m) {
+			var p = mapPoint(m[0]), c = document.createElementNS(SVGNS, 'circle');
+			c.setAttribute('cx', p.x); c.setAttribute('cy', p.y); c.setAttribute('r', m[2] ? 3.5 : 2.2); if (m[2]) c.setAttribute('class', 'big');
+			icons.appendChild(c);
+			var t = document.createElementNS(SVGNS, 'text'); t.setAttribute('x', p.x); t.setAttribute('y', m[3] ? p.y + 13 : p.y - 7); t.textContent = m[1];
+			icons.appendChild(t);
+		});
+		var star = document.createElementNS(SVGNS, 'text'), sp = mapPoint(TOTAL);   // the Star over Bethlehem
+		star.setAttribute('x', sp.x + 12); star.setAttribute('y', sp.y + 3); star.textContent = '✦'; star.setAttribute('style', 'fill:#FFDB59;font-size:11px');
+		icons.appendChild(star);
+		mapPaws();
+	}
+	function mapPaws() {   // the nights Pip has been found
+		var g = document.getElementById('map-paws'); if (!g) return;
+		g.innerHTML = '';
+		pipFound().forEach(function(key) {
+			var k = dayOf(key), p = mapPoint(k + 0.5), c = document.createElementNS(SVGNS, 'circle');
+			c.setAttribute('cx', p.x); c.setAttribute('cy', p.y + (k > TOTAL ? 6 : -6)); c.setAttribute('r', 1.6); g.appendChild(c);
+		});
+	}
+	var mapLast = -99;
+	function mapUpdate() {
+		if (!mapOut || Math.abs(cam - mapLast) < 0.002) return;
+		mapLast = cam;
+		var p = mapPoint(cam); mapDot.setAttribute('cx', p.x); mapDot.setAttribute('cy', p.y);
+		// the road travelled, in gold
+		mapDone.innerHTML = '';
+		var outL = mapOut.getTotalLength(), done = clamp((Math.min(cam, TOTAL) + PROLOGUE) / (TOTAL + PROLOGUE), 0, 1) * outL;
+		var pts = []; for (var t = 0; t <= done; t += 4) { var q = mapOut.getPointAtLength(t); pts.push(q.x.toFixed(1) + ' ' + q.y.toFixed(1)); }
+		if (cam > TOTAL) { var hl = mapHome.getTotalLength(), hd = clamp((cam - TOTAL) / (END - TOTAL), 0, 1) * hl; for (t = 0; t <= hd; t += 4) { q = mapHome.getPointAtLength(t); pts.push(q.x.toFixed(1) + ' ' + q.y.toFixed(1)); } }
+		if (pts.length > 1) { var path = document.createElementNS(SVGNS, 'path'); path.setAttribute('d', 'M' + pts.join(' L')); mapDone.appendChild(path); }
+		var k = clamp(Math.floor(cam + 0.15), 0, END), left = TOTAL - k;
+		mapText.textContent = 'Day ' + (k + 1) + ' · ' + (left > 1 ? left + ' nights to Bethlehem' : left === 1 ? '1 night to Bethlehem' : left === 0 ? 'Bethlehem' : (END - k > 0 ? (END - k) + (END - k === 1 ? ' night' : ' nights') + ' to home' : 'Home again'));
+	}
 
 	function paint() {
 		var t = show ? clamp(show.elapsed / show.seconds, 0, 1) : 1;
@@ -1407,6 +1482,7 @@
 		paintCritters(false);
 		paintForeground();
 		paintNearWeather();
+		mapUpdate();
 		// fade in from the night once the wise men are loaded
 		if (!artWaiting()) fadeIn = Math.min(1, fadeIn + 0.04);
 		if (fadeIn < 1) { ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.fillStyle = 'rgba(7,11,34,' + (1 - fadeIn).toFixed(3) + ')'; ctx.fillRect(0, 0, canvas.width, canvas.height); }
@@ -1428,7 +1504,8 @@
 		makeStars();
 		sound.music(k, k === TOTAL);
 		PIECES.forEach(function(p) { p.heard = false; p.seen = null; });
-		if (pipCard) { pipCard.hidden = true; verseEl.style.visibility = ''; }
+		if (pipCard) { pipCard.hidden = true; verseEl.style.visibility = ''; pip.card = false; }
+		pipReset();
 		critters = []; prints = []; wx.drops = []; wx.dust = []; wx.streaks = []; wx.bolt = null; wx.flash = 0;
 		drawText();
 		updateControls();
@@ -1607,7 +1684,13 @@
 				storm: w === 'storm' ? lv : 0, clear: (w === 'clear' || w === 'haze') && night.day !== TOTAL, camp: !!night.plan.camp && t > 0.85,
 				water: nearBy(['river', 'oasis', 'heron', 'well']), sheep: nearBy(['shepherds', 'sheep']), walking: walk});
 			var passing = PIECES.filter(function(p) { return Math.abs(cam - p.pass) < 0.03 && !p.heard; })[0];
-			if (passing && playing) { passing.heard = true; if (/sheep|shepherds|herder/.test(passing.kind)) sound.animal(passing.kind === 'herder' ? 'goat' : 'sheep'); if (passing.kind === 'donkey') sound.animal('donkey'); }
+			if (passing && playing) {
+				passing.heard = true;
+				if (/sheep|shepherds/.test(passing.kind)) { sound.animal('sheep'); setTimeout(function() { sound.animal('lamb'); }, 900); }
+				if (passing.kind === 'herder') sound.animal('goat');
+				if (passing.kind === 'donkey') sound.animal('donkey');
+				if (/jerusalem-gate|herod/.test(passing.key)) sound.animal('shofar');   // a ram's horn as they reach Jerusalem
+			}
 		}
 		meteors.forEach(function(m) { m.t += dt * 1.5; });
 		paint();
@@ -1659,6 +1742,7 @@
 	}
 
 	if (TEST && params.get('night')) viewIdx = clamp(+params.get('night') - 1, 0, END);   // ?test&night=15
+	mapSetup();
 	resize();
 	if (over) {
 		// once they're home: a still picture of them at the palace, and a simple message

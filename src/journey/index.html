@@ -57,6 +57,20 @@ main {overflow:visible;}
 .caption.on {opacity:1;}
 .verse-end {top:20%; left:50%; right:auto; transform:translateX(-50%); width:min(780px, 88%); padding:18px 26px; border-radius:10px; background:rgba(7,11,34,0.55); box-shadow:0 0 40px 20px rgba(7,11,34,0.35); opacity:0; transition:opacity 1.6s;}
 .verse-end.on {opacity:1;}
+/* the journey map, top centre in the header */
+header {position:fixed;}
+.map {position:absolute; left:50%; top:8px; transform:translateX(-50%); width:min(520px, 46vw); text-align:center; pointer-events:none;}
+.map svg {display:block; width:100%; height:auto; overflow:visible;}
+.map #map-out, .map #map-home {fill:none; stroke:rgba(255,255,255,0.25); stroke-width:2; stroke-dasharray:3 4;}
+.map #map-done path {fill:none; stroke:#FFDB59; stroke-width:2.5; stroke-linecap:round;}
+.map #map-icons circle {fill:rgba(255,255,255,0.55);}
+.map #map-icons .big {fill:#FFDB59;}
+.map #map-icons text {font:9px Inter,Arial,sans-serif; fill:rgba(255,255,255,0.7); text-anchor:middle;}
+.map #map-paws circle {fill:#e8a3b0;}
+.map #map-dot {fill:#fffbe8; filter:drop-shadow(0 0 4px #FFDB59);}
+.map-text {font:600 11px Inter,Arial,sans-serif; letter-spacing:0.06em; text-transform:uppercase; color:#e8e3ff; margin-top:-4px;}
+@media screen and (max-width:760px) { .map {width:min(300px, 52vw);} .map #map-icons text {display:none;} }
+@media screen and (max-height:500px) { .map {top:2px; width:min(380px, 46vw);} .map-text {display:none;} }
 .pip-key {position:absolute; left:-9999px;}
 .pip-key:focus {left:20px; top:150px; z-index:5; background:#FFDB59; color:#070b22; border:0; border-radius:6px; padding:8px 12px;}
 .pip-card {position:absolute; left:50%; top:24%; transform:translateX(-50%); width:min(440px, 86%); background:#fbf3e1; color:#2a2140; border-radius:14px; padding:18px 22px 16px; box-shadow:0 10px 40px rgba(0,0,0,0.45); text-align:center; z-index:4; animation: pip-pop 0.35s ease-out;}
@@ -154,6 +168,17 @@ main {overflow:visible;}
 <body>
 	<header>
 		<a href="/"><img src="/assets/images/global/yellow-logo-partial.png" alt="Follow the Star logo" width="120" height="96" class="logo"></a>
+		<div class="map" id="map" role="img" aria-label="Map of the journey">
+			<svg viewBox="0 0 520 54" aria-hidden="true">
+				<path id="map-out" d="M18 28 C 90 10, 160 34, 240 22 S 400 12, 470 22"/>
+				<path id="map-home" d="M470 22 C 470 40, 380 46, 260 44 S 70 46, 18 28"/>
+				<g id="map-done"></g>
+				<g id="map-icons"></g>
+				<g id="map-paws"></g>
+				<circle id="map-dot" r="5"/>
+			</svg>
+			<div class="map-text" id="map-text"></div>
+		</div>
 
 		<div class="buttons">
 			<a href="/tickets/" data-show-after="2026-11-08T09:00:00-08:00" hidden>Buy Tickets</a>
