@@ -1,0 +1,15 @@
+{
+	"short_name": "The Journey",
+	"name": "The Journey | Follow the Star",
+	"description": "Travel with the wise men to Bethlehem, a little farther every night.",
+	"start_url": "/journey/",
+	"scope": "/journey/",
+	"display": "fullscreen",
+	"orientation": "landscape",
+	"background_color": "#070b22",
+	"theme_color": "#070b22",
+	"icons": [
+		{"src": "/assets/images/global/android-chrome-192x192.png", "sizes": "192x192", "type": "image/png"},
+		{"src": "/assets/images/global/android-chrome-512x512.png", "sizes": "512x512", "type": "image/png"}
+	]
+}

@@ -94,7 +94,7 @@ var JourneySound = (function() {
 		musicGain.gain.setTargetAtTime(MUSIC_LEVEL, ac.currentTime + 2.5, 1);
 	}
 	function hoot() { once('owl', 0.4, 0.6); }
-	function animal(kind) { once(kind, 0.35, 0.3); }
+	function animal(kind, volume) { once(kind, volume || 0.35, 0.3); }
 	// fetch tonight's animal sounds ahead of time, so the first bleat isn't lost while it downloads
 	function preload(prefixes) { if (!ac) return; prefixes.forEach(function(p) { variants(p).forEach(load); }); }
 

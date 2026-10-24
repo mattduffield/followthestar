@@ -13,7 +13,11 @@
 	<link rel="apple-touch-icon" sizes="180x180" href="/assets/images/global/apple-touch-icon.png">
 	<link rel="icon" type="image/png" sizes="32x32" href="/assets/images/global/favicon-32x32.png">
 	<link rel="icon" type="image/png" sizes="16x16" href="/assets/images/global/favicon-16x16.png">
-	<link rel="manifest" href="/manifest.json">
+	<link rel="manifest" href="/journey/manifest.json">
+	<meta name="apple-mobile-web-app-capable" content="yes">
+	<meta name="mobile-web-app-capable" content="yes">
+	<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+	<meta name="apple-mobile-web-app-title" content="The Journey">
 	<link rel="mask-icon" href="/assets/images/global/safari-pinned-tab.svg" color="#5bbad5">
 	<meta name="msapplication-TileColor" content="#da532c">
 	<meta name="theme-color" content="#070b22">
@@ -92,13 +96,28 @@ header {position:fixed;}
 .player .nights small {display:block; font-size:12px; color:#c9c3e6;}
 .player .btn {min-width:118px; background:rgba(7,11,34,0.6); border:1px solid #FFDB59; border-radius:20px; color:#FFDB59; padding:9px 16px; font:400 13px Inter,Arial,sans-serif; text-transform:uppercase; letter-spacing:0.04em; cursor:pointer;}
 .player button:focus-visible {outline:2px solid #fff; outline-offset:2px;}
+.player .full {min-width:0; font-size:16px; line-height:1; padding:7px 12px;}
+/* keep clear of the notch and rounded corners on phones */
+.player {padding-left:max(12px, env(safe-area-inset-left)); padding-right:max(12px, env(safe-area-inset-right)); bottom:max(18px, env(safe-area-inset-bottom));}
+.when {left:max(24px, env(safe-area-inset-left));}
+/* full screen (computers, iPads, Android): the scene alone, with the map moved onto it */
+.stage:fullscreen, .stage:-webkit-full-screen {height:100%; width:100%;}
+.stage .map {top:max(8px, env(safe-area-inset-top)); z-index:3;}
+.is-full .when {top:max(64px, env(safe-area-inset-top));}
+/* phones held sideways: the header and the buttons step aside while the night plays; a tap brings them back */
+header, .player, .rotate {transition:transform 0.5s ease, opacity 0.5s ease;}
+.tucked header {transform:translateY(-100%);}
+.tucked .player {transform:translateY(160%); opacity:0;}
+.tucked .when {top:12px;}
+.tap-hint {position:absolute; left:50%; bottom:14px; transform:translateX(-50%); background:rgba(7,11,34,0.65); color:#e8e3ff; border-radius:16px; padding:5px 12px; font:300 12px Inter,Arial,sans-serif; opacity:0; transition:opacity 0.6s; pointer-events:none;}
+.tucked .tap-hint.show {opacity:1;}
 .player .btn.away {visibility:hidden;}
 #play {min-width:132px;} #tonight-btn {min-width:150px;} #sofar {min-width:176px;}
 .player .sound[aria-pressed="true"] {background:#FFDB59; color:#070b22;}
 .player .sound.remembered[aria-pressed="false"] {animation: nudge-glow 2s ease-in-out 3;}
 @keyframes nudge-glow {50% {box-shadow:0 0 0 4px rgba(255,219,89,0.35);}}
-.rotate {position:absolute; left:50%; bottom:80px; transform:translateX(-50%); background:rgba(7,11,34,0.7); border:1px solid rgba(255,255,255,0.3); border-radius:20px; padding:6px 14px; font:300 13px Inter,Arial,sans-serif; color:#e8e3ff; white-space:nowrap; display:none;}
-@media (orientation:portrait) and (max-width:760px) {.rotate {display:block;}}
+.rotate {position:absolute; left:50%; top:34%; transform:translateX(-50%); background:rgba(7,11,34,0.7); border:1px solid rgba(255,255,255,0.3); border-radius:20px; padding:6px 14px; font:300 13px Inter,Arial,sans-serif; color:#e8e3ff; white-space:nowrap; display:none;}
+@media (orientation:portrait) and (max-width:600px) {.rotate {display:block;}}
 
 /* where they are today */
 .today {position:relative; z-index:2; background:#070b22; padding:40px 24px 50px;}
@@ -148,16 +167,16 @@ header {position:fixed;}
 	header {height:56px; padding:6px 16px;}
 	header > a > img {width:48px; height:38px; margin-top:0;}
 	header > .buttons a, header > .buttons button {padding:5px 12px; font-size:14px;}
-	.when {top:66px; left:16px; font-size:11px;}
+	.when {top:66px; left:max(16px, env(safe-area-inset-left)); font-size:11px;}
 	.when b {font-size:20px;}
-	.title {top:18%;}
+	.title {top:30%;}
 	.title h1 {font-size:28px;}
 	.title p {font-size:15px;}
 	.caption {top:36%;}
 	.verse-end {top:14%;}
 	.verse-end blockquote {font-size:17px;}
 	.caption span {font-size:18px;}
-	.player {bottom:8px; gap:6px;}
+	.player {bottom:max(8px, env(safe-area-inset-bottom)); gap:6px;}
 	.player .nights button {width:34px; height:32px;}
 	.player .btn {padding:6px 12px; font-size:12px; min-width:0;}
 	#play {min-width:118px;} #tonight-btn {min-width:124px;} #sofar {min-width:150px;}
@@ -206,6 +225,7 @@ header {position:fixed;}
 				<button type="button" class="btn away" id="tonight-btn">Back to tonight</button>
 				<button type="button" class="btn" id="sofar">The journey so far</button>
 				<button type="button" class="btn sound" id="sound" aria-pressed="false">Sound off</button>
+				<button type="button" class="btn full" id="full" aria-label="Full screen" title="Full screen" hidden>⛶</button>
 			</div>
 			<div class="overlay done" id="done" hidden>
 				<h2>The wise men are home</h2>
@@ -218,6 +238,7 @@ header {position:fixed;}
 				<small class="pip-count"></small>
 				<button type="button" id="pip-close">Keep travelling</button>
 			</div>
+			<div class="tap-hint" id="tap-hint">Tap the scene for the buttons</div>
 			<div class="rotate" id="rotate">Turn your phone sideways for the full view</div>
 		</div>
 	</section>

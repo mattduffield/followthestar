@@ -317,7 +317,7 @@
 		VW = w / S;
 		TOPV = -(h / S - VH);                              // extra sky above the scene on tall screens
 		LEAD_X = Math.min(VW - 60, Math.max(VW * 0.52, 520) + 40);
-		document.getElementById('rotate').style.display = h > w && w < 760 ? '' : 'none';
+		document.getElementById('rotate').style.display = h > w && w < 600 ? '' : 'none';   // phones held upright (not tablets)
 		paint();
 	}
 
@@ -591,7 +591,8 @@
 	function stepCritters(dt) {
 		critters = critters.filter(function(c) {
 			c.t += dt;
-			if (c.kind === 'owl') { c.x += c.dir * c.v * dt; return c.x > -120 && c.x < VW + 120; }
+			var fast = show && show.mode === 'sofar' ? 4 : 1;      // in the time-lapse, everything moves faster
+			if (c.kind === 'owl') { c.x += c.dir * c.v * dt * fast; return c.x > -120 && c.x < VW + 120; }
 			if (c.kind === 'bats') return c.t < c.life;
 			var go = c.kind === 'jerboa' ? (Math.sin(c.t * 7 + c.seed) > -0.2 ? 1 : 0) : c.kind === 'mouse' || c.kind === 'gecko' ? (Math.sin(c.t * 2.2 + c.seed) > -0.45 ? 1 : 0.05) : 1;
 			c.moving = go > 0.5;
@@ -1361,24 +1362,33 @@
 		}
 		pip.u = clamp(pip.u, base + 24, base + VW - 24);             // always on screen
 	}
+	// Pip is drawn from the sand mouse, warmed a little: darker than the sand, so he's easier to spot. He moves in
+	// little springy hops (squashing as he lands) with a soft shadow on the sand that shrinks as he jumps; when found
+	// he gives a big hop, then waves while his card is open.
+	var PIP_LOOK = 'sepia(0.6) saturate(1.6) brightness(1.15)', PIP_WAVE_LOOK = 'sepia(0.35) saturate(1.1) brightness(0.72) hue-rotate(-12deg)';
 	function paintPip() {
 		if (!charsReady()) { pip.box = null; return; }
 		if (pip.rng == null) pipReset();
 		var dt = Math.min(0.1, clock - pip.last); pip.last = clock;
 		if (playing || evening() > 0) pipStep(dt);
 		var x = pip.u - (cam * DAYW - LEAD_X), y = groundY(pip.u) + 6;
-		var trotting = pip.state === 'trot', frames = animFrames('jr-pip-trot-', 4), hop = 0, im, h = 22;
-		if (pip.hop >= 0) { pip.hopT += dt; hop = Math.sin(Math.min(1, pip.hopT / 0.6) * Math.PI) * 26; if (pip.hopT > 0.6) pip.hop = -1; }
-		if (pip.hop >= 0) im = art('jr-pip-hop');
-		else if (pip.card || (pip.near && !trotting)) im = art('jr-pip-wave');      // he waves when you come close, and while his card is open
-		else if (trotting && frames) { im = frames[Math.floor(clock * 10) % 4]; h = 17; hop = Math.abs(Math.sin(clock * 15)) * 2; }
-		else im = art('jr-pip-sit');
-		if (!im) im = art('jr-cr-sand-mouse');
+		var moving = pip.state === 'trot', hop = 0, squash = 0;
+		if (moving) { var ph = (clock * 3.2) % 1; hop = Math.sin(ph * Math.PI) * 7; squash = ph < 0.12 ? (1 - ph / 0.12) * 0.18 : 0; }
+		if (pip.hop >= 0) { pip.hopT += dt; var q = Math.min(1, pip.hopT / 0.7); hop = Math.sin(q * Math.PI) * 30; if (q > 0.92) squash = 0.2; if (pip.hopT > 0.75) pip.hop = -1; }
+		else if (pip.near && !moving) hop = 3 + Math.abs(Math.sin(clock * 6)) * 2;   // a little excited bounce when a pointer comes near
+		var waving = pip.card && pip.hop < 0 && art('jr-pip-wave');
+		var im = waving ? art('jr-pip-wave') : art('jr-cr-sand-mouse');
 		if (!im) return;
-		var w = h * im.width / im.height, dir = trotting ? pip.dir : (hash(night.day) < 0.5 ? 1 : -1);
+		var h = waving ? 26 : 20, w = h * im.width / im.height, dir = moving ? pip.dir : (hash(night.day) < 0.5 ? 1 : -1);
+		// his shadow, smaller and fainter the higher he is
+		var sh = 1 - Math.min(1, hop / 34);
+		ctx.fillStyle = 'rgba(70,35,10,' + (0.28 * sh).toFixed(3) + ')';
+		ctx.beginPath(); ctx.ellipse(x, y + 1, 10 * (0.55 + 0.45 * sh), 2.6 * (0.55 + 0.45 * sh), 0, 0, Math.PI * 2); ctx.fill();
 		ctx.save();
-		ctx.translate(x, y - hop); ctx.scale(dir, 1);
+		ctx.translate(x, y - hop); ctx.scale(dir * (1 + squash * 0.6), 1 - squash);
+		ctx.filter = waving ? PIP_WAVE_LOOK : PIP_LOOK;
 		ctx.drawImage(im, -w / 2, -h * (im.base || 1), w, h);
+		ctx.filter = 'none';
 		ctx.restore();
 		pip.box = {x: x, y: y - h / 2 - hop};
 	}
@@ -1506,7 +1516,7 @@
 		PIECES.forEach(function(p) { p.heard = false; p.seen = null; p.nextCall = 0; });
 		setNightSounds = function() {
 		var kinds = PIECES.filter(function(p) { return p.night === k; }).map(function(p) { return p.kind + ' ' + p.key; }).join(' ');
-		sound.preload([/sheep|shepherds/.test(kinds) ? 'sheep' : '', /sheep|shepherds/.test(kinds) ? 'lamb' : '', /herder/.test(kinds) ? 'goat' : '', /donkey/.test(kinds) ? 'donkey' : '', /jerusalem-gate|herod/.test(kinds) ? 'shofar' : ''].filter(Boolean));
+		sound.preload([/sheep|shepherds/.test(kinds) ? 'sheep' : '', /sheep|shepherds/.test(kinds) ? 'lamb' : '', /herder/.test(kinds) ? 'goat' : '', /donkey|caravan/.test(kinds) ? 'donkey' : '', /jerusalem-gate|herod/.test(kinds) ? 'shofar' : ''].filter(Boolean));
 		};
 		setNightSounds();
 		if (pipCard) { pipCard.hidden = true; verseEl.style.visibility = ''; pip.card = false; }
@@ -1524,7 +1534,7 @@
 		show = {from: st[0], to: st[1], seconds: seconds, elapsed: 0, delay: delay || 0.8, mode: 'night', spawns: spawns};
 		cam = st[0]; restAt = st[1];
 		if (reduceMotion) { show.elapsed = show.seconds + showTail(); cam = st[1]; playing = false; stepWeather(0, 1); updateControls(); return; }
-		playing = true; updateControls();
+		playing = true; updateControls(); untuck(6000);
 	}
 	function playSoFar() {
 		setNight(realToday);
@@ -1554,7 +1564,7 @@
 		cam = show.from + (show.to - show.from) * easeWalk(t);
 		show.spawns.forEach(function(s) { if (!s.done && t >= s.at) { s.done = true; spawnCritter(s.kind); } });
 		if (show.mode === 'sofar') soFarDay(clamp(Math.floor(cam + 0.15), 0, END));
-		if (show.elapsed >= show.seconds + showTail()) { playing = false; updateControls(); }
+		if (show.elapsed >= show.seconds + showTail()) { playing = false; updateControls(); document.body.classList.remove('tucked'); }
 	}
 
 	// ----- words over the scene -----
@@ -1595,6 +1605,40 @@
 
 	// ----- controls: earlier nights, pause, watch again, the journey so far -----
 	var setNightSounds = function() {};
+
+	// ----- full screen, and a cleaner view on phones -----
+	var stageEl = document.querySelector('.stage'), fullBtn = document.getElementById('full'), mapEl = document.getElementById('map');
+	var canFull = !!(stageEl.requestFullscreen || stageEl.webkitRequestFullscreen);   // not on iPhone, where only videos may go full screen
+	var fsEl = function() { return document.fullscreenElement || document.webkitFullscreenElement; };
+	if (canFull) fullBtn.hidden = false;
+	fullBtn.addEventListener('click', function() {
+		if (fsEl()) (document.exitFullscreen || document.webkitExitFullscreen).call(document);
+		else (stageEl.requestFullscreen || stageEl.webkitRequestFullscreen).call(stageEl);
+	});
+	function onFull() {
+		var on = !!fsEl();
+		document.body.classList.toggle('is-full', on);
+		fullBtn.textContent = on ? '✕' : '⛶'; fullBtn.setAttribute('aria-label', on ? 'Leave full screen' : 'Full screen');
+		if (mapEl) (on ? stageEl : document.querySelector('header')).appendChild(mapEl);   // the map comes along into full screen
+		setTimeout(resize, 50);
+	}
+	document.addEventListener('fullscreenchange', onFull); document.addEventListener('webkitfullscreenchange', onFull);
+	// on a short (sideways phone) screen, tuck the header and buttons away a few seconds after the night starts
+	// playing; a tap anywhere on the scene brings them back for a few seconds
+	var tuckTimer = null, tapHinted = false;
+	function shortScreen() { return window.innerHeight <= 500 && window.innerWidth > window.innerHeight; }
+	function untuck(wait) {
+		document.body.classList.remove('tucked');
+		clearTimeout(tuckTimer);
+		tuckTimer = setTimeout(function() {
+			if (!(shortScreen() && playing && pipCard.hidden)) return;
+			document.body.classList.add('tucked');
+			if (!tapHinted) { tapHinted = true; var th = document.getElementById('tap-hint'); th.classList.add('show'); setTimeout(function() { th.classList.remove('show'); }, 3500); }   // the first time only
+		}, wait || 4000);
+	}
+	stageEl.addEventListener('pointerdown', function(e) { if (document.body.classList.contains('tucked')) untuck(4000); });
+	document.querySelector('.player').addEventListener('pointerdown', function() { untuck(6000); });
+	window.addEventListener('scroll', function() { if (window.scrollY > 10) untuck(4000); }, {passive: true});
 	var prevBtn = document.getElementById('prev'), nextBtn = document.getElementById('next'), playBtn = document.getElementById('play');
 	var soFarBtn = document.getElementById('sofar'), tonightBtn = document.getElementById('tonight-btn'), dayEl = document.getElementById('ctl-day');
 	function updateControls() {
@@ -1704,10 +1748,11 @@
 			// the animals they pass call out now and then while they're in view (sheep and lambs, goats, a donkey)
 			PIECES.forEach(function(p) {
 				if (!playing || cam < p.pass - 0.16 || cam > p.pass + 0.12) return;
-				var calls = /sheep|shepherds/.test(p.kind) ? ['sheep', 'lamb'] : p.kind === 'herder' ? ['goat', 'goat', 'sheep'] : p.kind === 'donkey' ? ['donkey'] : null;
+				// (the merchants' caravan: their camels grumbling and a donkey braying, a little quieter as they're farther off)
+				var calls = /sheep|shepherds/.test(p.kind) ? ['sheep', 'lamb'] : p.kind === 'herder' ? ['goat', 'goat', 'sheep'] : p.kind === 'donkey' ? ['donkey'] : p.kind === 'caravan' ? ['camel-grunt', 'camel-grunt', 'donkey', 'camel-grunt'] : null;
 				if (calls && clock > (p.nextCall || 0)) {
-					if (p.nextCall) sound.animal(calls[Math.floor(Math.random() * calls.length)]);
-					p.nextCall = clock + (p.nextCall ? 4 + Math.random() * 5 : 0.8);
+					if (p.nextCall) sound.animal(calls[Math.floor(Math.random() * calls.length)], p.kind === 'caravan' ? 0.22 : 0.35);
+					p.nextCall = clock + (p.nextCall ? (p.kind === 'caravan' ? 2.5 + Math.random() * 3 : 4 + Math.random() * 5) : 0.8);
 				}
 				if (/jerusalem-gate|herod/.test(p.key) && !p.heard && Math.abs(cam - p.pass) < 0.03) { p.heard = true; sound.animal('shofar'); }   // a ram's horn at Jerusalem
 			});
