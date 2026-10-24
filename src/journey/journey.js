@@ -1462,6 +1462,14 @@
 	}
 	function mapSetup() {
 		if (!mapRoad) return;
+		// the marker: a camel and rider from the Follow the Star logo, shrunk to fit the road
+		var cm = window.JOURNEY_CAMELS && JOURNEY_CAMELS.c2;
+		if (cm) {
+			var H = 22, sc = H / cm.h, inner = document.createElementNS(SVGNS, 'g');
+			inner.setAttribute('transform', 'scale(' + sc.toFixed(4) + ') translate(' + (-cm.w / 2) + ',' + (-cm.h) + ') translate(0,' + cm.h + ') scale(0.1,-0.1)');
+			[cm.body].concat(cm.legs.map(function(l) { return l.d; })).forEach(function(d) { var p = document.createElementNS(SVGNS, 'path'); p.setAttribute('d', d); inner.appendChild(p); });
+			mapCamel.innerHTML = ''; mapCamel.appendChild(inner);
+		}
 		var g = document.getElementById('map-icons');
 		MILES.forEach(function(m) {
 			var p = mapRoad.getPointAtLength(mapX(m[0]));
