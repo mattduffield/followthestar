@@ -165,7 +165,7 @@
 		ruins:     {kind: 'ruins', art: 'jr-lm-ruins', caption: 'Past ancient ruins', h: 165},
 		inn:       {kind: 'inn', art: 'jr-lm-caravanserai', caption: 'An inn for travelers', h: 165},
 		'inn-2':   {kind: 'inn', art: 'jr-lm-caravanserai-2', caption: 'Rest at a roadside inn', h: 140},
-		pass:      {kind: 'pass', art: 'jr-far-pass', alt: 'jr-lm-mountain-pass', caption: 'Through the mountain pass', h: 250, layer: 'far', at: 0.4, off: 120},
+		pass:      {kind: 'pass', art: 'jr-far-pass', alt: 'jr-lm-mountain-pass', caption: 'Through the mountain pass', h: 290, layer: 'far', at: 0.4, off: 120},
 		well:      {kind: 'well', art: 'jr-lm-well', caption: 'A well by the road', h: 110, layer: 'road', off: 420},
 		olives:    {kind: 'olives', art: 'jr-lm-olive-grove', caption: 'Olive groves of Judea', h: 170},
 		'jerusalem-far':  {kind: 'jerusalem', art: 'jr-lm-jerusalem', caption: 'Jerusalem on the hills ahead', h: 120, layer: 'far', at: 0.55},
@@ -253,7 +253,7 @@
 			return;
 		}
 		if (/^jr-sky-/.test(n)) loadArt(n);
-		else if (/^jr-(far|mid|near)-/.test(n) && n !== 'jr-far-bethlehem') loadArt(n, skyline);
+		else if (/^jr-(far|mid|near)-/.test(n) && n !== 'jr-far-bethlehem' && n !== 'jr-far-pass') loadArt(n, skyline);
 		else loadArt(n, footing);
 	});	pump();
 
@@ -1023,7 +1023,7 @@
 					// a distant range the road winds into: its edges feathered into the hills and sky, hazed like the far
 					// hills, and sunk so the middle hills in front hide where it meets the ground
 					if (!im.soft) im.soft = feathered(im);
-					ctx.filter = 'brightness(0.72) saturate(0.8)';
+					ctx.filter = p.art === 'jr-far-pass' && art('jr-far-pass') ? 'none' : 'brightness(0.72) saturate(0.8)';   // (the strip is already shaded like the far hills)
 					ctx.drawImage(im.soft, x - w / 2, top + h * 0.18, w, h);
 					ctx.filter = 'none';
 				} else
@@ -1937,7 +1937,7 @@
 			lastVerse = verseOn;
 			if (verseOn) {
 				var rd = readingFor(dateOfDay(viewIdx));
-				verseEl.querySelector('blockquote').textContent = rd.text;
+				verseEl.querySelector('blockquote').textContent = '\u201c' + rd.text + '\u201d';
 				verseEl.querySelector('cite').textContent = rd.ref + ' (KJV)';
 			}
 			verseEl.classList.toggle('on', !!verseOn);
@@ -2110,7 +2110,7 @@
 				var calls = /sheep|shepherds/.test(p.kind) ? ['sheep', 'lamb'] : p.kind === 'herder' ? ['goat', 'goat', 'sheep'] : p.kind === 'donkey' ? ['donkey'] : p.kind === 'caravan' ? ['camel-grunt', 'camel-grunt', 'donkey', 'camel-grunt'] : p.kind === 'howl' ? [p.who] : p.kind === 'fox' ? ['fox'] : null;
 				if (calls && clock > (p.nextCall || 0)) {
 					var lapse = show && show.mode === 'sofar';
-					if (p.nextCall || lapse) sound.animal(calls[Math.floor(Math.random() * calls.length)], p.kind === 'caravan' ? 0.22 : p.kind === 'fox' ? 0.16 : p.kind === 'howl' ? 0.26 : 0.35);   // (far off, and the fox's cry kept soft)
+					if (p.nextCall || lapse) sound.animal(calls[Math.floor(Math.random() * calls.length)], p.kind === 'caravan' ? 0.22 : p.kind === 'fox' ? 0.24 : p.kind === 'howl' ? 0.3 : 0.35);   // (far off, and the fox's cry kept soft)
 					p.nextCall = clock + (p.nextCall ? (p.kind === 'caravan' ? 2.5 + Math.random() * 3 : p.who === 'wolf' ? 6 + Math.random() * 4 : p.kind === 'fox' ? 12 + Math.random() * 6 : p.kind === 'howl' ? 7 + Math.random() * 5 : 4 + Math.random() * 5) / (show && show.mode === 'sofar' ? 2.5 : 1) : 0.4);
 				}
 				if (/jerusalem-gate|herod/.test(p.key) && !p.heard && Math.abs(cam - p.pass) < 0.03) { p.heard = true; sound.animal('shofar'); }   // a ram's horn at Jerusalem

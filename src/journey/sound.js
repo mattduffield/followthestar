@@ -24,7 +24,7 @@ var JourneySound = (function() {
 	function variants(prefix) { return READY.filter(function(n) { return n === prefix || n.indexOf(prefix + '-') === 0; }); }
 	function load(name) {
 		if (!has(name) || buffers[name] || loading[name]) return;
-		loading[name] = fetch('/journey/audio/' + name + '.mp3').then(function(r) { return r.arrayBuffer(); })
+		loading[name] = fetch('/journey/audio/' + name + '.mp3?v=' + (window.JOURNEY_AUDIO_VERSION || '')).then(function(r) { return r.arrayBuffer(); })
 			.then(function(b) { return ac.decodeAudioData(b); }).then(function(buf) { buffers[name] = buf; }).catch(function() {});
 	}
 	function start() {
@@ -107,7 +107,7 @@ var JourneySound = (function() {
 		if (!on) return;
 		if (music && music.name === musicName) return;
 		if (music) { var old = music; old.gain.gain.setTargetAtTime(0, ac.currentTime, 1); setTimeout(function() { old.el.pause(); }, 4000); }
-		var el = new Audio('/journey/audio/' + musicName + '.mp3'); el.loop = true; el.crossOrigin = 'anonymous';
+		var el = new Audio('/journey/audio/' + musicName + '.mp3?v=' + (window.JOURNEY_AUDIO_VERSION || '')); el.loop = true; el.crossOrigin = 'anonymous';
 		var g = ac.createGain(); g.gain.value = 0;
 		ac.createMediaElementSource(el).connect(g); g.connect(musicGain);
 		el.play().catch(function() {});
