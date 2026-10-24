@@ -2064,7 +2064,7 @@
 				if (calls && clock > (p.nextCall || 0)) {
 					var lapse = show && show.mode === 'sofar';
 					if (p.nextCall || lapse) sound.animal(calls[Math.floor(Math.random() * calls.length)], p.kind === 'caravan' ? 0.22 : 0.35);
-					p.nextCall = clock + (p.nextCall ? (p.kind === 'caravan' ? 2.5 + Math.random() * 3 : 4 + Math.random() * 5) / (show && show.mode === 'sofar' ? 2.5 : 1) : 0.4);
+					p.nextCall = clock + (p.nextCall ? (p.kind === 'caravan' ? 2.5 + Math.random() * 3 : p.who === 'wolf' ? 6 + Math.random() * 4 : 4 + Math.random() * 5) / (show && show.mode === 'sofar' ? 2.5 : 1) : 0.4);
 				}
 				if (/jerusalem-gate|herod/.test(p.key) && !p.heard && Math.abs(cam - p.pass) < 0.03) { p.heard = true; sound.animal('shofar'); }   // a ram's horn at Jerusalem
 			});
