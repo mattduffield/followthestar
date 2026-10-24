@@ -1364,7 +1364,7 @@
 	}
 	// Pip is drawn from the sand mouse, warmed a little: darker than the sand, so he's easier to spot. He moves in
 	// little springy hops (squashing as he lands) with a soft shadow on the sand that shrinks as he jumps; when found
-	// he gives a big hop, then waves while his card is open.
+	// he gives a big hop, then keeps bouncing happily while his card is open.
 	var PIP_LOOK = 'sepia(0.6) saturate(1.6) brightness(1.15)', PIP_WAVE_LOOK = 'sepia(0.35) saturate(1.1) brightness(0.72) hue-rotate(-12deg)';
 	function paintPip() {
 		if (!charsReady()) { pip.box = null; return; }
@@ -1375,8 +1375,9 @@
 		var moving = pip.state === 'trot', hop = 0, squash = 0;
 		if (moving) { var ph = (clock * 3.2) % 1; hop = Math.sin(ph * Math.PI) * 7; squash = ph < 0.12 ? (1 - ph / 0.12) * 0.18 : 0; }
 		if (pip.hop >= 0) { pip.hopT += dt; var q = Math.min(1, pip.hopT / 0.7); hop = Math.sin(q * Math.PI) * 30; if (q > 0.92) squash = 0.2; if (pip.hopT > 0.75) pip.hop = -1; }
+		else if (pip.card) hop = Math.abs(Math.sin(clock * 4.5)) * 9;                // happy bounces while his card is open
 		else if (pip.near && !moving) hop = 3 + Math.abs(Math.sin(clock * 6)) * 2;   // a little excited bounce when a pointer comes near
-		var waving = pip.card && pip.hop < 0 && art('jr-pip-wave');
+		var waving = false;   // (always the original Pip)
 		var im = waving ? art('jr-pip-wave') : art('jr-cr-sand-mouse');
 		if (!im) return;
 		var h = waving ? 26 : 20, w = h * im.width / im.height, dir = moving ? pip.dir : (hash(night.day) < 0.5 ? 1 : -1);
