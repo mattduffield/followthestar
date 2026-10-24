@@ -1334,7 +1334,7 @@
 	}
 	var PIP_SPOTS = [130, -110, -330, 250, -470, 60];          // around the caravan, from the lead camel (scene units)
 	function pipReset() {
-		pip.rng = rng(night.day * 977 + 31); pip.u = null; pip.state = 'trot'; pip.until = 0; pip.hop = -1; pip.last = clock;
+		pip.rng = rng(night.day * 977 + 31); pip.u = null; pip.sx = null; pip.state = 'trot'; pip.until = 0; pip.hop = -1; pip.last = clock;
 	}
 	function pipStep(dt) {
 		var base = cam * DAYW - LEAD_X;                          // world position of the screen's left edge
@@ -1347,6 +1347,25 @@
 			return;
 		}
 		var sx = pip.u - base;
+		if (show && show.mode === 'sofar' && e === 0) {
+			// the time-lapse races along far faster than a mouse can run, so he keeps up with the caravan instead
+			// (his place is kept on screen, not on the ground): darting from spot to spot around the camels at
+			// super speed, with short pauses
+			if (pip.sx == null) pip.sx = clamp(sx, 24, VW - 24);
+			sx = pip.sx;
+			if (pip.state === 'sit') {
+				if (clock > pip.until) { pip.target = LEAD_X + PIP_SPOTS[Math.floor(pip.rng() * PIP_SPOTS.length)]; pip.state = 'trot'; }
+			} else {
+				var dd = Math.sign(pip.target - sx), st = 520 * dt;
+				pip.dir = dd || pip.dir;
+				if (Math.abs(pip.target - sx) <= st) { sx = pip.target; pip.state = 'sit'; pip.until = clock + 1.2 + pip.rng() * 1.8; }
+				else sx += dd * st;
+			}
+			pip.sx = clamp(sx, 24, VW - 24);
+			pip.u = base + pip.sx;
+			return;
+		}
+		pip.sx = null;
 		if (pip.state === 'sit') {
 			// he sits a while; if the caravan has left him far behind, he sets off sooner
 			if (clock > pip.until || sx < 30 || sx > VW - 30) {
@@ -1373,7 +1392,7 @@
 		if (playing || evening() > 0) pipStep(dt);
 		var x = pip.u - (cam * DAYW - LEAD_X), y = groundY(pip.u) + 6;
 		var moving = pip.state === 'trot', hop = 0, squash = 0;
-		if (moving) { var ph = (clock * 3.2) % 1; hop = Math.sin(ph * Math.PI) * 7; squash = ph < 0.12 ? (1 - ph / 0.12) * 0.18 : 0; }
+		if (moving) { var ph = (clock * (show && show.mode === 'sofar' ? 6 : 3.2)) % 1; hop = Math.sin(ph * Math.PI) * 7; squash = ph < 0.12 ? (1 - ph / 0.12) * 0.18 : 0; }
 		if (pip.hop >= 0) { pip.hopT += dt; var q = Math.min(1, pip.hopT / 0.7); hop = Math.sin(q * Math.PI) * 30; if (q > 0.92) squash = 0.2; if (pip.hopT > 0.75) pip.hop = -1; }
 		else if (pip.card) hop = Math.abs(Math.sin(clock * 4.5)) * 9;                // happy bounces while his card is open
 		else if (pip.near && !moving) hop = 3 + Math.abs(Math.sin(clock * 6)) * 2;   // a little excited bounce when a pointer comes near
