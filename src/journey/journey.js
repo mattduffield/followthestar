@@ -215,7 +215,7 @@
 		if (!p.howl || /rain|storm|sandstorm/.test(p.weather)) return;   // not out howling in the rain
 		var k = dayOf(p.d), st = stretch(k);
 		PIECES.push({night: k, key: 'howl', kind: 'howl', who: p.howl, art: 'jr-howl-' + p.howl, caption: p.howl === 'wolf' ? 'A wolf howls far away' : 'Jackals calling in the night',
-			h: p.howl === 'wolf' ? 40 : 34, layer: 'mid', pass: st[0] + 0.45 * (st[1] - st[0]), off: 380, small: true});
+			h: p.howl === 'wolf' ? 52 : 46, layer: 'mid', pass: st[0] + 0.45 * (st[1] - st[0]), off: 380, small: true});
 	});
 	// far off in the first week: a great snow-capped mountain in the lands of the East, smoking gently
 	PIECES.push({night: 2, key: 'volcano', kind: 'volcano', art: 'jr-far-volcano', caption: '', h: 150, layer: 'far', pass: 2.6, off: 0});
@@ -1014,7 +1014,7 @@
 				ctx.save();
 				if (p.flip) { ctx.translate(x, 0); ctx.scale(-1, 1); ctx.translate(-x, 0); }
 				if (p.kind === 'howl') {
-					// far off in the moonlight: dimmed and cooled to match the distant hills; jackals call in a pair
+					// off on the hills in the moonlight: dimmed and cooled a little to sit in the night; jackals call in a pair
 					ctx.filter = 'brightness(0.78) saturate(0.85) hue-rotate(-6deg)';
 					if (p.who === 'jackal') { ctx.save(); ctx.translate(x - w * 1.25, 0); ctx.scale(-1, 1); ctx.drawImage(im, -w * 0.44, top + h * 0.12, w * 0.88, h * 0.88); ctx.restore(); }   // a second, facing the other way
 					ctx.drawImage(im, x - w / 2, top, w, h);
