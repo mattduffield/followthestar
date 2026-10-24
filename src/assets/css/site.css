@@ -69,6 +69,3 @@ footer .contactInfo .footer-link {margin-top:auto;}
 	footer .contactInfo {flex-direction: column;}
 	footer .contactInfo img {margin-top:10px}
 }
-
-/* a link that looks like plain text (the way into previews) */
-.quiet-link {color:inherit; text-decoration:none; cursor:default;}

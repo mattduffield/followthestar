@@ -216,7 +216,21 @@
 
 	// ----- art images -----
 	var images = {};
-	function loadArt(n, prep) { var im = new Image(); im.onload = function() { if (prep) prep(im); images[n] = im; }; im.src = '/journey/art/' + n + '.webp'; }
+	var queue = [], active = 0;
+	function pump() {
+		while (active < 6 && queue.length) {
+			var job = queue.shift(); active++;
+			(function(job) {
+				var im = new Image();
+				im.onload = function() { if (job.prep) job.prep(im); images[job.n] = im; active--; pump(); };
+				im.onerror = function() { active--; pump(); };
+				im.src = '/journey/art/' + job.n + '.webp';
+			})(job);
+		}
+	}
+	function loadArt(n, prep) { queue.push({n: n, prep: prep}); }
+	var rank = function(n) { return /^jr-char-/.test(n) ? 0 : /^jr-(sky|far|mid|near)-/.test(n) ? 1 : 2; };   // (characters first, then sky and land)
+	ART_READY = ART_READY.filter(function(n) { return !/^jr-camel-rider/.test(n); }).sort(function(a, b) { return rank(a) - rank(b); });
 	ART_READY.forEach(function(n) {
 		var rig = window.JOURNEY_CAMEL_RIG && JOURNEY_CAMEL_RIG[n];
 		if (rig) {
@@ -227,7 +241,8 @@
 		if (/^jr-sky-/.test(n)) loadArt(n);
 		else if (/^jr-(far|mid|near)-/.test(n) && n !== 'jr-far-bethlehem') loadArt(n, skyline);
 		else loadArt(n, footing);
-	});
+	});	pump();
+
 	function art(name) { return name && images[name] || null; }
 	function animFrames(prefix, n) { var f = []; for (var i = 0; i < n; i++) { if (!art(prefix + i)) return null; f.push(art(prefix + i)); } return f; }
 	function pixels(im) {
@@ -1141,8 +1156,20 @@
 		});
 		if (kind === 'fire') paintFire(fireX(), smooth((e - 1.6) / 1.2));
 	}
+	// the page waits for the wise men and their camels to load, so nothing stands in for them first; if the art is
+	// very slow (or missing) it gives up after a few seconds and uses the logo's camels
+	var loadStart = performance.now();
+	function sceneReady() {   // tonight's sky and land, as well as the characters
+		if (!charsReady()) return false;
+		var want = [night.sky.art].concat(['far', 'mid', 'road'].map(function(l) { return stageAt(Math.max(0, cam)).art[l].filter(function(n) { return ART_READY.indexOf(n) >= 0; }); }));
+		return want.every(function(w) { return Array.isArray(w) ? !w.length || w.some(art) : ART_READY.indexOf(w) < 0 || art(w); });
+	}
+	var ready = false;
+	function artWaiting() { if (!ready) ready = sceneReady() || performance.now() - loadStart > 25000; return !ready; }
+	var fadeIn = 0;
 	function paintCaravan() {
 		if (charsReady()) return paintCharacters();
+		if (artWaiting()) return;
 		var order = riderOrder(night.day);
 		CARAVAN.forEach(function(k, i) { if (k.art !== order[i]) { k.art = order[i]; k.wasPlanted = []; } });
 		var firefly = CARAVAN.every(function(k) { return rigReady(k.art); });
@@ -1380,6 +1407,9 @@
 		paintCritters(false);
 		paintForeground();
 		paintNearWeather();
+		// fade in from the night once the wise men are loaded
+		if (!artWaiting()) fadeIn = Math.min(1, fadeIn + 0.04);
+		if (fadeIn < 1) { ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.fillStyle = 'rgba(7,11,34,' + (1 - fadeIn).toFixed(3) + ')'; ctx.fillRect(0, 0, canvas.width, canvas.height); }
 	}
 
 	// ----- the show: each night they walk one stretch of road on their own, like a short film -----
@@ -1426,6 +1456,7 @@
 	function showDone() { return !show || show.elapsed >= show.seconds + showTail(); }
 	function advanceShow(dt) {
 		if (!show || !playing) return;
+		if (artWaiting()) return;                                       // don't start walking until they're here
 		if (show.delay > 0) { show.delay -= dt; return; }
 		show.elapsed += dt;
 		var t = Math.min(1, show.elapsed / show.seconds);
