@@ -212,10 +212,10 @@
 	// a jackal or a wolf sitting on a far ridge, head raised, howling: plan.js 'howl' (jackals in the desert, a wolf in the
 	// mountains). Firefly art when it's in (jr-howl-jackal / jr-howl-wolf, the sitting-howling pose); a silhouette until then
 	(window.JOURNEY_PLAN || []).forEach(function(p) {
-		if (!p.howl) return;
+		if (!p.howl || /rain|storm|sandstorm/.test(p.weather)) return;   // not out howling in the rain
 		var k = dayOf(p.d), st = stretch(k);
 		PIECES.push({night: k, key: 'howl', kind: 'howl', who: p.howl, art: 'jr-howl-' + p.howl, caption: p.howl === 'wolf' ? 'A wolf howls far away' : 'Jackals calling in the night',
-			h: p.howl === 'wolf' ? 46 : 36, layer: 'far', pass: st[0] + 0.45 * (st[1] - st[0]), off: 380, small: true});
+			h: p.howl === 'wolf' ? 24 : 20, layer: 'far', pass: st[0] + 0.45 * (st[1] - st[0]), off: 380, small: true});
 	});
 	// far off in the first week: a great snow-capped mountain in the lands of the East, smoking gently
 	PIECES.push({night: 2, key: 'volcano', kind: 'volcano', art: 'jr-far-volcano', caption: '', h: 150, layer: 'far', pass: 2.6, off: 0});
@@ -991,6 +991,11 @@
 			if (im && im.base) {
 				var w = h * im.width / im.height;
 				var y = groundUnder(layer, x, w / 2) - (p.kind === 'angel' ? 230 : 0);   // on the hills' ground (the angel floats above the camp)
+				if (p.kind === 'howl') {   // sitting right on the visible ridge line under its paws, never above it
+					var sh2 = shiftOf(layer), ridge = -1e9;
+					for (var fx = -0.35; fx <= 0.35; fx += 0.175) ridge = Math.max(ridge, layerY(layer, x + fx * w - LEAD_X + sh2));
+					y = ridge + 3;
+				}
 				if (p.kind === 'angel') glow(x, y - h * 0.5, h * 1.1, 'rgb(255,236,180)', 0.35 * (0.8 + 0.2 * Math.sin(clock * 1.5)));
 				var top = y + h * 0.06 - im.base * h;
 				ctx.save();
