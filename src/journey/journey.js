@@ -1907,12 +1907,23 @@
 		WEATHER_KINDS.forEach(function(w) { var o = document.createElement('option'); o.value = w; o.textContent = w; sel.appendChild(o); });
 		sel.addEventListener('change', function() { weatherOverride = sel.value || null; playNight(viewIdx, 0.3); });
 		document.getElementById('test-skip').addEventListener('click', function() { if (show) { show.delay = 0; show.elapsed = Math.max(show.elapsed, show.seconds * 0.5 - 0.01); } });
-		var rows = '<thead><tr><th>Night</th><th>Date</th><th>Land</th><th>Sky</th><th>Weather</th><th>Landmark</th><th>Encounter</th><th>Critters</th><th>Camp</th><th>Reading</th><th>Note</th></tr></thead><tbody>';
+		var rows = '<thead><tr><th>Night</th><th>Date</th><th>Land</th><th>Sky</th><th>Weather</th><th>Landmark</th><th>Encounter</th><th>Critters</th><th>Camp</th><th>Also in the sky / land</th><th>Reading</th><th>Note</th></tr></thead><tbody>';
+		function extras(k) {   // the scenery that comes from the date rather than the plan
+			var x = [], ph = moonPhase(dateOfDay(k)), w = planFor(k).weather;
+			if (k <= 4) x.push('smoking mountain');
+			if (cometNight(k)) x.push('comet');
+			if (ph > 0.44 && ph < 0.56 && k !== TOTAL) x.push('orange moonrise');
+			if (w === 'storm' || w === 'rain') x.push('rainbow as it clears'); else if (wetBefore(k)) x.push('rainbow at first');
+			if (w === 'wind') x.push('dust devils');
+			if (w === 'sandstorm') x.push('wall of dust, dust devils');
+			if (snowSeason(k)) x.push('snow on the peaks');
+			return x;
+		}
 		var from = new Date(JOURNEY_READINGS_FROM + 'T00:00:00');
 		for (var k = 0; k <= END; k++) {
 			var p = planFor(k), d = dateOfDay(k), r = JOURNEY_READINGS[clamp(Math.round((d - from) / DAY), 0, JOURNEY_READINGS.length - 1)];
 			rows += '<tr data-k="' + k + '" class="w-' + p.weather + '"><td>' + (k + 1) + '</td><td>' + d.toLocaleDateString('en-US', {weekday: 'short', month: 'short', day: 'numeric'}) + '</td><td>' + stageAt(k).label + '</td><td>' + p.sky + '</td><td>' + p.weather +
-				'</td><td>' + (p.landmark || '') + '</td><td>' + (p.encounter || '') + '</td><td>' + (p.critters || []).join(', ') + '</td><td>' + (p.camp ? 'yes' : '') + '</td><td>' + r.ref + '</td><td>' + (p.note || '') + '</td></tr>';
+				'</td><td>' + (p.landmark || '') + '</td><td>' + (p.encounter || '') + '</td><td>' + (p.critters || []).join(', ') + '</td><td>' + (p.camp ? 'yes' : '') + '</td><td>' + extras(k).join(', ') + '</td><td>' + r.ref + '</td><td>' + (p.note || '') + '</td></tr>';
 		}
 		table.querySelector('table').innerHTML = rows + '</tbody>';
 		table.addEventListener('click', function(e) { var tr = e.target.closest('tr[data-k]'); if (tr) { playNight(+tr.dataset.k, 0.3); canvas.scrollIntoView({behavior: 'smooth'}); } });
