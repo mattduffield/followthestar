@@ -209,6 +209,14 @@
 		if (p.encounter && ENCOUNTERS[p.encounter]) addPiece(k, ENCOUNTERS[p.encounter], p.encounter, 0.22, true);   // early, so it's gone before they stop
 		if (p.camp) addPiece(k, {kind: 'camp', art: CAMPS[k % 3], caption: '', h: 130, at: 1, off: 300}, 'camp', 1, true);
 	}
+	// a jackal or a wolf sitting on a far ridge, head raised, howling: plan.js 'howl' (jackals in the desert, a wolf in the
+	// mountains). Firefly art when it's in (jr-howl-jackal / jr-howl-wolf, the sitting-howling pose); a silhouette until then
+	(window.JOURNEY_PLAN || []).forEach(function(p) {
+		if (!p.howl) return;
+		var k = dayOf(p.d), st = stretch(k);
+		PIECES.push({night: k, key: 'howl', kind: 'howl', who: p.howl, art: 'jr-howl-' + p.howl, caption: p.howl === 'wolf' ? 'A wolf howls far away' : 'Jackals calling in the night',
+			h: p.howl === 'wolf' ? 46 : 36, layer: 'far', pass: st[0] + 0.45 * (st[1] - st[0]), off: 380, small: true});
+	});
 	// far off in the first week: a great snow-capped mountain in the lands of the East, smoking gently
 	PIECES.push({night: 2, key: 'volcano', kind: 'volcano', art: 'jr-far-volcano', caption: '', h: 150, layer: 'far', pass: 2.6, off: 0});
 	// Bethlehem on the far hills, ahead of them through the last nights
@@ -898,6 +906,26 @@
 				if (arrived) { person(x - 12, y + 4, 1.3, '#7a4e1e'); person(x + 14, y + 4, 1.4, '#7a4e1e'); rect(x - 8, y - 12, 16, 8, '#7a4e1e'); }
 				break;
 			case 'camp': tents(x, y, 1.1, col, true); break;
+			case 'howl':   // a canine sitting on the ridge, muzzle raised to the sky (stand-in until the art arrives)
+				var hs = (p.who === 'wolf' ? 1.5 : 1.2), hc = '#141026', lift = Math.sin(clock * 0.7) * 0.06;
+				ctx.save(); ctx.translate(x, y + 3); ctx.scale(hs, hs); ctx.fillStyle = hc;
+				ctx.beginPath();
+				ctx.moveTo(-12, 0);                                   // back of the haunch, on the ground
+				ctx.bezierCurveTo(-16, -6, -14, -14, -8, -15);        // haunch
+				ctx.bezierCurveTo(-4, -16, -2, -20, -1, -25);         // back, rising to the shoulders
+				ctx.lineTo(1, -29);                                   // neck
+				ctx.lineTo(3 + lift * 10, -36);                       // throat up to the muzzle
+				ctx.lineTo(9 + lift * 10, -42);                       // muzzle tip, pointing up at the sky
+				ctx.lineTo(6 + lift * 10, -36);
+				ctx.lineTo(5, -33);                                   // brow
+				ctx.lineTo(4.5, -38); ctx.lineTo(3, -33);             // ear
+				ctx.lineTo(6, -27);                                   // chest
+				ctx.bezierCurveTo(7, -20, 6, -10, 5, 0);              // front leg
+				ctx.lineTo(2, 0); ctx.lineTo(1.5, -9);                // between the legs
+				ctx.lineTo(-1, 0); ctx.closePath(); ctx.fill();
+				ctx.beginPath(); ctx.moveTo(-12, -2); ctx.bezierCurveTo(-20, -1, -24, -3, -26, 1); ctx.bezierCurveTo(-22, 0, -17, 1, -11, 1); ctx.fill();   // tail along the ground
+				ctx.restore();
+				break;
 			case 'volcano':
 				var vc = '#2c2850';
 				shape([x - 230, y + 4, x - 40, y - 150, x + 40, y - 150, x + 250, y + 4], vc);
@@ -1318,10 +1346,26 @@
 		if (night.weather === 'storm' || night.weather === 'rain') tint('rgba(8,8,22,A)', 0.5 * wx.level);
 		if (night.weather === 'sandstorm') tint('rgba(120,78,40,A)', 0.55 * wx.level);
 		var clearSky = 1 - wx.cover;
+		// on evening skies the sun is setting ahead of them as the night begins: it sinks behind the far hills, its
+		// glow fades, and the stars come out as it goes
+		var sunset = 0;
+		if (/dusk/.test(night.skyKey) && !(show && show.mode === 'sofar')) {
+			sunset = 1 - smooth(nightT() / 0.32);
+			if (sunset > 0.01) {
+				var sx = VW * 0.8, sy = 392 + 118 * (1 - sunset), sr = 46;
+				glow(sx, sy, 420, 'rgb(255,150,80)', 0.32 * sunset * clearSky);
+				glow(sx, sy, 150, 'rgb(255,190,110)', 0.45 * sunset * clearSky);
+				ctx.save(); ctx.globalAlpha = (0.55 + 0.45 * sunset) * Math.max(0.25, clearSky);
+				var sg = ctx.createRadialGradient(sx, sy - 8, 4, sx, sy, sr);
+				sg.addColorStop(0, '#fff2c0'); sg.addColorStop(0.6, '#ffb257'); sg.addColorStop(1, '#ff7a3d');
+				ctx.fillStyle = sg; ctx.beginPath(); ctx.arc(sx, sy, sr, 0, Math.PI * 2); ctx.fill();
+				ctx.restore();
+			}
+		}
 		var skyH = 520 - TOPV, sh = shiftOf('sky');
 		stars.forEach(function(s) {
 			var x = ((s.x - sh) % (VW + 40) + VW + 40) % (VW + 40) - 20, y = TOPV + s.y * skyH;
-			var o = s.o * clearSky * (s.tw && !reduceMotion ? 0.55 + 0.45 * Math.sin(clock * 6 / s.tw + s.ph) : 1);
+			var o = s.o * clearSky * (1 - 0.9 * sunset) * (s.tw && !reduceMotion ? 0.55 + 0.45 * Math.sin(clock * 6 / s.tw + s.ph) : 1);
 			if (o < 0.03) return;
 			ctx.globalAlpha = o; ctx.fillStyle = '#fff'; ctx.fillRect(x, y, s.s, s.s);
 		});
@@ -1654,7 +1698,7 @@
 		if (w === 'storm' || w === 'rain') a = smooth((t - 0.76) / 0.12);
 		else if (w === 'clouds' || (wetBefore(night.day) && night.day > 0)) a = 1 - smooth((t - 0.15) / 0.25);
 		if (a <= 0.01) return;
-		var cx = VW * 0.62, cy = 700, R = Math.min(560, VW * 0.42);
+		var cx = VW * 0.3, cy = 700, R = Math.min(560, VW * 0.42);   // opposite the setting sun, as a real rainbow is
 		var cols = ['255,90,90', '255,170,80', '255,235,110', '120,220,120', '110,170,255', '150,120,255', '200,130,255'];
 		ctx.save(); ctx.lineWidth = 6; ctx.globalAlpha = 0.16 * a;
 		cols.forEach(function(c, i) { ctx.strokeStyle = 'rgb(' + c + ')'; ctx.beginPath(); ctx.arc(cx, cy, R - i * 6, Math.PI * 1.08, Math.PI * 1.92); ctx.stroke(); });
@@ -1758,7 +1802,7 @@
 		PIECES.forEach(function(p) { p.heard = false; p.seen = null; p.nextCall = 0; });
 		setNightSounds = function() {
 		var kinds = PIECES.filter(function(p) { return p.night === k; }).map(function(p) { return p.kind + ' ' + p.key; }).join(' ');
-		sound.preload([/sheep|shepherds/.test(kinds) ? 'sheep' : '', /sheep|shepherds/.test(kinds) ? 'lamb' : '', /herder/.test(kinds) ? 'goat' : '', /donkey|caravan/.test(kinds) ? 'donkey' : '', /jerusalem-gate|herod/.test(kinds) ? 'shofar' : ''].filter(Boolean));
+		sound.preload([/howl/.test(kinds) ? 'jackal' : '', /howl/.test(kinds) ? 'wolf' : '', /fox/.test(kinds) ? 'fox' : '', /sheep|shepherds/.test(kinds) ? 'sheep' : '', /sheep|shepherds/.test(kinds) ? 'lamb' : '', /herder/.test(kinds) ? 'goat' : '', /donkey|caravan/.test(kinds) ? 'donkey' : '', /jerusalem-gate|herod/.test(kinds) ? 'shofar' : ''].filter(Boolean));
 		};
 		setNightSounds();
 		if (pipCard) { pipCard.hidden = true; verseEl.style.visibility = ''; pip.card = false; }
@@ -1944,7 +1988,7 @@
 		for (var k = 0; k <= END; k++) {
 			var p = planFor(k), d = dateOfDay(k), r = JOURNEY_READINGS[clamp(Math.round((d - from) / DAY), 0, JOURNEY_READINGS.length - 1)];
 			rows += '<tr data-k="' + k + '" class="w-' + p.weather + '"><td>' + (k + 1) + '</td><td>' + d.toLocaleDateString('en-US', {weekday: 'short', month: 'short', day: 'numeric'}) + '</td><td>' + stageAt(k).label + '</td><td>' + p.sky + '</td><td>' + p.weather +
-				'</td><td>' + (p.landmark || '') + '</td><td>' + (p.encounter || '') + '</td><td>' + (p.critters || []).join(', ') + '</td><td>' + (p.camp ? 'yes' : '') + '</td><td>' + extras(k).join(', ') + '</td><td>' + r.ref + '</td><td>' + (p.note || '') + '</td></tr>';
+				'</td><td>' + (p.landmark || '') + '</td><td>' + (p.encounter || '') + (p.howl ? (p.encounter ? ', ' : '') + p.howl + ' howling' : '') + '</td><td>' + (p.critters || []).join(', ') + '</td><td>' + (p.camp ? 'yes' : '') + '</td><td>' + extras(k).join(', ') + '</td><td>' + r.ref + '</td><td>' + (p.note || '') + '</td></tr>';
 		}
 		table.querySelector('table').innerHTML = rows + '</tbody>';
 		table.addEventListener('click', function(e) { var tr = e.target.closest('tr[data-k]'); if (tr) { playNight(+tr.dataset.k, 0.3); canvas.scrollIntoView({behavior: 'smooth'}); } });
@@ -2006,7 +2050,7 @@
 				if (!playing || cam < p.pass - 0.16 || cam > p.pass + 0.12) return;
 				if (show && show.mode === 'sofar') sound.preload(/sheep|shepherds/.test(p.kind) ? ['sheep', 'lamb'] : p.kind === 'herder' ? ['goat'] : ['donkey']);
 				// (the merchants' caravan: their camels grumbling and a donkey braying, a little quieter as they're farther off)
-				var calls = /sheep|shepherds/.test(p.kind) ? ['sheep', 'lamb'] : p.kind === 'herder' ? ['goat', 'goat', 'sheep'] : p.kind === 'donkey' ? ['donkey'] : p.kind === 'caravan' ? ['camel-grunt', 'camel-grunt', 'donkey', 'camel-grunt'] : null;
+				var calls = /sheep|shepherds/.test(p.kind) ? ['sheep', 'lamb'] : p.kind === 'herder' ? ['goat', 'goat', 'sheep'] : p.kind === 'donkey' ? ['donkey'] : p.kind === 'caravan' ? ['camel-grunt', 'camel-grunt', 'donkey', 'camel-grunt'] : p.kind === 'howl' ? [p.who] : p.kind === 'fox' ? ['fox'] : null;
 				if (calls && clock > (p.nextCall || 0)) {
 					var lapse = show && show.mode === 'sofar';
 					if (p.nextCall || lapse) sound.animal(calls[Math.floor(Math.random() * calls.length)], p.kind === 'caravan' ? 0.22 : 0.35);
