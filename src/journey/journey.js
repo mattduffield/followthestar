@@ -115,6 +115,10 @@
 		var m = moonWords(n.phase); if (m && n.day !== TOTAL && !cloudy) bits.push(m);
 		if (WEATHER[n.weather].words) bits.push(WEATHER[n.weather].words);
 		if (n.plan.note && !weatherOverride) bits.push(n.plan.note);
+		if (cometNight(n.day)) bits.push('a comet with a long tail');
+		if (n.phase > 0.44 && n.phase < 0.56 && n.day !== TOTAL && !/storm|rain|clouds/.test(n.weather)) bits.push('a big orange moon rising');
+		if (snowSeason(n.day) && n.day <= TOTAL + 2) bits.push('snow on the far mountains');
+		if (n.day <= 4) bits.push('a mountain smoking far to the north');
 		var s = bits.join(', ') || 'a quiet night';
 		return s.charAt(0).toUpperCase() + s.slice(1) + '.';
 	}
@@ -205,6 +209,8 @@
 		if (p.encounter && ENCOUNTERS[p.encounter]) addPiece(k, ENCOUNTERS[p.encounter], p.encounter, 0.22, true);   // early, so it's gone before they stop
 		if (p.camp) addPiece(k, {kind: 'camp', art: CAMPS[k % 3], caption: '', h: 130, at: 1, off: 300}, 'camp', 1, true);
 	}
+	// far off in the first week: a great snow-capped mountain in the lands of the East, smoking gently
+	PIECES.push({night: 2, key: 'volcano', kind: 'volcano', art: 'jr-far-volcano', caption: '', h: 150, layer: 'far', pass: 2.6, off: 0});
 	// Bethlehem on the far hills, ahead of them through the last nights
 	PIECES.push({night: TOTAL, key: 'bethlehem-far', kind: 'bethlehem', art: 'jr-far-bethlehem', caption: '', h: 70, layer: 'far', pass: TOTAL, off: -180});
 	var STABLE = PIECES.filter(function(p) { return p.kind === 'stable'; })[0];
@@ -447,6 +453,20 @@
 
 	// ----- weather -----
 	// intensity through the night: storms build, rage through the middle and clear before they rest
+	// how far through the night we are (0..1); in the time-lapse, how far through the day it's passing
+	function nightT() {
+		if (!show) return 1;
+		if (show.mode === 'sofar') return clamp(cam - (Math.floor(cam + 0.15) - 0.15), 0, 1);
+		return clamp(show.elapsed / show.seconds, 0, 1);
+	}
+	// how far the sky has drifted since tonight began (the moon and comet move with it, but stay on screen)
+	function skyDrift() {
+		var start = !show ? cam : show.mode === 'sofar' ? Math.floor(cam + 0.15) - 0.15 : show.from;
+		return (cam - start) * DAYW * SPEED.sky;
+	}
+	function cometNight(k) { return k >= dayOf('11-06') && k <= dayOf('11-12'); }   // a comet hangs in the sky for a week in November
+	function snowSeason(k) { return k >= dayOf('12-01'); }                           // winter snow on the far mountains
+	function wetBefore(k) { var p = planFor(k - 1); return p.weather === 'storm' || p.weather === 'rain'; }
 	function weatherLevel(t) {
 		var w = night.weather;
 		if (w === 'storm' || w === 'sandstorm') return smooth((t - 0.06) / 0.22) * (1 - smooth((t - 0.7) / 0.18));
@@ -809,6 +829,17 @@
 				if (arrived) { person(x - 12, y + 4, 1.3, '#7a4e1e'); person(x + 14, y + 4, 1.4, '#7a4e1e'); rect(x - 8, y - 12, 16, 8, '#7a4e1e'); }
 				break;
 			case 'camp': tents(x, y, 1.1, col, true); break;
+			case 'volcano':
+				var vc = '#2c2850';
+				shape([x - 230, y + 4, x - 40, y - 150, x + 40, y - 150, x + 250, y + 4], vc);
+				shape([x - 62, y - 108, x - 40, y - 150, x + 40, y - 150, x + 66, y - 106, x + 30, y - 118, x + 8, y - 104, x - 20, y - 120], 'rgba(230,235,250,0.85)');   // snow
+				glow(x, y - 150, 40, 'rgb(255,140,70)', 0.18 * flicker(4));   // a faint glow at the top
+				for (var sm = 0; sm < 6; sm++) {   // a thin plume of smoke drifting with the wind
+					var age = ((clock * 0.12 + sm / 6) % 1);
+					ctx.fillStyle = 'rgba(150,145,175,' + (0.22 * (1 - age)).toFixed(3) + ')';
+					ctx.beginPath(); ctx.ellipse(x + age * 120, y - 158 - age * 110, 10 + age * 34, 6 + age * 16, 0, 0, Math.PI * 2); ctx.fill();
+				}
+				break;
 			case 'angel': glow(x, y - 300, 140, 'rgb(255,236,180)', 0.45); person(x, y - 250, 2.4, 'rgba(255,248,225,0.9)'); break;
 			case 'gazelles': case 'ibex': for (var g = 0; g < 4; g++) animal(x + g * 34 - 50, y - (g % 2) * 4, 1.1, col, p.kind, clock * 3 + g); break;
 			case 'fox': case 'hare': animal(x, y, 1.3, col, p.kind, clock * 6); break;
@@ -1211,17 +1242,32 @@
 		ctx.globalAlpha = 1;
 		var mw = moonWords(night.phase);
 		if (mw && night.day !== TOTAL && clearSky > 0.05) {
-			var mx = VW * night.moonX - sh * 0.5 % VW, my = TOPV + 0.2 * skyH + 80, mr = 22;   // clear of the date in the corner and of the Star
+			var mx = VW * night.moonX - skyDrift() * 0.5, my = TOPV + 0.2 * skyH + 80, mr = 22;   // drifting a little through the night   // clear of the date in the corner and of the Star
+			// a full moon rises big and orange from behind the hills, and shrinks and whitens as it climbs
+			var full = night.phase > 0.44 && night.phase < 0.56, rise = full ? smooth(nightT() / 0.5) : 1;
+			my = 455 + (my - 455) * rise; mr = 34 + (22 - 34) * rise;
+			var moonCol = full ? 'rgb(' + Math.round(242 + 2 * rise) + ',' + Math.round(163 + 77 * rise) + ',' + Math.round(92 + 128 * rise) + ')' : '#f4f0dc';
 			ctx.globalAlpha = clearSky;
-			glow(mx, my, 90, 'rgb(220,225,255)', 0.18);
+			glow(mx, my, 90 * mr / 22, rise < 1 ? 'rgb(250,180,110)' : 'rgb(220,225,255)', 0.18 + 0.12 * (1 - rise));
 			ctx.save(); ctx.beginPath(); ctx.arc(mx, my, mr, 0, Math.PI * 2); ctx.clip();
-			ctx.fillStyle = '#f4f0dc'; ctx.fillRect(mx - mr, my - mr, mr * 2, mr * 2);
+			ctx.fillStyle = moonCol; ctx.fillRect(mx - mr, my - mr, mr * 2, mr * 2);
 			var ph = night.phase, kk = Math.cos(ph * 2 * Math.PI);
 			ctx.fillStyle = 'rgba(10,12,40,0.93)';
 			ctx.beginPath();
 			if (ph < 0.5) { ctx.arc(mx, my, mr, Math.PI / 2, -Math.PI / 2, false); ctx.ellipse(mx, my, Math.abs(kk) * mr, mr, 0, -Math.PI / 2, Math.PI / 2, kk < 0); }
 			else { ctx.arc(mx, my, mr, -Math.PI / 2, Math.PI / 2, false); ctx.ellipse(mx, my, Math.abs(kk) * mr, mr, 0, Math.PI / 2, -Math.PI / 2, kk < 0); }
 			ctx.fill(); ctx.restore();
+			ctx.globalAlpha = 1;
+		}
+		// a comet for a week in November: a soft head with a long tail streaming away
+		if (cometNight(night.day) && clearSky > 0.1) {
+			var cx = VW * 0.3 - skyDrift() * 0.4, cy = TOPV + skyH * 0.28 + 40;
+			ctx.save(); ctx.globalAlpha = clearSky; ctx.translate(cx, cy); ctx.rotate(-0.5);
+			var tail = ctx.createLinearGradient(0, 0, 190, 0);
+			tail.addColorStop(0, 'rgba(225,235,255,0.55)'); tail.addColorStop(1, 'rgba(225,235,255,0)');
+			ctx.fillStyle = tail; ctx.beginPath(); ctx.moveTo(0, -2); ctx.quadraticCurveTo(100, -14, 190, -22); ctx.lineTo(190, 18); ctx.quadraticCurveTo(100, 10, 0, 2); ctx.fill();
+			ctx.restore(); ctx.globalAlpha = clearSky;
+			glow(cx, cy, 14, 'rgb(235,240,255)', 0.8); ctx.fillStyle = '#fff'; ctx.fillRect(cx - 1.2, cy - 1.2, 2.4, 2.4);
 			ctx.globalAlpha = 1;
 		}
 		// shooting stars now and then; many on meteor-shower nights
@@ -1514,6 +1560,62 @@
 		mapText.innerHTML = d.toLocaleDateString('en-US', {weekday: 'long', month: 'long', day: 'numeric'}) + ' · Day ' + (k + 1) + ' of ' + (END + 1) + ' · ' + where;
 	}
 
+	// ----- weather scenery -----
+	// a pale rainbow as a storm or rain clears, and lingering at the start of the next night
+	function paintRainbow() {
+		var t = nightT(), w = night.weather, a = 0;
+		if (w === 'storm' || w === 'rain') a = smooth((t - 0.76) / 0.12);
+		else if (wetBefore(night.day) && night.day > 0) a = 1 - smooth((t - 0.15) / 0.25);
+		if (a <= 0.01) return;
+		var cx = VW * 0.62, cy = 700, R = Math.min(560, VW * 0.42);
+		var cols = ['255,90,90', '255,170,80', '255,235,110', '120,220,120', '110,170,255', '150,120,255', '200,130,255'];
+		ctx.save(); ctx.lineWidth = 6; ctx.globalAlpha = 0.16 * a;
+		cols.forEach(function(c, i) { ctx.strokeStyle = 'rgb(' + c + ')'; ctx.beginPath(); ctx.arc(cx, cy, R - i * 6, Math.PI * 1.08, Math.PI * 1.92); ctx.stroke(); });
+		ctx.restore();
+	}
+	// before a sandstorm, a tall brown wall of dust rolls in over the far hills
+	function paintDustWall() {
+		if (night.weather !== 'sandstorm') return;
+		var t = nightT(), grow = smooth(t / 0.24) * (1 - smooth((t - 0.32) / 0.12));
+		if (grow <= 0.01) return;
+		var base = 480, hgt = 300 * grow, sh = shiftOf('far');
+		var g = ctx.createLinearGradient(0, base - hgt, 0, base);
+		g.addColorStop(0, 'rgba(150,100,60,0)'); g.addColorStop(0.25, 'rgba(150,100,60,' + (0.55 * grow).toFixed(2) + ')'); g.addColorStop(1, 'rgba(130,85,50,' + (0.85 * grow).toFixed(2) + ')');
+		ctx.fillStyle = g; ctx.beginPath(); ctx.moveTo(-20, base);
+		for (var x = -20; x <= VW + 20; x += 20) ctx.lineTo(x, base - hgt * (0.82 + 0.18 * Math.sin((x + sh) / 90 + clock * 0.6)) );
+		ctx.lineTo(VW + 20, base); ctx.closePath(); ctx.fill();
+	}
+	// snow on the tops of the far mountains in winter
+	function paintSnowCaps() {
+		if (!snowSeason(night.day)) return;
+		var sh = shiftOf('far'), ys = [], lo = 1e9, hi = -1e9;
+		for (var x = -20; x <= VW + 20; x += 6) { var y = layerY('far', x - LEAD_X + sh); ys.push([x, y]); lo = Math.min(lo, y); hi = Math.max(hi, y); }
+		var cut = lo + (hi - lo) * 0.4;
+		ctx.save(); ctx.fillStyle = 'rgba(232,238,252,0.8)';
+		ctx.beginPath();
+		ys.forEach(function(p, i) { ctx[i ? 'lineTo' : 'moveTo'](p[0], p[1]); });                 // along the tops...
+		for (var j = ys.length - 1; j >= 0; j--) {                                                  // ...and back, a little lower on the peaks
+			var q = ys[j], depth = Math.max(0, cut - q[1]) * 0.55 + 0.5;
+			ctx.lineTo(q[0], q[1] + depth + Math.sin(q[0] * 0.21) * Math.min(3, depth * 0.3));
+		}
+		ctx.closePath(); ctx.fill(); ctx.restore();
+	}
+	// little whirlwinds of sand crossing the dunes on windy nights, and ahead of a sandstorm
+	function paintDustDevils() {
+		var w = night.weather, t = nightT();
+		var on = w === 'wind' ? 1 : w === 'sandstorm' ? 1 - smooth((t - 0.2) / 0.1) : 0;
+		if (on <= 0 || reduceMotion) return;
+		for (var i = 0; i < 2; i++) {
+			var span = VW + 400, x = ((i * 700 + 300 - clock * (40 + i * 18) - shiftOf('mid') * 0.6) % span + span) % span - 200;
+			var base = layerY('mid', x - LEAD_X + shiftOf('mid')) + 6, hgt = 90 + i * 30;
+			for (var k = 0; k < 14; k++) {
+				var f = k / 13, rx = 6 + f * 22, cy = base - f * hgt, wob = Math.sin(clock * 5 + k * 0.7 + i) * 6 * f;
+				ctx.fillStyle = 'rgba(214,170,110,' + (0.26 * on * (1 - f * 0.6)).toFixed(3) + ')';
+				ctx.beginPath(); ctx.ellipse(x + wob, cy, rx, 4 + f * 3, 0, 0, Math.PI * 2); ctx.fill();
+			}
+		}
+	}
+
 	function paint() {
 		var t = show ? clamp(show.elapsed / show.seconds, 0, 1) : 1;
 		var shake = wx.shake > 0 ? Math.sin(clock * 60) * 3 * wx.shake : 0;
@@ -1524,7 +1626,9 @@
 		paintCritters(true);                                             // the owl and bats
 		paintClouds(wx.level, 'back');
 		ctx.translate(shake, shake * 0.4);
-		paintLayer('far'); paintPieces('far');
+		paintRainbow();
+		paintLayer('far'); paintSnowCaps(); paintPieces('far');
+		paintDustWall();
 		paintClouds(wx.level, 'front');                                  // the big, near clouds pass in front of the far hills
 		if (night.weather === 'haze') { var g = ctx.createLinearGradient(0, 380, 0, 520); g.addColorStop(0, 'rgba(160,140,200,0)'); g.addColorStop(1, 'rgba(160,140,200,0.2)'); ctx.fillStyle = g; ctx.fillRect(0, 380, VW, 140); }
 		if (night.weather === 'fog') paintMist(468, 0.5, 0.4, 1);
@@ -1532,6 +1636,7 @@
 		paintBolt();
 		paintStarRay();
 		paintLayer('mid'); paintPieces('mid');
+		paintDustDevils();
 		if (night.weather === 'fog') paintMist(560, 0.45, 0.8, 1.1);
 		if (night.weather === 'sandstorm') tint('rgba(160,108,58,A)', 0.28 * wx.level, TOPV);
 		paintLayer('road');
@@ -1750,6 +1855,7 @@
 		for (k = 0; k <= END; k++) { var q = planFor(k); [q.weather, q.landmark, q.encounter].concat(q.critters || []).forEach(function(x) { if (x && !(x in seen)) seen[x] = k + 1; }); }
 		// for automated review: jump to a moment of a night and hold it there
 		window.journeyTest = {
+			moon: function() { return {phase: night.phase, words: moonWords(night.phase), day: night.day, cover: wx.cover, moonX: night.moonX, sh: shiftOf('sky'), VW: VW}; },
 			pip: function() { return pip.box; },
 			findPip: function() { findPip(); },
 			owl: function() { spawnCritter('owl'); },

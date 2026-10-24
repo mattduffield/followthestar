@@ -11,6 +11,10 @@
 //   critters   jerboa, mouse, gecko, hedgehog, owl (flying over), bats (only once there's bat art)
 //   camp       they stop beside a camp with a fire
 //   note       shown in the night's description (meteor showers are on their real dates)
+//   also drawn automatically from the date: the moon in its real phase (full moons rise big and orange: Oct 26,
+//   Nov 24, Dec 24), a comet Nov 6-12, a smoking snow-capped mountain far to the north in the first week, snow on
+//   the far mountains from December 1, a pale rainbow as rain or a storm clears (and into the next night),
+//   whirlwinds of sand on windy nights, and a wall of dust rolling in before each sandstorm
 var JOURNEY_PLAN = [
 	// ----- the lands of the East -----
 	{d: '10-01', sky: 'night',     weather: 'clear',     landmark: 'palace',    critters: ['owl']},
