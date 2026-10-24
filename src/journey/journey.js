@@ -1707,27 +1707,59 @@
 		});
 	}
 	var mapLast = -99;
-	function mapDayAt(clientX, clientY) {   // the night nearest a point on the map's road
+	function mapDayAt(clientX, clientY, anyY) {   // the night nearest a point on the map's road (anyY: while a finger slides, ignore drift off the road)
 		var svgEl = mapRoad.ownerSVGElement, pt = svgEl.createSVGPoint(); pt.x = clientX; pt.y = clientY;
 		var p = pt.matrixTransform(svgEl.getScreenCTM().inverse()), best = 0, bd = 1e9;
-		for (var k = 0; k <= TOTAL; k++) { var q = mapRoad.getPointAtLength(mapX(k + 0.5)), d = Math.abs(q.x - p.x) + Math.abs(q.y - p.y) * 0.5; if (d < bd) { bd = d; best = k; } }
-		return bd < 30 ? best : -1;
+		for (var k = 0; k <= TOTAL; k++) { var q = mapRoad.getPointAtLength(mapX(k + 0.5)), d = Math.abs(q.x - p.x) + (anyY ? 0 : Math.abs(q.y - p.y) * 0.5); if (d < bd) { bd = d; best = k; } }
+		return anyY || bd < 30 ? best : -1;
 	}
 	if (mapRoad) {
-		var mapEl2 = document.getElementById('map'), mapTip = document.getElementById('map-tip');
+		var mapEl2 = document.getElementById('map'), mapTip = document.getElementById('map-tip'), mapTouch = null, mapTouchEnd = 0;
+		var shortDate = function(k) { return dateOfDay(k).toLocaleDateString('en-US', {month: 'short', day: 'numeric'}); };
+		var notYet = function(k) { mapTip.textContent = 'Not yet · come back on ' + dateOfDay(k).toLocaleDateString('en-US', {month: 'long', day: 'numeric'}); mapTip.hidden = false; };
+		var tipAt = function(x, k, finger) {   // under a finger the tip sits to one side, toward the middle, so the finger doesn't cover it
+			var r = mapEl2.getBoundingClientRect(), left = x - r.left;
+			if (finger) left += left > r.width / 2 ? -64 : 64;
+			mapTip.textContent = shortDate(k) + (k <= lastOpen ? '' : ' · not yet');
+			mapTip.style.left = left + 'px'; mapTip.hidden = false;
+		};
 		mapEl2.addEventListener('mousemove', function(e) {
 			var k = mapDayAt(e.clientX, e.clientY), open = k >= 0 && k <= lastOpen;
 			mapEl2.style.cursor = open ? 'pointer' : '';
-			if (k >= 0) { mapTip.textContent = dateOfDay(k).toLocaleDateString('en-US', {month: 'short', day: 'numeric'}) + (open ? '' : ' · not yet'); mapTip.style.left = e.clientX - mapEl2.getBoundingClientRect().left + 'px'; mapTip.hidden = false; }
-			else mapTip.hidden = true;
+			if (k >= 0) tipAt(e.clientX, k); else mapTip.hidden = true;
 		});
 		mapEl2.addEventListener('mouseleave', function() { mapTip.hidden = true; });
 		mapEl2.addEventListener('click', function(e) {
+			if (Date.now() - mapTouchEnd < 800) return;   // a finger already handled it
 			var k = mapDayAt(e.clientX, e.clientY);
 			if (k < 0) return;
-			if (k > lastOpen) { mapTip.textContent = 'Not yet · come back on ' + dateOfDay(k).toLocaleDateString('en-US', {month: 'long', day: 'numeric'}); mapTip.hidden = false; return; }
+			if (k > lastOpen) { notYet(k); return; }
 			playNight(k, 0.3);
 		});
+		// Phones and tablets: press on the road, slide to pick a night (the date shows beside your finger), let go to go there.
+		mapEl2.addEventListener('pointerdown', function(e) {
+			if (e.pointerType === 'mouse') return;
+			var k = mapDayAt(e.clientX, e.clientY);
+			if (k < 0) return;
+			e.preventDefault(); mapTouch = {id: e.pointerId, k: k};
+			try { mapEl2.setPointerCapture(e.pointerId); } catch (err) {}
+			tipAt(e.clientX, k, true);
+		});
+		mapEl2.addEventListener('pointermove', function(e) {
+			if (!mapTouch || e.pointerId !== mapTouch.id) return;
+			e.preventDefault(); mapTouch.k = mapDayAt(e.clientX, e.clientY, true);
+			tipAt(e.clientX, mapTouch.k, true);
+		});
+		var mapLift = function(e, go) {
+			if (!mapTouch || e.pointerId !== mapTouch.id) return;
+			var k = Math.min(mapTouch.k, lastOpen), want = mapTouch.k;
+			mapTouch = null; mapTouchEnd = Date.now();
+			if (!go) { mapTip.hidden = true; return; }
+			if (want > lastOpen) { notYet(want); setTimeout(function() { mapTip.hidden = true; }, 2500); return; }
+			mapTip.hidden = true; playNight(k, 0.3);
+		};
+		mapEl2.addEventListener('pointerup', function(e) { mapLift(e, true); });
+		mapEl2.addEventListener('pointercancel', function(e) { mapLift(e, false); });
 	}
 	function mapUpdate() {
 		if (!mapRoad || Math.abs(cam - mapLast) < 0.002) return;
