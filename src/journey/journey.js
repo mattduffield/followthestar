@@ -243,7 +243,7 @@
 		}
 	}
 	function loadArt(n, prep) { queue.push({n: n, prep: prep}); }
-	var rank = function(n) { return /^jr-char-/.test(n) ? 0 : /^jr-(sky|far|mid|near)-/.test(n) ? 1 : 2; };   // (characters first, then sky and land)
+	var rank = function(n) { return /^jr-char-/.test(n) ? 0 : /^jr-howl-/.test(n) ? 1 : /^jr-(sky|far|mid|near)-/.test(n) ? 1 : 2; };   // (characters first, then sky and land)
 	ART_READY = ART_READY.filter(function(n) { return !/^jr-camel-rider/.test(n); }).sort(function(a, b) { return rank(a) - rank(b); });
 	ART_READY.forEach(function(n) {
 		var rig = window.JOURNEY_CAMEL_RIG && JOURNEY_CAMEL_RIG[n];
@@ -968,6 +968,9 @@
 	function paintPieces(layer) {
 		PIECES.forEach(function(p) {
 			if (p.layer !== layer) return;
+			// the howlers belong to their own night only (the far hills move so slowly they'd still be there the next night),
+			// and only once their picture has loaded (no stand-in)
+			if (p.kind === 'howl' && (p.night !== night.day || !art(p.art))) return;
 			var x = screenX(layer, pieceU(p));
 			if (x < -600 || x > VW + 600) return;
 			// farther away than the camels, so smaller; encounters smaller still, as if farther back
@@ -992,6 +995,13 @@
 				var top = y + h * 0.06 - im.base * h;
 				ctx.save();
 				if (p.flip) { ctx.translate(x, 0); ctx.scale(-1, 1); ctx.translate(-x, 0); }
+				if (p.kind === 'howl') {
+					// far off in the moonlight: dimmed and cooled to match the distant hills; jackals call in a pair
+					ctx.filter = 'brightness(0.62) saturate(0.75) hue-rotate(-8deg)';
+					if (p.who === 'jackal') { ctx.save(); ctx.translate(x - w * 1.25, 0); ctx.scale(-1, 1); ctx.drawImage(im, -w * 0.44, top + h * 0.12, w * 0.88, h * 0.88); ctx.restore(); }   // a second, facing the other way
+					ctx.drawImage(im, x - w / 2, top, w, h);
+					ctx.filter = 'none';
+				} else
 				ctx.drawImage(dark ? (im.dark || (im.dark = tinted(im, 0.45))) : im, x - w / 2, top, w, h);
 				ctx.restore();
 			} else drawStandIn(p, x, groundUnder(layer, x, 120) + 4);
