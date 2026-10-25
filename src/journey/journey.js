@@ -383,6 +383,13 @@
 
 	var realDay = Math.floor((now() - START) / DAY), over = realDay > END;      // once they're home, the journey is over
 	var HOMEMODE = over || (TEST && params.has('home'));   // ?test&home to preview the year-round view
+	function easterDay(y) {   // Easter Sunday (the Gregorian reckoning)
+		var a = y % 19, b = Math.floor(y / 100), c = y % 100, d = Math.floor(b / 4), e = b % 4, f = Math.floor((b + 8) / 25), g = Math.floor((b - f + 1) / 3);
+		var h = (19 * a + b - d - g + 15) % 30, i = Math.floor(c / 4), k = c % 4, l = (32 + 2 * e + 2 * i - h - k) % 7, m = Math.floor((a + 11 * h + 22 * l) / 451);
+		return new Date(y, Math.floor((h + l - 7 * m + 114) / 31) - 1, ((h + l - 7 * m + 114) % 31) + 1);
+	}
+	function EASTER() { return HOMEMODE && ymd(now()) === ymd(easterDay(now().getFullYear())); }   // Easter morning at home
+	function PACKED() { return HOMEMODE && now().getMonth() === 8; }   // September: packed and ready to set out
 	// at home, each day's weather by the real seasons of the lands east of the Jordan: winter rain, the hot khamsin winds
 	// and sandstorms of spring, hazy summers
 	function homeWeather() {
@@ -1362,10 +1369,15 @@
 	var kingBoxes = [], said = null, lastSaid = {};
 	function sayPlace() {
 		var lm = night.plan && night.plan.landmark, kind = eveningKind();
-		return HOMEMODE ? 'rest' : kind === 'manger' ? 'christmas' : lm === 'home' ? 'home' : kind === 'palace' ? 'herod' : homeward(night.day) ? 'road' : 'fire';
+		return EASTER() ? 'easter' : HOMEMODE ? 'rest' : kind === 'manger' ? 'christmas' : lm === 'home' ? 'home' : kind === 'palace' ? 'herod' : homeward(night.day) ? 'road' : 'fire';
 	}
 	function talkToKing(pt) {
 		var hit = kingBoxes.filter(function(b) { return pt.x > b.x0 && pt.x < b.x1 && pt.y > b.y0 && pt.y < b.y1; }).pop();
+		if (hit && hit.n === 0) {   // the armillary sphere
+			var ARM = ['An armillary sphere: the wise men’s model of the heavens.', 'Its rings show the paths of the sun and the stars.', '“The heavens declare the glory of God” (Psalm 19:1).'];
+			lastSaid.arm = ((lastSaid.arm == null ? -1 : lastSaid.arm) + 1) % ARM.length;
+			said = {n: 0, text: ARM[lastSaid.arm], at: clock, dur: 4}; track('armillary'); return true;
+		}
 		if (!hit || !window.KING_SAYINGS) return false;
 		var place = sayPlace(), lines = (KING_SAYINGS[hit.n] || {})[place] || [];
 		if (!lines.length) return false;
@@ -1392,6 +1404,26 @@
 		ctx.globalAlpha = a; ctx.fillStyle = 'rgba(7,11,34,0.72)';
 		ctx.beginPath(); ctx.roundRect ? ctx.roundRect(-tw / 2 - 12, -20, tw + 24, 30, 12) : ctx.rect(-tw / 2 - 12, -20, tw + 24, 30); ctx.fill();
 		ctx.fillStyle = '#fff'; ctx.textAlign = 'center'; ctx.fillText(said.text, 0, 0);
+		ctx.restore();
+	}
+	// September at home: the camels loaded for the journey: a rolled carpet across the saddle, striped in its king's
+	// colour, a leather saddlebag hanging at its side and a water skin behind
+	var PACK_COL = ['#a8243c', '#2c4fa6', '#1d7a52'];
+	function drawPacks(p, s) {
+		var x = p.seatX, y = p.seatY + 4 * s / 0.25, k = s / 0.25, col = PACK_COL[p.n] || '#8a5a2b';
+		ctx.save();
+		ctx.fillStyle = '#5a3317'; ctx.beginPath(); ctx.ellipse(x - 30 * k, y + 26 * k, 6 * k, 9 * k, 0.2, 0, Math.PI * 2); ctx.fill();   // the water skin
+		ctx.fillStyle = 'rgba(255,220,170,0.25)'; ctx.beginPath(); ctx.ellipse(x - 32 * k, y + 23 * k, 2 * k, 4 * k, 0.2, 0, Math.PI * 2); ctx.fill();
+		ctx.fillStyle = '#7a4a22'; ctx.beginPath(); ctx.roundRect ? ctx.roundRect(x - 8 * k, y + 14 * k, 18 * k, 20 * k, 4 * k) : ctx.rect(x - 8 * k, y + 14 * k, 18 * k, 20 * k); ctx.fill();   // the saddlebag
+		ctx.fillStyle = '#5e3416'; ctx.fillRect(x - 8 * k, y + 14 * k, 18 * k, 7 * k);                                  // its flap
+		ctx.fillStyle = '#d9a441'; ctx.beginPath(); ctx.arc(x + 1 * k, y + 20 * k, 1.6 * k, 0, Math.PI * 2); ctx.fill();   // a brass buckle
+		for (var i = 0; i < 6; i++) {   // the rolled carpet, lying across the saddle
+			ctx.fillStyle = i % 2 ? '#e8d3a8' : col;
+			ctx.fillRect(x - 30 * k + i * 8 * k, y - 9 * k, 8 * k, 10 * k);
+		}
+		ctx.fillStyle = 'rgba(0,0,0,0.18)'; ctx.fillRect(x - 30 * k, y - 2 * k, 48 * k, 3 * k);                      // its rounded shading
+		ctx.fillStyle = col; ctx.beginPath(); ctx.ellipse(x + 18 * k, y - 4 * k, 3 * k, 5 * k, 0, 0, Math.PI * 2); ctx.fill();   // its rolled end
+		ctx.strokeStyle = '#3a2410'; ctx.lineWidth = 1.2 * k; ctx.beginPath(); ctx.ellipse(x + 18 * k, y - 4 * k, 1.5 * k, 2.6 * k, 0, 0, Math.PI * 2); ctx.stroke();
 		ctx.restore();
 	}
 	var camelBoxes = [];
@@ -1578,6 +1610,19 @@
 	// kings have walked over, starting small and building to a steady fire.
 	// opt: {y: where its base is, s: its size (1 = the kings' fire), id: which fire, so each keeps its own sparks}
 	var fires = {}, fireNow = 0, fireKick = -99;
+	// a bronze brazier on three legs, its fire burning, by the palace steps at home (Firefly art if it's in)
+	function paintBrazier(x) {
+		var y = kingY(x), im = art('jr-pr-brazier');
+		if (im && im.base) { var bh = 64, bw = bh * im.width / im.height; ctx.drawImage(im, x - bw / 2, y + 4 - im.base * bh, bw, bh); }
+		else {
+			ctx.strokeStyle = '#3a2410'; ctx.lineWidth = 3; ctx.lineCap = 'round';
+			[[-14, 0], [14, 0], [0, 3]].forEach(function(l) { ctx.beginPath(); ctx.moveTo(x + l[0] * 0.4, y - 34); ctx.lineTo(x + l[0], y + l[1]); ctx.stroke(); });   // the legs
+			var g = ctx.createLinearGradient(0, y - 46, 0, y - 32); g.addColorStop(0, '#d9a441'); g.addColorStop(1, '#6e4416');
+			ctx.fillStyle = g; ctx.beginPath(); ctx.moveTo(x - 20, y - 46); ctx.quadraticCurveTo(x, y - 24, x + 20, y - 46); ctx.closePath(); ctx.fill();   // the bowl
+			ctx.fillStyle = '#e6bf62'; ctx.fillRect(x - 21, y - 48, 42, 3);   // its rim
+		}
+		paintFire(x, 1, 0.55, {y: y - 44, s: 0.6, id: 'brazier'});
+	}
 	var CAMP_FIRES = {'jr-lm-camp': [400, 282, 0.34], 'jr-lm-camp-2': [545, 515, 0.22], 'jr-lm-camp-3': [530, 505, 0.24]};   // where each camp's fire is, in its picture's pixels, and its size per 100 of the camp's height
 	function paintFire(x, a, grow, opt) {
 		if (a <= 0) return;
@@ -1717,7 +1762,7 @@
 			var p = {k: k, c: c, r: r, cx: cx, u: u, n: n, t0: t0, sink: 22 * sg, sg: sg, i: i,
 				// the camel goes down (its walking picture becomes its kneeling one, from the same sheet) and its king comes
 				// down with it in the same moment; then he stands up behind it and walks off
-				kneelA: smooth((e - t0) / 0.5),
+				kneelA: PACKED() ? 0 : smooth((e - t0) / 0.5),   // (in September at home they stand, loaded for the road)
 				stand: smooth((e - 2.0 - i * 0.35) / 0.45),           // once all three camels are down, the kings get up in turn
 				spot: kingSpot(i), walkStart: 2.6 + i * 0.35};
 			p.g = drawRigCamel(k, c.camel, r, cx, u, {alpha: 0, sink: 22 * sg});    // where the camel stands (nothing drawn yet)
@@ -1771,6 +1816,7 @@
 			var c = p.c, r = p.r, s = p.g.s, ri = (homeward(night.day) && art(c.rideHome)) || art(c.ride);   // going home their hands are empty: the gifts were given
 			var riding = e <= 0;
 			drawRigCamel(p.k, c.camel, r, p.cx, p.u, {alpha: 1 - p.kneelA, rider: riding ? ri : null, riderH: ri.height * p.ks, seat: SEATS[p.n], sink: p.sink});
+			if (PACKED()) drawPacks(p, s);
 			camelBoxes.push({k: p.k, i: p.i, king: p.n + 1, riding: riding, x0: p.cx - r.w * s * 0.45, x1: p.cx + r.w * s * 0.5, y0: p.g.y - r.h * s * (p.kneelA > 0.5 ? 0.6 : 1), y1: p.g.y});
 			var kim = art(c.kneel), ks = r.kneelSeat, kw = kim.width * s, kh = kim.height * s;
 			var kx = ks ? p.seatX - ks[0] * s : p.cx - kw / 2, ky = p.g.y + 4 - (ks ? ks[3] : kh / s * (kim.base || 1)) * s;   // seats lined up
@@ -1793,7 +1839,15 @@
 			}
 		});
 		fireNow = kind === 'fire' ? smooth((e - fireLit) / 3.5) : 0;   // (the crackle is heard as the fire catches, not before)
-		if (kind === 'fire') paintFire(fireX(), smooth((e - fireLit) / 0.8), fireNow);   // lit when the first of them gets there, catching and building up
+		if (kind === 'fire') paintFire(fireX(), smooth((e - fireLit) / 0.8), fireNow);
+		if (HOMEMODE && !EASTER()) paintBrazier(LEAD_X + 300);   // at home, a brazier burns by the palace steps (not on Easter morning)
+		var arm = HOMEMODE && art('jr-pr-armillary');   // and the wise men's armillary sphere, their model of the heavens (tap it)
+		if (arm && arm.base) {
+			var ax = LEAD_X + 400, ay = kingY(ax) + 4, ah = 92, aw = ah * arm.width / arm.height;
+			ctx.drawImage(arm, ax - aw / 2, ay - arm.base * ah, aw, ah);
+			kingBoxes.push({n: 0, x0: ax - aw / 2, x1: ax + aw / 2, y0: ay - ah, y1: ay, head: ay - ah - 6, x: ax});
+			sparkle(ax + aw * 0.3, ay - ah * 0.8, 6, beckon(3, 8) * 0.9);
+		}   // lit when the first of them gets there, catching and building up
 	}
 	// the page waits for the wise men and their camels to load, so nothing stands in for them first; if the art is
 	// very slow (or missing) it gives up after a few seconds and uses the logo's camels
@@ -1970,6 +2024,14 @@
 		// on evening skies the sun is setting ahead of them as the night begins: it sinks behind the far hills, its
 		// glow fades, and the stars come out as it goes
 		var sunset = 0, day = daylight();
+		if (EASTER()) {   // Easter morning: the sun coming up over the hills in the east, the stars fading
+			sunset = 0.85;
+			var ex = VW * 0.6, ey = 455;   // (the scene is drawn turned round at home, so this is to the left of centre: the east)
+			glow(ex, ey, 520, 'rgb(255,190,120)', 0.45); glow(ex, ey, 180, 'rgb(255,230,160)', 0.6);
+			ctx.save(); var eg = ctx.createRadialGradient(ex, ey - 6, 4, ex, ey, 44);
+			eg.addColorStop(0, '#fffbe6'); eg.addColorStop(0.6, '#ffe09a'); eg.addColorStop(1, '#ffb257');
+			ctx.fillStyle = eg; ctx.beginPath(); ctx.arc(ex, ey, 44, 0, Math.PI * 2); ctx.fill(); ctx.restore();
+		}
 		var hi = noon();
 		if (day > 0) {   // the afternoon sky: blue above, warm towards the sun, fading as the sun goes down (at midday clear blue)
 			var mix = function(a, b) { return a.map(function(v, i) { return Math.round(v + (b[i] - v) * hi); }).join(','); };
@@ -2376,7 +2438,7 @@
 			var hk = ymd(now()), home = []; try { home = JSON.parse(localStorage.getItem(PIP_HOME_KEY) || '[]'); } catch (e) {}
 			if (home.indexOf(hk) < 0) { home.push(hk); try { localStorage.setItem(PIP_HOME_KEY, JSON.stringify(home)); } catch (e) {} }
 			var cards = window.PIP_HOME_CARDS || [''];
-			pipCard.querySelector('p').textContent = cards[Math.floor(YEARDAY / 7) % cards.length];
+			pipCard.querySelector('p').textContent = EASTER() ? 'Happy Easter! Early on the first day of the week, the women found the stone rolled away. “He is not here: for he is risen” (Matthew 28:6).' : cards[Math.floor(YEARDAY / 7) % cards.length];
 			pipCard.querySelector('.pip-count').textContent = 'You’ve found Pip on ' + home.length + (home.length === 1 ? ' day' : ' days') + ' at home. A new card every week!';
 		} else {
 		var key = String(dateOfDay(viewIdx).getMonth() + 1).padStart(2, '0') + '-' + String(dateOfDay(viewIdx).getDate()).padStart(2, '0');
@@ -2660,7 +2722,7 @@
 	}
 	var FLOWER_COLS = ['#f28fb1', '#ffd45e', '#f6f1e4', '#c39bf0', '#ff9f6b'];
 	function paintBlooms() {
-		var amt = bloom(night.day);
+		var amt = EASTER() ? 1 : bloom(night.day);   // (and on Easter morning the desert is in flower)
 		if (!amt || /storm|sandstorm/.test(night.weather)) return;
 		var base = cam * DAYW - LEAD_X, seg = 46;
 		for (var i = Math.floor((base - 40) / seg); i <= Math.floor((base + VW + 40) / seg); i++) {
@@ -2964,6 +3026,7 @@
 			if (w === 'sandstorm') x.push('wall of dust, dust devils');
 			if (snowSeason(k)) x.push('snow on the peaks');
 			if (cranesTonight(k)) x.push('cranes flying over');
+			if (PIECES.some(function(p) { return p.kind === 'trotter' && p.night === k; })) x.push('a jackal running across the hills');
 			if (bloom(k)) x.push('flowers after the rain');
 			return x;
 		}
@@ -3033,7 +3096,7 @@
 			// what they're passing: water near the river and oases, sheep near the shepherds
 			var nearBy = function(kinds) { return PIECES.some(function(p) { return kinds.indexOf(p.kind) >= 0 && Math.abs(cam - p.pass) < 0.18; }) ? 1 : 0; };
 			sound.update({fast: show && show.mode === 'sofar' && playing && evening() === 0 ? 3 : 1, wind: night.wind * (w === 'wind' ? 1 : 0.4), rain: w === 'rain' || w === 'storm' ? lv : 0, sandstorm: w === 'sandstorm' ? lv : 0,
-				storm: w === 'storm' ? lv : 0, clear: (w === 'clear' || w === 'haze') && night.day !== TOTAL, camp: evening() > 0 ? fireNow : 0,
+				storm: w === 'storm' ? lv : 0, clear: (w === 'clear' || w === 'haze') && night.day !== TOTAL, camp: HOMEMODE && !EASTER() ? 0.5 : evening() > 0 ? fireNow : 0,
 				water: nearBy(['river', 'oasis', 'heron', 'well']), sheep: nearBy(['shepherds', 'sheep']), walking: walk});
 			// the animals they pass call out now and then while they're in view (sheep and lambs, goats, a donkey)
 			PIECES.forEach(function(p) {
@@ -3131,9 +3194,14 @@
 			night.skyKey = hw === 'storm' ? 'storm' : hw === 'sandstorm' ? 'sandstorm' : hw === 'rain' || hw === 'clouds' ? 'clouds' : 'night';
 			night.sky = SKIES[night.skyKey] || SKIES.night;
 			night.wind = hw === 'sandstorm' ? 1 : hw === 'wind' ? 0.6 : hw === 'storm' ? 0.5 : 0.15;
+			if (EASTER()) { night.weather = 'clear'; night.plan = Object.assign({}, night.plan, {weather: 'clear'}); night.skyKey = 'predawn'; night.sky = SKIES.predawn; }
 			makeStars();
 		};
-		stayHome(); setRunning(true); track('home_visit', {days_to_go: toGo});
+		stayHome();
+		if (EASTER()) {
+			doneEl.querySelector('h2').textContent = 'He is risen!';
+			doneEl.querySelector('p').innerHTML = '“He is not here: for he is risen, as he said.” <span class="hint">(Matthew 28:6)</span><br>' + doneEl.querySelector('p').innerHTML;
+		} setRunning(true); track('home_visit', {days_to_go: toGo});
 		again.addEventListener('click', function() {   // back on the road: every night of last year's journey can be watched
 			doneEl.hidden = true; HOMEMODE = false; lastOpen = END; realToday = END;
 			['when', 'title', 'caption', 'verse-end'].forEach(function(id) { document.getElementById(id).style.display = ''; });
