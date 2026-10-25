@@ -507,6 +507,15 @@
 	// ----- weather -----
 	// intensity through the night: storms build, rage through the middle and clear before they rest
 	// how far through the night we are (0..1); in the time-lapse, how far through the day it's passing
+	// On 'late sun' nights (plan.js sun: 'late') they ride in the late afternoon: 1 is full afternoon light, falling
+	// as the sun sinks through the walk, about a quarter left as they stop, and gone a few seconds into the evening,
+	// while the fire is lit
+	function daylight() {
+		if (!night.plan || night.plan.sun !== 'late' || (show && show.mode === 'sofar')) return 0;
+		var e = evening();
+		if (e > 0) return 0.25 * (1 - smooth(e / 6));
+		return 1 - 0.75 * smooth((nightT() - 0.35) / 0.65);
+	}
 	function nightT() {
 		if (!show) return 1;
 		if (show.mode === 'sofar') return clamp(cam - (Math.floor(cam + 0.15) - 0.15), 0, 1);
@@ -1594,7 +1603,7 @@
 	// The moon's face: its dark seas where they really are (as seen from the northern hemisphere), the bright craters
 	// Tycho and Copernicus with their rays, a scatter of small craters and a little darkening towards the edge. Made once
 	// in greys and tinted by the moon's colour (orange as it rises), so the phase shadow can be laid over it.
-	var moonFace = null;
+	var moonFace = null, moonCanvas = null;
 	function makeMoonFace() {
 		var N = 160, c = document.createElement('canvas'); c.width = c.height = N;
 		var g = c.getContext('2d'), R = N / 2, r = rng(4242);
@@ -1642,8 +1651,26 @@
 		var clearSky = 1 - wx.cover;
 		// on evening skies the sun is setting ahead of them as the night begins: it sinks behind the far hills, its
 		// glow fades, and the stars come out as it goes
-		var sunset = 0;
-		if (/dusk/.test(night.skyKey) && !(show && show.mode === 'sofar')) {
+		var sunset = 0, day = daylight();
+		if (day > 0) {   // the afternoon sky: blue above, warm towards the sun, fading as the sun goes down
+			var wash = ctx.createLinearGradient(0, TOPV, 0, 520);
+			wash.addColorStop(0, 'rgba(96,140,214,' + (0.75 * day).toFixed(3) + ')');
+			wash.addColorStop(0.6, 'rgba(214,160,170,' + (0.6 * day).toFixed(3) + ')');
+			wash.addColorStop(1, 'rgba(255,184,112,' + (0.75 * day).toFixed(3) + ')');
+			ctx.fillStyle = wash; ctx.fillRect(0, TOPV, VW, VH - TOPV);
+		}
+		if (day > 0.005) {
+			sunset = day;
+			var hx = VW * (homeward(night.day) ? 0.2 : 0.8), hy = 300 + 225 * (1 - day), hr = 40 + 8 * (1 - day);   // high and small, sinking, larger and redder as it nears the hills
+			glow(hx, hy, 460, 'rgb(255,170,90)', 0.35 * day * clearSky);
+			glow(hx, hy, 160, 'rgb(255,215,140)', 0.5 * day * clearSky);
+			ctx.save(); ctx.globalAlpha = clearSky;
+			var hg = ctx.createRadialGradient(hx, hy - 8, 4, hx, hy, hr);
+			hg.addColorStop(0, '#fffbe6'); hg.addColorStop(0.6, day > 0.6 ? '#ffe39a' : '#ffb257'); hg.addColorStop(1, day > 0.6 ? '#ffc56b' : '#ff7a3d');
+			ctx.fillStyle = hg; ctx.beginPath(); ctx.arc(hx, hy, hr, 0, Math.PI * 2); ctx.fill();
+			ctx.restore();
+		}
+		else if (/dusk/.test(night.skyKey) && !(show && show.mode === 'sofar') && !(night.plan && night.plan.sun === 'late')) {
 			var wet = night.weather === 'rain' || night.weather === 'storm';
 			sunset = wet ? 1 - smooth((nightT() - 0.72) / 0.28) : 1 - smooth(nightT() / 0.32);   // (on a rainy evening it sets as the rain clears, behind the rainbow)
 			if (sunset > 0.01) {
@@ -1675,18 +1702,30 @@
 			var moonCol = full ? 'rgb(' + Math.round(242 + 2 * rise) + ',' + Math.round(163 + 77 * rise) + ',' + Math.round(92 + 128 * rise) + ')' : '#f4f0dc';
 			ctx.globalAlpha = clearSky;
 			glow(mx, my, 90 * mr / 22, rise < 1 ? 'rgb(250,180,110)' : 'rgb(220,225,255)', 0.18 + 0.12 * (1 - rise));
-			ctx.save(); ctx.beginPath(); ctx.arc(mx, my, mr, 0, Math.PI * 2); ctx.clip();
+			// the moon is made on a little canvas of its own: its face, tinted, then the unlit part taken away (at night
+			// not quite all of it, leaving the faint earthshine; by day all of it, so the sky shows there)
 			if (!moonFace) moonFace = makeMoonFace();
-			ctx.save(); ctx.translate(mx, my); if (homeward(night.day)) ctx.scale(-1, 1);   // (the scene is drawn mirrored on the way home; the moon isn't)
-			ctx.drawImage(moonFace, -mr, -mr, mr * 2, mr * 2); ctx.restore();
-			ctx.globalCompositeOperation = 'multiply'; ctx.fillStyle = moonCol; ctx.fillRect(mx - mr, my - mr, mr * 2, mr * 2);
-			ctx.globalCompositeOperation = 'source-over';
-			var ph = night.phase, kk = Math.cos(ph * 2 * Math.PI);
-			ctx.fillStyle = 'rgba(8,10,30,0.95)';   // (the dark part a shade see-through: the faint earthshine)
-			ctx.beginPath();
-			if (ph < 0.5) { ctx.arc(mx, my, mr, Math.PI / 2, -Math.PI / 2, false); ctx.ellipse(mx, my, Math.abs(kk) * mr, mr, 0, -Math.PI / 2, Math.PI / 2, kk < 0); }
-			else { ctx.arc(mx, my, mr, -Math.PI / 2, Math.PI / 2, false); ctx.ellipse(mx, my, Math.abs(kk) * mr, mr, 0, Math.PI / 2, -Math.PI / 2, kk < 0); }
-			ctx.fill(); ctx.restore();
+			var mc = moonCanvas || (moonCanvas = document.createElement('canvas')), M = Math.ceil(mr * 2 * dpr * S) + 2;
+			if (mc.width !== M) { mc.width = mc.height = M; }
+			var g = mc.getContext('2d'), R = M / 2;
+			g.setTransform(1, 0, 0, 1, 0, 0); g.globalCompositeOperation = 'source-over'; g.clearRect(0, 0, M, M);
+			g.save(); g.beginPath(); g.arc(R, R, R - 1, 0, Math.PI * 2); g.clip();
+			g.translate(R, R); if (homeward(night.day)) g.scale(-1, 1);   // (the scene is drawn mirrored on the way home; the moon isn't)
+			g.drawImage(moonFace, -R, -R, M, M); g.restore();
+			g.globalCompositeOperation = 'multiply'; g.fillStyle = moonCol; g.fillRect(0, 0, M, M);
+			g.globalCompositeOperation = 'destination-in'; g.beginPath(); g.arc(R, R, R - 1, 0, Math.PI * 2); g.fill();
+			var ph = night.phase, kk = Math.cos(ph * 2 * Math.PI), rr = R + 1;   // (the shadow a touch larger, so no rim is left round the dark part)
+			g.globalCompositeOperation = 'destination-out';
+			g.fillStyle = 'rgba(0,0,0,' + (0.9 + 0.1 * Math.min(1, day * 3)).toFixed(3) + ')';
+			g.beginPath();
+			if (ph < 0.5) { g.arc(R, R, rr, Math.PI / 2, -Math.PI / 2, false); g.ellipse(R, R, Math.abs(kk) * rr, rr, 0, -Math.PI / 2, Math.PI / 2, kk < 0); }
+			else { g.arc(R, R, rr, -Math.PI / 2, Math.PI / 2, false); g.ellipse(R, R, Math.abs(kk) * rr, rr, 0, Math.PI / 2, -Math.PI / 2, kk < 0); }
+			g.fill();
+			if (day < 0.3) {   // at night the dark part is the night sky's colour, not see-through to the glow behind it
+				g.globalCompositeOperation = 'destination-over'; g.fillStyle = 'rgba(8,10,30,' + (0.9 * (1 - day / 0.3)).toFixed(3) + ')';
+				g.beginPath(); g.arc(R, R, rr, 0, Math.PI * 2); g.fill();
+			}
+			ctx.drawImage(mc, mx - mr, my - mr, mr * 2, mr * 2);
 			ctx.globalAlpha = 1;
 		}
 		// a comet for a week in November: a soft head with a long tail streaming away
@@ -1848,35 +1887,21 @@
 		pip.u = clamp(pip.u, base + 24, base + VW - 24);             // always on screen
 	}
 	// In the evening Pip explores the camp: he trots to a spot, stops and looks about (turning now and then, sometimes
-	// a hop or two), then off somewhere else. He keeps to his own side of the fire and never goes near it. Click or tap
-	// the sand and he runs over to that spot (with a happy hop when he gets there); bring the pointer near and he turns
-	// to look at it and bounces.
-	function pipFireZone() { if (eveningKind() !== 'fire') return null; var fx = fireX(); return [fx - 75, fx + 75]; }
-	function pipBigSide() {   // which side of the fire has the room to play (-1 left, 1 right)
-		var z = pipFireZone(); return !z || z[0] > VW - z[1] ? -1 : 1;
-	}
-	function pipSafe(fromX, x) {   // the nearest place to x he can get to from fromX without going through the fire
-		x = clamp(x, 30, VW - 30);
-		var z = pipFireZone();
-		if (!z) return x;
-		if (fireNow < 0.02) {   // the fire isn't lit yet: he can cross, and goes to the side with room
-			var big = pipBigSide();
-			return big < 0 ? Math.min(x, z[0]) : Math.max(x, z[1]);
-		}
-		if (fromX <= z[0] + 1) return Math.min(x, z[0]);
-		if (fromX >= z[1] - 1) return Math.max(x, z[1]);
-		return fromX - z[0] < z[1] - fromX ? z[0] : z[1];   // (if he's somehow in it, straight out the nearer side)
+	// a hop or two), then off somewhere else. When his way crosses the fire he goes round it on the near side (lower on
+	// the sand, so in front of it). Click or tap the sand and he runs over to that spot (with a happy hop when he gets
+	// there); bring the pointer near and he turns to look at it and bounces.
+	function pipRound(x) {   // how far in front of the fire he goes as he passes it
+		if (eveningKind() !== 'fire' || fireNow <= 0) return 0;
+		var d = (x - fireX()) / 95;
+		return Math.abs(d) < 1 ? 26 * Math.cos(d * Math.PI / 2) : 0;
 	}
 	function pipEvening(dt, base) {
-		var sx = pip.u - base, z = pipFireZone();
-		if (z && fireNow < 0.02 && (pipBigSide() < 0 ? sx > z[0] : sx < z[1]) && !pip.called) {   // on the cramped side as they stop: over to the open side first
-			pip.target = pipSafe(sx, pipBigSide() < 0 ? z[0] - 60 - pip.rng() * 200 : z[1] + 60 + pip.rng() * 200); pip.state = 'trot'; pip.called = true;
-		}
+		var sx = pip.u - base;
 		if (pip.state === 'sit') {
 			if (pip.near) { pip.until = Math.max(pip.until, clock + 1); return; }   // he stays to watch the pointer
 			if (pip.rng() < dt * 0.35) pip.face = -(pip.face || 1);               // looking about
 			if (pip.rng() < dt * 0.25 && !(pip.skip > clock)) pip.skip = clock + 0.9; // a little hop or two
-			if (clock > pip.until) { pip.target = pipSafe(sx, 40 + pip.rng() * (VW - 80)); pip.state = 'trot'; pip.called = false; }
+			if (clock > pip.until) { pip.target = 40 + pip.rng() * (VW - 80); pip.state = 'trot'; pip.called = false; }
 		} else {
 			var d = Math.sign(pip.target - sx), step = (pip.called ? 190 : 110) * dt;
 			pip.dir = d || pip.dir;
@@ -1891,7 +1916,7 @@
 		if (evening() <= 2.9 || pip.card || pip.u == null) return false;
 		var p = sceneXY(evt), base = cam * DAYW - LEAD_X;
 		if (p.y < groundY(base + p.x) - 70) return false;                        // (only on the ground, not the sky)
-		pip.target = pipSafe(pip.u - base, p.x); pip.state = 'trot'; pip.called = true;
+		pip.target = clamp(p.x, 30, VW - 30); pip.state = 'trot'; pip.called = true;
 		return true;
 	}
 	// Pip is drawn from the sand mouse, warmed a little: darker than the sand, so he's easier to spot. He moves in
@@ -1903,7 +1928,7 @@
 		if (pip.rng == null) pipReset();
 		var dt = Math.min(0.1, clock - pip.last); pip.last = clock;
 		if (playing || evening() > 0) pipStep(dt);
-		var x = pip.u - (cam * DAYW - LEAD_X), y = groundY(pip.u) + 6;
+		var x = pip.u - (cam * DAYW - LEAD_X), y = groundY(pip.u) + 6 + pipRound(pip.u - (cam * DAYW - LEAD_X));
 		var moving = pip.state === 'trot', hop = 0, squash = 0;
 		if (moving) { var ph = (clock * (show && show.mode === 'sofar' ? 6 : 3.2)) % 1; hop = Math.sin(ph * Math.PI) * 7; squash = ph < 0.12 ? (1 - ph / 0.12) * 0.18 : 0; }
 		if (pip.hop >= 0) { pip.hopT += dt; var q = Math.min(1, pip.hopT / 0.7); hop = Math.sin(q * Math.PI) * 30; if (q > 0.92) squash = 0.2; if (pip.hopT > 0.75) pip.hop = -1; }
@@ -2190,6 +2215,14 @@
 		paintCritters(false);
 		paintForeground();
 		paintNearWeather();
+		var dl = daylight();
+		if (dl > 0) {   // the warm afternoon light over everything, going as the sun goes
+			ctx.save(); ctx.globalCompositeOperation = 'soft-light';
+			ctx.fillStyle = 'rgba(255,196,130,' + (0.75 * dl).toFixed(3) + ')'; ctx.fillRect(-20, TOPV, VW + 40, VH - TOPV + 20);
+			ctx.globalCompositeOperation = 'screen';
+			ctx.fillStyle = 'rgba(120,90,60,' + (0.22 * dl).toFixed(3) + ')'; ctx.fillRect(-20, TOPV, VW + 40, VH - TOPV + 20);
+			ctx.restore();
+		}
 		mapUpdate();
 		// fade in from the night once the wise men are loaded
 		if (!artWaiting()) fadeIn = Math.min(1, fadeIn + 0.04);
