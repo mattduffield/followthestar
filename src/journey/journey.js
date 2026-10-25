@@ -2022,8 +2022,10 @@
 			var up = smooth(since / 0.8);
 			ctx.save(); ctx.globalAlpha = 1 - smooth((since - 2.5) / 1);
 			drawFind(f.kind[0], f.x, f.y - 30 * up, 1.8 + 0.8 * up);
-			ctx.translate(f.x, f.y - 52); if (homeward(night.day)) ctx.scale(-1, 1);
-			ctx.textAlign = 'center'; ctx.font = 'italic 15px Merienda, Georgia, serif'; ctx.fillStyle = '#fff';
+			ctx.font = 'italic 15px Merienda, Georgia, serif';
+			var half = ctx.measureText(f.kind[1] + '!').width / 2 + 12;   // kept on screen, however near the edge it was found
+			ctx.translate(clamp(f.x, half, VW - half), f.y - 52); if (homeward(night.day)) ctx.scale(-1, 1);
+			ctx.textAlign = 'center'; ctx.fillStyle = '#fff';
 			ctx.fillText(f.kind[1] + '!', 0, 0);
 			ctx.font = '11px Inter, Arial, sans-serif'; ctx.fillStyle = '#FFDB59'; var nf = findsMade().length; ctx.fillText(nf + (nf === 1 ? ' thing' : ' things') + ' found along the way', 0, 16);
 			ctx.restore(); return;
