@@ -1506,13 +1506,30 @@
 	// cut off and drawn in two halves (back and front foot) that step forward and back in turn, with the hem
 	// swinging; the body above rises a touch over each step. Set KING_STRIDE to false to go back to the plain walk.
 	var KING_STRIDE = true;
-	function drawKing(im, x, y, h, dir, bob, tilt, a, ph) {
+	function drawKing(im, x, y, h, dir, bob, tilt, a, ph, look) {
 		if (!im || a <= 0) return;
 		var w = h * im.width / im.height, base = im.base || 1, top = -h * base;
 		ctx.save(); ctx.globalAlpha = a;
 		ctx.translate(x, y - bob); ctx.rotate(tilt); ctx.scale(dir, 1);
 		if (!KING_STRIDE || ph == null) {
 			if (!bob && !tilt && !reduceMotion) ctx.scale(1, 1 + 0.008 * Math.sin(clock * 1.5 + x * 0.05));   // standing still, he breathes
+			if (look > 0.01) {   // looking up at the Star: the head and shoulders tip back about the neck, the top turning most.
+				// Put together at the picture's own size first (overlapping strips), then drawn in one piece, so no seams show
+				var W = im.width, H = im.height, nk = 0.24 * (im.base || 1), sy = H * nk, pad = Math.round(W * 0.3);
+				var cv = im.looking || (im.looking = document.createElement('canvas'));
+				if (cv.width !== W + pad * 2) { cv.width = W + pad * 2; cv.height = H + pad; }
+				var g = cv.getContext('2d'); g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, cv.width, cv.height); g.translate(pad, pad);
+				g.drawImage(im, 0, sy - 2, W, H - sy + 2, 0, sy - 2, W, H - sy + 2);
+				var px = W * 0.42, py = sy;
+				for (var st = 5; st >= 0; st--) {
+					var y0 = sy * st / 6, y1 = Math.min(sy + 3, sy * (st + 1) / 6 + 6), ang = -0.28 * look * (1 - st / 6);
+					g.save(); g.translate(px, py); g.rotate(ang); g.translate(-px, -py);
+					g.drawImage(im, 0, y0, W, y1 - y0, 0, y0, W, y1 - y0);
+					g.restore();
+				}
+				ctx.drawImage(cv, -w / 2 - pad * w / W, top - pad * h / H, w * cv.width / W, h * cv.height / H);
+				ctx.restore(); return;
+			}
 			ctx.drawImage(im, -w / 2, top, w, h); ctx.restore(); return;
 		}
 		var split = 0.84, srcSplit = im.height * base * split, srcBottom = im.height * base;
@@ -1579,11 +1596,16 @@
 					var cyc = (clock + 2) / 7, turn = Math.floor(cyc) % 3, q = cyc - Math.floor(cyc);
 					if (turn === i && q < 0.3) { lean = Math.sin(Math.PI * q / 0.3) * 0.16 * (fireX() > x ? 1 : -1); if (q > 0.12 && q < 0.16) fireKick = clock; }
 				}
-				kings.push({n: p.n, im: end, x: x, y: y, ks: p.ks, dir: gifts ? 1 : p.spot.dir, a: arrived, tilt: lean});
+				var look = 0;
+				if (!gifts && arrived >= 1 && !reduceMotion && lean === 0) {   // now and then each looks up at the Star for a few seconds
+					var lc = (clock + i * 3.3) / 11, lq = lc - Math.floor(lc);
+					if (lq > 0.55 && lq < 0.85) look = Math.sin(Math.PI * (lq - 0.55) / 0.3);
+				}
+				kings.push({n: p.n, im: end, x: x, y: y, ks: p.ks, dir: gifts ? 1 : p.spot.dir, a: arrived, tilt: lean, look: look});
 			}
 		});
 		kings.forEach(function(q, i) {
-			drawKing(q.im, q.x, q.y, q.im.height * q.ks, q.dir, q.bob || 0, q.tilt || 0, q.a, q.ph);
+			drawKing(q.im, q.x, q.y, q.im.height * q.ks, q.dir, q.bob || 0, q.tilt || 0, q.a, q.ph, q.look || 0);
 			if (q.a > 0.5) { var hh = q.im.height * q.ks * (q.im.base || 1); breathe('king' + q.n, q.x + q.dir * hh * 0.1, q.y - hh * 0.86, q.dir, 1); }   // (standing about at the fire)
 		});
 		// 2. the camels, and the kings still on them
@@ -1689,7 +1711,7 @@
 	var CONSTELLATIONS = [
 		{name: 'Orion, the hunter', ref: 'Job 9:9', stars: [[0.2, 0.1], [0.75, 0.18], [0.38, 0.5], [0.5, 0.47], [0.62, 0.44], [0.3, 0.92], [0.82, 0.86], [0.48, 0]],
 		 lines: [[0, 2], [1, 4], [2, 3], [3, 4], [2, 5], [4, 6], [0, 7], [1, 7]]},
-		{name: 'The Pleiades, the seven sisters', ref: 'Amos 5:8', stars: [[0.3, 0.4], [0.45, 0.3], [0.52, 0.45], [0.62, 0.38], [0.58, 0.58], [0.72, 0.52], [0.4, 0.6]], lines: []},
+		{name: 'The Pleiades, the seven sisters', ref: 'Amos 5:8', stars: [[0.3, 0.4], [0.45, 0.3], [0.52, 0.45], [0.62, 0.38], [0.58, 0.58], [0.72, 0.52], [0.4, 0.6]], lines: [[0, 1], [1, 3], [3, 5], [5, 4], [4, 6], [6, 0], [2, 1], [2, 4]]},
 		{name: 'The Great Bear', ref: 'Job 38:32', stars: [[0, 0.3], [0.17, 0.25], [0.32, 0.32], [0.46, 0.42], [0.5, 0.68], [0.8, 0.72], [0.82, 0.44]],
 		 lines: [[0, 1], [1, 2], [2, 3], [3, 4], [4, 5], [5, 6], [6, 3]]},
 		{name: 'Cassiopeia, the queen', ref: '', stars: [[0, 0.3], [0.24, 0.68], [0.46, 0.4], [0.7, 0.72], [0.95, 0.22]], lines: [[0, 1], [1, 2], [2, 3], [3, 4]]},
@@ -1726,13 +1748,14 @@
 		}
 		k.pts.forEach(function(p, i) {   // its stars, a little brighter than the rest
 			var tw = 0.75 + 0.25 * Math.sin(clock * 2 + i * 1.9);
-			glow(p[0], p[1], 7 + 4 * on, 'rgb(220,230,255)', 0.4 * seen * tw);
+			glow(p[0], p[1], 9 + 4 * on, 'rgb(220,230,255)', 0.55 * seen * tw);
 			ctx.globalAlpha = seen; ctx.fillStyle = '#fff'; ctx.fillRect(p[0] - 1.2, p[1] - 1.2, 2.4, 2.4); ctx.globalAlpha = 1;
 		});
 	}
 	function traceAt(p) {   // a click near one of tonight's constellation stars traces it
 		var k = constellation(); if (!k || daylight() > 0.2) return false;
-		if (!k.pts.some(function(q) { return Math.hypot(q[0] - p.x, q[1] - p.y) < 22; })) return false;
+		var xs = k.pts.map(function(q) { return q[0]; }), ys = k.pts.map(function(q) { return q[1]; });   // anywhere in the figure (easy with a finger)
+		if (p.x < Math.min.apply(null, xs) - 30 || p.x > Math.max.apply(null, xs) + 30 || p.y < Math.min.apply(null, ys) - 30 || p.y > Math.max.apply(null, ys) + 30) return false;
 		traced = {t: clock, day: night.day}; return true;
 	}
 	// The moon's face: its dark seas where they really are (as seen from the northern hemisphere), the bright craters
@@ -2164,7 +2187,7 @@
 	}
 	canvas.addEventListener('click', function(evt) { if (nearPip(evt, evt.pointerType === 'touch' ? 40 : 26)) findPip(); else if (pickUp(sceneXY(evt)) || traceAt(sceneXY(evt))) return; else if (evt.pointerType !== 'touch') pipCall(evt); });
 	canvas.addEventListener('pointerdown', function(evt) { if (evt.pointerType === 'touch') { if (nearPip(evt, 40)) { evt.preventDefault(); findPip(); } else if (!pickUp(sceneXY(evt)) && !traceAt(sceneXY(evt))) pipCall(evt); } });
-	canvas.addEventListener('mousemove', function(evt) { pip.near = nearPip(evt, 70); pip.lookX = sceneXY(evt).x; var k = constellation(), sp = sceneXY(evt); canvas.style.cursor = nearPip(evt, 26) || (k && daylight() < 0.2 && k.pts.some(function(q) { return Math.hypot(q[0] - sp.x, q[1] - sp.y) < 22; })) ? 'pointer' : ''; });
+	canvas.addEventListener('mousemove', function(evt) { pip.near = nearPip(evt, 70); pip.lookX = sceneXY(evt).x; var k = constellation(), sp = sceneXY(evt); canvas.style.cursor = nearPip(evt, 26) || (k && daylight() < 0.2 && k.pts.some(function(q) { return Math.hypot(q[0] - sp.x, q[1] - sp.y) < 40; })) ? 'pointer' : ''; });
 	canvas.addEventListener('mouseleave', function() { pip.near = false; });
 	document.getElementById('pip-close').addEventListener('click', function() {
 		pipCard.hidden = true; verseEl.style.visibility = ''; pip.card = false;
