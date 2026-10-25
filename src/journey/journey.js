@@ -219,14 +219,14 @@
 		if (!p.howl || /rain|storm|sandstorm/.test(p.weather)) return;   // not out howling in the rain
 		var k = dayOf(p.d), st = stretch(k);
 		PIECES.push({night: k, key: 'howl', kind: 'howl', who: p.howl, art: 'jr-howl-' + p.howl, caption: p.howl === 'wolf' ? 'A wolf howls far away' : 'Jackals calling in the night',
-			h: p.howl === 'wolf' ? 52 : 46, layer: 'mid', pass: st[0] + 0.45 * (st[1] - st[0]), off: 380, small: true});
+			h: p.howl === 'wolf' ? 92 : 78, layer: 'mid', pass: st[0] + 0.45 * (st[1] - st[0]), off: 380, small: true});
 	});
 	// a lone jackal trotting across the hills on a few other desert and rocky nights
 	for (var kj = dayOf('10-09'); kj < dayOf('12-11'); kj++) {
 		var pj = planFor(kj);
 		if (pj.howl || pj.encounter === 'fox' || !/clear|haze|wind/.test(pj.weather) || hash(kj * 5 + 900) > 0.2) continue;
 		var stj = stretch(kj);
-		PIECES.push({night: kj, key: 'trotter', kind: 'trotter', who: 'jackal', art: 'jr-jackal-trot', caption: 'A jackal trotting over the hills', h: 46,
+		PIECES.push({night: kj, key: 'trotter', kind: 'trotter', who: 'jackal', art: 'jr-jackal-trot', caption: 'A jackal running over the hills', h: 78,
 			layer: 'mid', pass: stj[0] + 0.62 * (stj[1] - stj[0]), off: 380, small: true});
 	}
 	// far off in the first week: a great snow-capped mountain in the lands of the East, smoking gently
@@ -1058,6 +1058,7 @@
 			// the howlers belong to their own night only (the far hills move so slowly they'd still be there the next night),
 			// and only once their picture has loaded (no stand-in)
 			if ((p.kind === 'howl' || p.kind === 'trotter') && (p.night !== night.day || !art(p.art))) return;
+			if (p.kind === 'trotter' && !animFrames('jr-an-' + p.who + '-run-', 4)) return;   // (only once it has its running frames)
 			if ((p.kind === 'angel' || p.kind === 'camp') && p.night !== night.day) return;   // (the angel came in a dream, and last night's camp was packed up: neither carries into the next night)
 			var x = screenX(layer, pieceU(p));
 			if (x < -600 || x > VW + 600) return;
@@ -1100,12 +1101,13 @@
 					// in a pair). All three poses are from one sheet, drawn at the sheet's own scale to one another.
 					ctx.filter = 'brightness(0.78) saturate(0.85) hue-rotate(-6deg)';
 					var SH = CANINE_H[p.who], q = clamp((VW * 1.1 - x) / (VW * 0.3), 0, 1);   // (so it's howling well before it passes behind the caravan)
-					var pose = p.kind === 'trotter' ? 'trot' : q < 0.5 ? 'trot' : q < 0.75 ? 'stand' : 'howl';
+					var runF = animFrames('jr-an-' + p.who + '-run-', 4);   // its run cycle (round 14); until then it just sits and howls
+					var pose = p.kind === 'trotter' ? 'trot' : !runF ? 'howl' : q < 0.5 ? 'trot' : q < 0.75 ? 'stand' : 'howl';
 					var off = p.kind === 'trotter' ? -220 + 440 * clamp((VW * 1.1 - x) / (VW * 1.2), 0, 1) : pose === 'trot' ? -120 * (1 - q / 0.5) : 0;
 					p.howling = pose === 'howl';
-					var pim = pose === 'howl' ? im : art('jr-' + p.who + '-' + pose) || im;
+					var pim = pose === 'howl' ? im : pose === 'trot' && runF ? runF[Math.floor(clock * 10 + p.night) % 4] : art('jr-' + p.who + '-' + pose) || im;
 					var ph2 = pose === 'howl' ? h : h * SH[pose] / SH.howl, pw = ph2 * pim.width / pim.height;
-					var bob = pose === 'trot' && !reduceMotion ? Math.abs(Math.sin(clock * 7 + p.night)) * 2 : 0;
+					var bob = 0;
 					var px2 = x + off, shr = shiftOf(layer), ry = -1e9;   // the ridge under where it is now, as it trots
 					for (var rx = -0.35; rx <= 0.35; rx += 0.175) ry = Math.max(ry, layerY(layer, px2 + rx * pw - LEAD_X + shr));
 					var ptop = ry + 3 + ph2 * 0.06 - (pim.base || 1) * ph2 - bob;
@@ -2591,7 +2593,7 @@
 		viewIdx = k;
 		night = nightFor(k);
 		makeStars();
-		sound.music(k, k === TOTAL);
+		sound.music(k, k === TOTAL, TOTAL - k);
 		PIECES.forEach(function(p) { p.heard = false; p.seen = null; p.nextCall = 0; });
 		setNightSounds = function() {
 		var kinds = PIECES.filter(function(p) { return p.night === k; }).map(function(p) { return p.kind + ' ' + p.key; }).join(' ');
@@ -2744,7 +2746,7 @@
 	soFarBtn.addEventListener('click', playSoFar);
 	var soundBtn = document.getElementById('sound');
 	function soundLabel(on) { soundBtn.textContent = on ? 'Sound on' : 'Sound off'; soundBtn.setAttribute('aria-pressed', on ? 'true' : 'false'); }
-	soundBtn.addEventListener('click', function() { soundLabel(sound.toggle()); sound.music(viewIdx, viewIdx === TOTAL); setNightSounds(); });
+	soundBtn.addEventListener('click', function() { soundLabel(sound.toggle()); sound.music(viewIdx, viewIdx === TOTAL, TOTAL - viewIdx); setNightSounds(); });
 	soundLabel(false);
 	soundBtn.hidden = !sound.hasAny();   // no button until there are recordings to play
 	if (sound.wanted()) soundBtn.classList.add('remembered');   // they had it on last time: browsers still need a click to start it

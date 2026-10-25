@@ -99,9 +99,17 @@ var JourneySound = (function() {
 	function preload(prefixes) { if (!ac) return; prefixes.forEach(function(p) { variants(p).forEach(load); }); }
 
 	// music: one piece per night, looped and faded in
-	function setMusic(nightIndex, christmas) {
-		var list = variants('music').filter(function(n) { return n !== 'music-christmas'; });
+	// More carols as Christmas comes nearer: none in October and November, then from December 1 a carol every other
+	// night, and every night in the last week; Christmas Day its own piece. (Carols are music-carol-*, and music-3,
+	// "Greensleeves", the tune of "What Child Is This".)
+	function setMusic(nightIndex, christmas, daysToChristmas) {
+		var all = variants('music').filter(function(n) { return n !== 'music-christmas'; });
+		var carols = all.filter(function(n) { return /^music-carol/.test(n) || n === 'music-3'; }), others = all.filter(function(n) { return carols.indexOf(n) < 0; });
+		var d = daysToChristmas == null ? 99 : daysToChristmas, list;
 		if (christmas && has('music-christmas')) list = ['music-christmas'];   // its own piece for Christmas Day
+		else if (d >= 0 && d <= 7 || christmas) list = carols.length ? carols : others;
+		else if (d >= 0 && d <= 24) list = nightIndex % 2 && carols.length ? carols : others;
+		else list = others.length ? others : carols;
 		if (!list.length) return;
 		musicName = list[nightIndex % list.length];
 		if (!on) return;
