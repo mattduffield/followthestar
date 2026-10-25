@@ -381,7 +381,7 @@
 		paint();
 	}
 
-	var realDay = Math.floor((now() - START) / DAY), over = realDay > END && !TEST;      // once they're home, the journey is over
+	var realDay = Math.floor((now() - START) / DAY), over = realDay > END;      // once they're home, the journey is over
 	var HOMEMODE = over || (TEST && params.has('home'));   // ?test&home to preview the year-round view
 	// at home, each day's weather by the real seasons of the lands east of the Jordan: winter rain, the hot khamsin winds
 	// and sandstorms of spring, hazy summers
@@ -2777,13 +2777,14 @@
 		drawText();
 		updateControls();
 	}
-	// Google Analytics (through Google Tag Manager, on every page of the site): what visitors do on The Journey.
-	// Nothing about who they are; not sent in test mode. See /privacy/.
+	// Google Analytics (the Google tag on every page of the site): what visitors do on The Journey, as events named
+	// journey_… with the night and date. Nothing about who they are; not sent in test mode. See /privacy/.
 	function track(name, data) {
-		if (TEST || !window.dataLayer) return;
-		var d = {event: 'journey_' + name, journey_night: viewIdx + 1, journey_date: (function(d) { return String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); })(dateOfDay(viewIdx))};
-		for (var key in (data || {})) d['journey_' + key] = data[key];
-		window.dataLayer.push(d);
+		if (TEST || typeof window.gtag !== 'function') return;
+		var d = viewIdx >= 0 ? dateOfDay(viewIdx) : now();
+		var p = {night: viewIdx + 1, date: String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0')};
+		for (var key in (data || {})) p[key] = data[key];
+		window.gtag('event', 'journey_' + name, p);
 	}
 	var tracked = {};
 	function trackOnce(name, data) { var key = name + viewIdx; if (tracked[key]) return; tracked[key] = 1; track(name, data); }
@@ -3111,8 +3112,16 @@
 		var again = document.createElement('button'); again.type = 'button'; again.className = 'btn again'; again.textContent = 'Watch last year’s journey';
 		doneEl.appendChild(again); doneEl.hidden = false;
 		['when', 'title', 'caption', 'verse-end'].forEach(function(id) { document.getElementById(id).style.display = 'none'; });
-		var nightCtl = ['.player .nights', '#play', '#tonight-btn', '#sofar'].map(function(q) { return document.querySelector(q); }).filter(Boolean);
+		var nightCtl = [TEST ? null : '.player .nights', '#play', '#tonight-btn', '#sofar'].map(function(q) { return q && document.querySelector(q); }).filter(Boolean);
 		nightCtl.forEach(function(el) { el.style.display = 'none'; });   // (sound and full screen stay)
+		if (TEST) {   // test mode: ◀ ▶ step a day back or forward, to check the weather, moon, Pip's cards and finds day by day
+			var stepDay = function(n) { var d = new Date(now()); d.setDate(d.getDate() + n); params.set('date', ymd(d)); params.delete('weather'); location.search = params.toString(); };
+			var homeLabel = function() { dayEl.innerHTML = 'Home · ' + homeWeather() + '<small>' + now().toLocaleDateString('en-US', {weekday: 'short', month: 'short', day: 'numeric', year: 'numeric'}) + '</small>'; };
+			prevBtn.disabled = false; nextBtn.disabled = false;
+			prevBtn.addEventListener('click', function(e) { if (HOMEMODE) { e.stopImmediatePropagation(); stepDay(-1); } }, true);
+			nextBtn.addEventListener('click', function(e) { if (HOMEMODE) { e.stopImmediatePropagation(); stepDay(1); } }, true);
+			homeLabel(); setInterval(function() { if (HOMEMODE) { homeLabel(); prevBtn.disabled = nextBtn.disabled = false; } }, 500);
+		}
 		document.getElementById('today').style.display = 'none';
 		var stayHome = function() {
 			playNight(END, 0); show.elapsed = show.seconds + EVENING * 0.8; cam = stretch(END)[1]; walk = 0; playing = true;
