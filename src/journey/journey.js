@@ -2025,6 +2025,17 @@
 
 	// ----- foreground pieces that rush past in front -----
 	function anyFgArt() { return Object.keys(FG_ART).some(function(kd) { return FG_ART[kd].some(art); }); }
+	// In the wind, plants and trees bend and sway from their feet: leaning downwind (the way they travel), swaying with
+	// the gusts, each to its own rhythm. Rocks and walls stay put; a calm night is still.
+	function plantBend(kind, i) {
+		if (kind === 'boulders' || kind === 'wall' || reduceMotion) return 0;
+		var wnd = night.weather === 'wind' ? 1 : night.weather === 'sandstorm' || night.weather === 'storm' ? wx.level : night.weather === 'rain' ? 0.4 * wx.level : 0;
+		if (wnd <= 0.02) return 0;
+		var give = kind === 'grass' || kind === 'reeds' ? 1.6 : kind === 'palm' ? 1 : 0.6;   // grass bends most, olives and acacias least
+		var gust = 0.6 + 0.4 * Math.sin(clock * 0.7 + i * 0.3) * Math.sin(clock * 0.31 + i);
+		var sway = Math.sin(clock * (1.6 + hash(i + 300) * 0.8) + i * 2.1) + 0.35 * Math.sin(clock * 4.3 + i);
+		return wnd * give * (0.05 + 0.045 * gust * sway);
+	}
 	function paintForeground() {
 		var seg = 1000, sh = shiftOf('fg');
 		var first = Math.floor((sh - LEAD_X - 500) / seg), last = Math.floor((sh - LEAD_X + VW + 500) / seg);
@@ -2043,7 +2054,13 @@
 			var kind = kinds[Math.floor(hash(i + 7000) * kinds.length)];
 			var h = 120 + hash(i + 8000) * 120, col = '#0d0919';
 			var names = FG_ART[kind].filter(art), im = art(names[Math.floor(hash(i + 9000) * names.length)]);
-			if (im && im.base) { var w = h * 1.15 * im.width / im.height; ctx.drawImage(im, x - w / 2, VH + 16 - im.base * h * 1.15, w, h * 1.15); continue; }
+			if (im && im.base) {
+				var w = h * 1.15 * im.width / im.height, bend = plantBend(kind, i);
+				if (!bend) { ctx.drawImage(im, x - w / 2, VH + 16 - im.base * h * 1.15, w, h * 1.15); continue; }
+				ctx.save(); ctx.translate(x, VH + 16); ctx.transform(1, 0, -bend, 1, 0, 0);   // bending from its foot: the top moves most
+				ctx.drawImage(im, -w / 2, -im.base * h * 1.15, w, h * 1.15); ctx.restore();
+				continue;
+			}
 			var y = VH + 14;
 			if (kind === 'palm') palm(x, y, h * 1.3, col, (hash(i) - 0.5) * 80);
 			else if (kind === 'acacia') acacia(x, y, h, col);
