@@ -1117,8 +1117,11 @@
 					for (var rx = -0.35; rx <= 0.35; rx += 0.175) ry = Math.max(ry, layerY(layer, px2 + rx * pw - LEAD_X + shr));
 					var ptop = ry + 3 + ph2 * 0.06 - (pim.base || 1) * ph2 - bob;
 					var one = function(cx, scale, face) {   // face: 1 as drawn (nose to the right), -1 turned round
-						ctx.save(); ctx.translate(cx, 0); ctx.scale(face, 1);
-						var dw = pw * scale, dh = ph2 * scale, dx = -dw / 2, dy = ptop + ph2 * (1 - scale);
+						// standing on the hill under its own feet, tilted to the slope between its back and front paws
+						var dw = pw * scale, dh = ph2 * scale, gy = function(gx) { return layerY(layer, gx - LEAD_X + shr); };
+						var yb = gy(cx - dw * 0.32), yf = gy(cx + dw * 0.32), slope = clamp(Math.atan2(yf - yb, dw * 0.64), -0.4, 0.4);
+						ctx.save(); ctx.translate(cx, (yb + yf) / 2 + 3); ctx.rotate(slope); ctx.scale(face, 1);
+						var dx = -dw / 2, dy = dh * 0.06 - (pim.base || 1) * dh - bob;
 						if (pose === 'trot' && !runF && !reduceMotion) {
 							// no run frames: the trotting picture's legs swing in turn (front pair and back pair sheared opposite
 							// ways each stride), the body rising a little at each push off
