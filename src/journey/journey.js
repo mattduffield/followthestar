@@ -383,6 +383,16 @@
 
 	var realDay = Math.floor((now() - START) / DAY), over = realDay > END && !TEST;      // once they're home, the journey is over
 	var HOMEMODE = over || (TEST && params.has('home'));   // ?test&home to preview the year-round view
+	// at home, each day's weather by the real seasons of the lands east of the Jordan: winter rain, the hot khamsin winds
+	// and sandstorms of spring, hazy summers
+	function homeWeather() {
+		var d = now(), m = d.getMonth(), r = hash(d.getFullYear() * 400 + YEARDAY);
+		var odds = m <= 1 ? [['storm', 0.04], ['rain', 0.14], ['clouds', 0.25], ['fog', 0.07]]
+			: m <= 4 ? [['sandstorm', 0.06], ['wind', 0.16], ['clouds', 0.14], ['haze', 0.1], ['rain', m === 2 ? 0.06 : 0]]
+			: m <= 7 ? [['haze', 0.25], ['wind', 0.12]] : [['haze', 0.15], ['wind', 0.1], ['clouds', 0.08]];
+		for (var i = 0, acc = 0; i < odds.length; i++) { acc += odds[i][1]; if (r < acc) return odds[i][0]; }
+		return 'clear';
+	}
 	var YEARDAY = Math.floor((startOfDay(now()) - new Date(now().getFullYear(), 0, 1)) / DAY);   // (for home: what changes day to day)
 	var realToday = Math.min(END, Math.max(0, realDay));   // tonight (0 = the night they set out)
 	var lastOpen = TEST ? END : realToday;                                            // the furthest night that can be watched
@@ -565,6 +575,7 @@
 	function wetBefore(k) { var p = planFor(k - 1); return p.weather === 'storm' || p.weather === 'rain'; }
 	function weatherLevel(t) {
 		var w = night.weather;
+		if (HOMEMODE) return w === 'storm' || w === 'sandstorm' ? 0.75 : 0.9;   // at home the night doesn't pass: the weather holds steady
 		if (w === 'storm' || w === 'sandstorm') return smooth((t - 0.06) / 0.22) * (1 - smooth((t - 0.7) / 0.18));
 		if (w === 'rain') return smooth((t - 0.03) / 0.15) * (1 - smooth((t - 0.82) / 0.14));
 		return 1;
@@ -3100,18 +3111,24 @@
 		var again = document.createElement('button'); again.type = 'button'; again.className = 'btn again'; again.textContent = 'Watch last year’s journey';
 		doneEl.appendChild(again); doneEl.hidden = false;
 		['when', 'title', 'caption', 'verse-end'].forEach(function(id) { document.getElementById(id).style.display = 'none'; });
-		document.querySelector('.player').style.display = 'none';
+		var nightCtl = ['.player .nights', '#play', '#tonight-btn', '#sofar'].map(function(q) { return document.querySelector(q); }).filter(Boolean);
+		nightCtl.forEach(function(el) { el.style.display = 'none'; });   // (sound and full screen stay)
 		document.getElementById('today').style.display = 'none';
 		var stayHome = function() {
 			playNight(END, 0); show.elapsed = show.seconds + EVENING * 0.8; cam = stretch(END)[1]; walk = 0; playing = true;
 			night.phase = moonPhase(now());          // tonight's real moon
-			night.weather = 'clear'; makeStars();
+			var hw = params.get('weather') || homeWeather();   // (?weather=rain to try one)
+			night.weather = hw; night.plan = Object.assign({}, night.plan, {weather: hw});
+			night.skyKey = hw === 'storm' ? 'storm' : hw === 'sandstorm' ? 'sandstorm' : hw === 'rain' || hw === 'clouds' ? 'clouds' : 'night';
+			night.sky = SKIES[night.skyKey] || SKIES.night;
+			night.wind = hw === 'sandstorm' ? 1 : hw === 'wind' ? 0.6 : hw === 'storm' ? 0.5 : 0.15;
+			makeStars();
 		};
 		stayHome(); setRunning(true); track('home_visit', {days_to_go: toGo});
 		again.addEventListener('click', function() {   // back on the road: every night of last year's journey can be watched
 			doneEl.hidden = true; HOMEMODE = false; lastOpen = END; realToday = END;
 			['when', 'title', 'caption', 'verse-end'].forEach(function(id) { document.getElementById(id).style.display = ''; });
-			document.querySelector('.player').style.display = '';
+			nightCtl.forEach(function(el) { el.style.display = ''; });
 			track('watch_again'); playNight(0, 0.8); updateControls();
 		});
 		setInterval(drawText, 60000);
