@@ -1087,6 +1087,8 @@
 					ctx.globalCompositeOperation = 'source-over';
 				} else
 				ctx.drawImage(dark ? (im.dark || (im.dark = tinted(im, 0.45))) : im, x - w / 2, top, w, h);
+				var cf = CAMP_FIRES[p.art];   // the camps' own fires, drawn like the kings' one (the pictures were retouched without theirs)
+				if (cf && im === art(p.art)) paintFire(x - w / 2 + cf[0] * w / im.width, 1, 1, {y: top + cf[1] * h / im.height, s: h * cf[2] / 100, id: p.art});
 				if (p.key === 'owl' && art(p.art)) {   // its eyes catch the light, so it can be seen up in the palm; now and then it blinks
 					var shut = Math.sin(clock * 0.8 + p.night) > 0.95;
 					[0.609, 0.651].forEach(function(fx) {
@@ -1384,13 +1386,18 @@
 	// hot white-yellow at the root to red at the tip, and added together so they glow where they overlap), a pool of
 	// firelight on the sand, sparks drifting up and a thin smoke. grow (0..1) is how far it has caught: it's lit once the
 	// kings have walked over, starting small and building to a steady fire.
-	var embers = [], smoke = [], fireClock = 0, fireNow = 0;
-	function paintFire(x, a, grow) {
+	// opt: {y: where its base is, s: its size (1 = the kings' fire), id: which fire, so each keeps its own sparks}
+	var fires = {}, fireNow = 0;
+	var CAMP_FIRES = {'jr-lm-camp': [400, 282, 0.34], 'jr-lm-camp-2': [545, 515, 0.22], 'jr-lm-camp-3': [530, 505, 0.24]};   // where each camp's fire is, in its picture's pixels, and its size per 100 of the camp's height
+	function paintFire(x, a, grow, opt) {
 		if (a <= 0) return;
+		opt = opt || {};
 		grow = grow == null ? 1 : grow;
-		var y = kingY(x), dt = clamp(clock - fireClock, 0, 0.1); fireClock = clock;
+		var f = fires[opt.id || 'camp'] || (fires[opt.id || 'camp'] = {embers: [], smoke: [], clock: clock});
+		var y = opt.y != null ? opt.y : kingY(x), dt = clamp(clock - f.clock, 0, 0.1); f.clock = clock;
 		var size = 0.25 + 0.75 * grow;
 		ctx.save(); ctx.globalAlpha = a;
+		if (opt.s) { ctx.translate(x, y); ctx.scale(opt.s, opt.s); ctx.translate(-x, -y); }
 		// firelight on the sand and on whoever stands near
 		ctx.globalCompositeOperation = 'lighter';
 		ctx.save(); ctx.translate(x, y); ctx.scale(1, 0.32);
@@ -1431,8 +1438,9 @@
 		ctx.globalCompositeOperation = 'lighter';
 		glow(x, y - 12 * size, 16 * size, 'rgb(255,230,150)', 0.45 * grow * flicker(2));   // the hot heart, low in the fire
 		// sparks rising from it
+		var embers = f.embers, smoke = f.smoke;
 		if (!reduceMotion && Math.random() < dt * 14 * grow) embers.push({x: x + (Math.random() - 0.5) * 20, y: y - 20, vx: (Math.random() - 0.5) * 18 + night.wind * 20, vy: -50 - Math.random() * 60, life: 1.2 + Math.random() * 1.4, t: 0});
-		embers = embers.filter(function(e) {
+		embers = f.embers = embers.filter(function(e) {
 			e.t += dt; e.x += (e.vx + Math.sin(clock * 3 + e.life * 9) * 12) * dt; e.y += e.vy * dt; e.vy *= 0.995;
 			var f = 1 - e.t / e.life; if (f <= 0) return false;
 			ctx.fillStyle = 'rgba(255,' + Math.round(150 + 80 * f) + ',60,' + f.toFixed(2) + ')'; ctx.fillRect(e.x, e.y, 1.6, 1.6);
@@ -1441,7 +1449,7 @@
 		ctx.globalCompositeOperation = 'source-over';
 		// and a thin smoke drifting away above it
 		if (!reduceMotion && Math.random() < dt * 3 * grow) smoke.push({x: x + (Math.random() - 0.5) * 8, y: y - 50 * size, r: 6, t: 0, life: 4 + Math.random() * 2});
-		smoke = smoke.filter(function(p) {
+		smoke = f.smoke = smoke.filter(function(p) {
 			p.t += dt; p.y -= 16 * dt; p.x += (6 + night.wind * 30) * dt; p.r += 5 * dt;
 			var f = 1 - p.t / p.life; if (f <= 0) return false;
 			glow(p.x, p.y, p.r, 'rgb(150,140,160)', 0.12 * f * Math.min(1, p.t * 2));
