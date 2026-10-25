@@ -1591,6 +1591,43 @@
 		stars = [];
 		for (var i = 0; i < night.stars; i++) stars.push({x: r() * 4000, y: r(), s: r() < 0.08 ? 1.7 : 0.5 + r() * 0.9, o: 0.35 + r() * 0.6, tw: r() < 0.35 ? 2 + r() * 4 : 0, ph: r() * 6});
 	}
+	// The moon's face: its dark seas where they really are (as seen from the northern hemisphere), the bright craters
+	// Tycho and Copernicus with their rays, a scatter of small craters and a little darkening towards the edge. Made once
+	// in greys and tinted by the moon's colour (orange as it rises), so the phase shadow can be laid over it.
+	var moonFace = null;
+	function makeMoonFace() {
+		var N = 160, c = document.createElement('canvas'); c.width = c.height = N;
+		var g = c.getContext('2d'), R = N / 2, r = rng(4242);
+		g.fillStyle = '#f2efe6'; g.fillRect(0, 0, N, N);
+		[[-0.52, -0.02, 0.36, 0.30], [-0.28, -0.42, 0.25, 0.36], [0.20, -0.36, 0.15, 0.34], [0.36, -0.08, 0.19, 0.34], [0.70, -0.27, 0.10, 0.40],
+		 [0.60, 0.16, 0.13, 0.28], [-0.14, 0.36, 0.17, 0.26], [-0.50, 0.40, 0.09, 0.30], [0.40, 0.32, 0.08, 0.28], [0.05, -0.62, 0.12, 0.18],
+		 [-0.70, -0.30, 0.14, 0.22], [0.12, 0.06, 0.10, 0.20]].forEach(function(m) {
+			g.filter = 'blur(' + (R * 0.08) + 'px)';
+			g.fillStyle = 'rgba(118,116,126,' + (m[3] * 0.45) + ')';
+			for (var k = 0; k < 14; k++) {   // each sea many small overlapping blots, softened, so it has a ragged natural edge
+				var x = R + (m[0] + (r() - 0.5) * m[2] * 1.1) * R, y = R + (m[1] + (r() - 0.5) * m[2] * 1.1) * R, rr = m[2] * R * (0.35 + r() * 0.4);
+				g.beginPath(); g.ellipse(x, y, rr, rr * (0.6 + r() * 0.5), r() * 3, 0, Math.PI * 2); g.fill();
+			}
+			g.filter = 'none';
+		});
+		for (var i = 0; i < 26; i++) {   // a few small craters in the bright highlands, mostly the south
+			var a = r() * Math.PI * 2, d = Math.sqrt(r()) * 0.9, cx = R + Math.cos(a) * d * R, cy = R + Math.abs(Math.sin(a)) * d * R * (r() < 0.75 ? 1 : -1), cr = 0.6 + Math.pow(r(), 3) * 2.6;
+			g.fillStyle = 'rgba(120,118,128,0.18)'; g.beginPath(); g.arc(cx, cy, cr, 0, Math.PI * 2); g.fill();
+			g.strokeStyle = 'rgba(255,255,250,0.25)'; g.lineWidth = 0.6; g.beginPath(); g.arc(cx + 0.3, cy + 0.3, cr, Math.PI * 0.1, Math.PI * 1.1); g.stroke();
+		}
+		[[-0.10, 0.70, 1.0], [-0.30, -0.06, 0.6]].forEach(function(t) {   // Tycho and Copernicus, bright with rays
+			var tx = R + t[0] * R, ty = R + t[1] * R;
+			for (var k = 0; k < 14; k++) {
+				var aa = r() * Math.PI * 2, len = R * (0.25 + r() * 0.5) * t[2];
+				g.strokeStyle = 'rgba(255,255,248,0.12)'; g.lineWidth = 1; g.beginPath(); g.moveTo(tx, ty); g.lineTo(tx + Math.cos(aa) * len, ty + Math.sin(aa) * len); g.stroke();
+			}
+			g.fillStyle = 'rgba(255,255,250,0.7)'; g.beginPath(); g.arc(tx, ty, 1.4 * t[2] + 0.8, 0, Math.PI * 2); g.fill();
+		});
+		var limb = g.createRadialGradient(R, R, R * 0.55, R, R, R);
+		limb.addColorStop(0, 'rgba(60,55,70,0)'); limb.addColorStop(1, 'rgba(60,55,70,0.22)');
+		g.fillStyle = limb; g.fillRect(0, 0, N, N);
+		return c;
+	}
 	function paintSky() {
 		var sk = night.sky, im = art(sk.art);
 		if (im) { var sc = Math.max(VW / im.width, (VH - TOPV) / im.height); ctx.drawImage(im, (VW - im.width * sc) / 2, VH - im.height * sc, im.width * sc, im.height * sc); }
@@ -1634,14 +1671,18 @@
 			var sp = starPos(); if (Math.abs(mx - sp.x) < 140) mx = sp.x - 140;   // never on top of the Star (it moves into this part of the sky as Christmas nears)
 			// a full moon rises big and orange from behind the hills, and shrinks and whitens as it climbs
 			var full = night.phase > 0.44 && night.phase < 0.56, rise = full ? smooth(nightT() / 0.5) : 1;
-			my = 455 + (my - 455) * rise; mr = 34 + (22 - 34) * rise;
+			my = 455 + (my - 455) * rise; mr = 40 + (26 - 40) * rise;
 			var moonCol = full ? 'rgb(' + Math.round(242 + 2 * rise) + ',' + Math.round(163 + 77 * rise) + ',' + Math.round(92 + 128 * rise) + ')' : '#f4f0dc';
 			ctx.globalAlpha = clearSky;
 			glow(mx, my, 90 * mr / 22, rise < 1 ? 'rgb(250,180,110)' : 'rgb(220,225,255)', 0.18 + 0.12 * (1 - rise));
 			ctx.save(); ctx.beginPath(); ctx.arc(mx, my, mr, 0, Math.PI * 2); ctx.clip();
-			ctx.fillStyle = moonCol; ctx.fillRect(mx - mr, my - mr, mr * 2, mr * 2);
+			if (!moonFace) moonFace = makeMoonFace();
+			ctx.save(); ctx.translate(mx, my); if (homeward(night.day)) ctx.scale(-1, 1);   // (the scene is drawn mirrored on the way home; the moon isn't)
+			ctx.drawImage(moonFace, -mr, -mr, mr * 2, mr * 2); ctx.restore();
+			ctx.globalCompositeOperation = 'multiply'; ctx.fillStyle = moonCol; ctx.fillRect(mx - mr, my - mr, mr * 2, mr * 2);
+			ctx.globalCompositeOperation = 'source-over';
 			var ph = night.phase, kk = Math.cos(ph * 2 * Math.PI);
-			ctx.fillStyle = 'rgba(10,12,40,0.93)';
+			ctx.fillStyle = 'rgba(8,10,30,0.95)';   // (the dark part a shade see-through: the faint earthshine)
 			ctx.beginPath();
 			if (ph < 0.5) { ctx.arc(mx, my, mr, Math.PI / 2, -Math.PI / 2, false); ctx.ellipse(mx, my, Math.abs(kk) * mr, mr, 0, -Math.PI / 2, Math.PI / 2, kk < 0); }
 			else { ctx.arc(mx, my, mr, -Math.PI / 2, Math.PI / 2, false); ctx.ellipse(mx, my, Math.abs(kk) * mr, mr, 0, Math.PI / 2, -Math.PI / 2, kk < 0); }
@@ -1770,7 +1811,7 @@
 		var base = cam * DAYW - LEAD_X;                          // world position of the screen's left edge
 		if (pip.u == null) { pip.u = base + Math.max(40, LEAD_X - CHAR_BACK[2] - 160); pip.target = pip.u; pip.state = 'sit'; pip.until = clock + 3 + pip.rng() * 3; }
 		var e = evening();
-		if (e > 2.9) { pipEvening(dt, base); return; }
+		if (e > 0.6) { pipEvening(dt, base); return; }
 		var sx = pip.u - base;
 		if (show && show.mode === 'sofar' && e === 0) {
 			// the time-lapse races along far faster than a mouse can run, so he keeps up with the caravan instead
@@ -1811,16 +1852,26 @@
 	// the sand and he runs over to that spot (with a happy hop when he gets there); bring the pointer near and he turns
 	// to look at it and bounces.
 	function pipFireZone() { if (eveningKind() !== 'fire') return null; var fx = fireX(); return [fx - 75, fx + 75]; }
+	function pipBigSide() {   // which side of the fire has the room to play (-1 left, 1 right)
+		var z = pipFireZone(); return !z || z[0] > VW - z[1] ? -1 : 1;
+	}
 	function pipSafe(fromX, x) {   // the nearest place to x he can get to from fromX without going through the fire
 		x = clamp(x, 30, VW - 30);
 		var z = pipFireZone();
 		if (!z) return x;
+		if (fireNow < 0.02) {   // the fire isn't lit yet: he can cross, and goes to the side with room
+			var big = pipBigSide();
+			return big < 0 ? Math.min(x, z[0]) : Math.max(x, z[1]);
+		}
 		if (fromX <= z[0] + 1) return Math.min(x, z[0]);
 		if (fromX >= z[1] - 1) return Math.max(x, z[1]);
 		return fromX - z[0] < z[1] - fromX ? z[0] : z[1];   // (if he's somehow in it, straight out the nearer side)
 	}
 	function pipEvening(dt, base) {
-		var sx = pip.u - base;
+		var sx = pip.u - base, z = pipFireZone();
+		if (z && fireNow < 0.02 && (pipBigSide() < 0 ? sx > z[0] : sx < z[1]) && !pip.called) {   // on the cramped side as they stop: over to the open side first
+			pip.target = pipSafe(sx, pipBigSide() < 0 ? z[0] - 60 - pip.rng() * 200 : z[1] + 60 + pip.rng() * 200); pip.state = 'trot'; pip.called = true;
+		}
 		if (pip.state === 'sit') {
 			if (pip.near) { pip.until = Math.max(pip.until, clock + 1); return; }   // he stays to watch the pointer
 			if (pip.rng() < dt * 0.35) pip.face = -(pip.face || 1);               // looking about
