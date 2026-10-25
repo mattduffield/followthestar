@@ -409,26 +409,40 @@
 	function groundY(u) { return layerY('road', u, 'ground'); }   // where the camels walk: on the sand, with rocks and tufts behind them
 
 	// draw part of a tile: the screen fraction [f0, f1] of tile n, mirrored on odd tiles
-	function drawTilePart(im, layer, x, n, f0, f1) {
-		var b = box(im, layer), dx = x + f0 * b.w, dw = (f1 - f0) * b.w;
+	function drawTilePart(im, layer, x, n, f0, f1, exact) {   // (exact: no overlap with the next part, for adding parts together)
+		var b = box(im, layer), dx = x + f0 * b.w, dw = (f1 - f0) * b.w, o = exact ? 0 : 0.5;
 		var s0 = (n % 2 ? 1 - f1 : f0) * im.width, sw = (f1 - f0) * im.width;
-		if (n % 2) { ctx.save(); ctx.translate(dx + dw, 0); ctx.scale(-1, 1); ctx.drawImage(im, s0, 0, sw, im.height, -0.5, b.y, dw + 1, b.h); ctx.restore(); }
-		else ctx.drawImage(im, s0, 0, sw, im.height, dx - 0.5, b.y, dw + 1, b.h);
-		if (b.y + b.h < VH + 10) { ctx.fillStyle = im.bottom; ctx.fillRect(dx - 0.5, b.y + b.h - 1, dw + 1, VH + 10 - b.y - b.h); }
+		if (n % 2) { ctx.save(); ctx.translate(dx + dw, 0); ctx.scale(-1, 1); ctx.drawImage(im, s0, 0, sw, im.height, -o, b.y, dw + 2 * o, b.h); ctx.restore(); }
+		else ctx.drawImage(im, s0, 0, sw, im.height, dx - o, b.y, dw + 2 * o, b.h);
+		if (b.y + b.h < VH + 10) { var by = b.y + b.h - (exact ? 0 : 1); ctx.fillStyle = im.bottom; ctx.fillRect(dx - o, by, dw + 2 * o, VH + 10 - by); }
+	}
+	var fadeCv = null;
+	function fadeCanvas() {   // a canvas the size of the scene's, for mixing two pictures of land where they meet
+		if (!fadeCv) fadeCv = document.createElement('canvas');
+		if (fadeCv.width !== canvas.width || fadeCv.height !== canvas.height) { fadeCv.width = canvas.width; fadeCv.height = canvas.height; }
+		return fadeCv;
 	}
 	function paintLayerArt(layer) {
 		var w = LAYER[layer].w, u0 = shiftOf(layer) - LEAD_X, n = Math.floor(u0 / w);
 		for (var x = n * w - u0; x < VW; x += w, n++) {
 			var cur = tileInfo(layer, n), prev = tileInfo(layer, n - 1);
 			if (prev.im && prev.im !== cur.im) {
-				// the land changes here: the old art carries on and the new fades in, in narrow strips
-				drawTilePart(prev.im, layer, x, n, 0, 1);
-				var STRIPS = 14;
+				// the land changes here: over the first part of the tile the old art turns into the new, strip by strip.
+				// Each strip is a true mix of the two (colour and see-through-ness alike), made on a canvas of its own by
+				// adding the old at (1 - t) to the new at t; drawn straight over each other instead, the old hills showed
+				// through the new as a see-through band, and where they stood taller, as a box with a hard edge.
+				var fc = fadeCanvas(), main = ctx, STRIPS = 48;
+				ctx = fc.getContext('2d');
+				ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, fc.width, fc.height); ctx.setTransform(main.getTransform());
+				ctx.globalCompositeOperation = 'lighter';
 				for (var s = 0; s < STRIPS; s++) {
-					ctx.globalAlpha = smooth((s + 0.5) / STRIPS);
-					drawTilePart(cur.im, layer, x, n, s * FADE / STRIPS, (s + 1) * FADE / STRIPS);
+					var t = smooth((s + 0.5) / STRIPS), f0 = s * FADE / STRIPS, f1 = (s + 1) * FADE / STRIPS;
+					ctx.globalAlpha = 1 - t; drawTilePart(prev.im, layer, x, n, f0, f1, true);
+					ctx.globalAlpha = t; drawTilePart(cur.im, layer, x, n, f0, f1, true);
 				}
-				ctx.globalAlpha = 1;
+				ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1;
+				ctx = main;
+				ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.drawImage(fc, 0, 0); ctx.restore();
 				drawTilePart(cur.im, layer, x, n, FADE, 1);
 			}
 			else if (cur.im) drawTilePart(cur.im, layer, x, n, 0, 1);
@@ -534,6 +548,17 @@
 		return have.length ? art(have[i % have.length]) : CLOUDS[dark ? 'dark' : 'light'][i % 4];
 	}
 
+	function softUnder(im) {   // the cloud pictures end in a flat cut along the bottom: fade their undersides away instead
+		if (!im || im.soft2) return im && im.soft2 || im;
+		if (!im.width) return im;
+		var c = document.createElement('canvas'); c.width = im.width; c.height = im.height;
+		var g = c.getContext('2d'); g.drawImage(im, 0, 0);
+		var fade = g.createLinearGradient(0, im.height * 0.62, 0, im.height);
+		fade.addColorStop(0, 'rgba(0,0,0,1)'); fade.addColorStop(1, 'rgba(0,0,0,0)');
+		g.globalCompositeOperation = 'destination-in'; g.fillStyle = fade; g.fillRect(0, 0, im.width, im.height);
+		im.soft2 = c;
+		return c;
+	}
 	function paintClouds(level, which) {
 		var w = night.weather, count = {clouds: 7, rain: 10, storm: 13, haze: 3, fog: 3, wind: 3, sandstorm: 0, clear: 0}[w] || 0;
 		if (!count) return;
@@ -546,10 +571,10 @@
 			var span = VW + cw * 2, speed = (8 + night.wind * 40) * depth;
 			var x = ((r() * span - clock * speed - sh * depth * 3) % span + span) % span - cw;
 			var y = TOPV + (dark ? 20 + r() * 230 * depth : 40 + r() * 280);
-			var a = (dark ? 0.92 : w === 'clouds' ? 0.75 : 0.4) * coverage * (0.55 + depth * 0.45);
+			var a = (dark ? 0.97 : w === 'clouds' ? 0.95 : 0.5) * coverage * (0.85 + depth * 0.15);   // near enough solid: the sky mustn't show through
 			if (a < 0.02) continue;
 			ctx.globalAlpha = a;
-			ctx.drawImage(cloudArt(dark, i), x, y, cw, ch);
+			ctx.drawImage(softUnder(cloudArt(dark, i)), x, y, cw, ch);
 			if (wx.flash > 0 && dark) { ctx.globalAlpha = a * wx.flash * 0.5; ctx.drawImage(CLOUDS.light[i % 4], x, y, cw, ch); }
 		}
 		ctx.globalAlpha = 1;
@@ -585,7 +610,7 @@
 		if (wx.thunderIn > 0) { wx.thunderIn -= dt; if (wx.thunderIn <= 0) { wx.shake = 1; sound.thunder(wx.near); } }
 		if (wx.flash <= 0.05) wx.bolt = null;
 		// rain and dust move in screen space
-		var raining = (night.weather === 'rain' || night.weather === 'storm') ? wx.level : 0;
+		var raining = (night.weather === 'rain' || night.weather === 'storm') ? smooth((wx.level - 0.3) / 0.6) : 0;   // the rain stops while there are still clouds
 		var want = Math.round(raining * (night.weather === 'storm' ? 420 : 280));
 		while (wx.drops.length < want) wx.drops.push({x: Math.random() * (VW + 200), y: TOPV + Math.random() * (VH - TOPV), l: 14 + Math.random() * 16, v: 900 + Math.random() * 500});
 		if (wx.drops.length > want) wx.drops.length = want;
@@ -984,6 +1009,7 @@
 			// the howlers belong to their own night only (the far hills move so slowly they'd still be there the next night),
 			// and only once their picture has loaded (no stand-in)
 			if (p.kind === 'howl' && (p.night !== night.day || !art(p.art))) return;
+			if ((p.kind === 'angel' || p.kind === 'camp') && p.night !== night.day) return;   // (the angel came in a dream, and last night's camp was packed up: neither carries into the next night)
 			var x = screenX(layer, pieceU(p));
 			if (x < -600 || x > VW + 600) return;
 			// farther away than the camels, so smaller; encounters smaller still, as if farther back
@@ -1004,6 +1030,11 @@
 			if (im && im.base) {
 				var w = h * im.width / im.height;
 				var y = groundUnder(layer, x, w / 2) - (p.kind === 'angel' ? 230 : 0);   // on the hills' ground (the angel floats above the camp)
+				if (layer === 'far' && p.kind !== 'pass') {   // far off on the ridge: down to its lowest point under the piece, so no sky shows beneath
+					var shf = shiftOf(layer), low = -1e9;
+					for (var gx = -0.4; gx <= 0.4; gx += 0.1) low = Math.max(low, layerY(layer, x + gx * w - LEAD_X + shf));
+					y = Math.max(y, low + 4);
+				}
 				if (p.kind === 'howl') {   // sitting right on the visible ridge line under its paws, never above it
 					var sh2 = shiftOf(layer), ridge = -1e9;
 					for (var fx = -0.35; fx <= 0.35; fx += 0.175) ridge = Math.max(ridge, layerY(layer, x + fx * w - LEAD_X + sh2));
@@ -1425,7 +1456,7 @@
 				ctx.restore();
 			}
 		});
-		if (kind === 'fire') paintFire(fireX(), smooth((e - 1.6) / 1.2));
+		if (kind === 'fire' && !night.plan.camp) paintFire(fireX(), smooth((e - 1.6) / 1.2));   // (a camp of tents has its own fire)
 	}
 	// the page waits for the wise men and their camels to load, so nothing stands in for them first; if the art is
 	// very slow (or missing) it gives up after a few seconds and uses the logo's camels
@@ -1475,12 +1506,13 @@
 		// glow fades, and the stars come out as it goes
 		var sunset = 0;
 		if (/dusk/.test(night.skyKey) && !(show && show.mode === 'sofar')) {
-			sunset = 1 - smooth(nightT() / 0.32);
+			var wet = night.weather === 'rain' || night.weather === 'storm';
+			sunset = wet ? 1 - smooth((nightT() - 0.72) / 0.28) : 1 - smooth(nightT() / 0.32);   // (on a rainy evening it sets as the rain clears, behind the rainbow)
 			if (sunset > 0.01) {
-				var sx = VW * 0.8, sy = 392 + 118 * (1 - sunset), sr = 46;
+				var sx = VW * (homeward(night.day) ? 0.2 : 0.8), sy = 392 + 118 * (1 - sunset), sr = 46;   // always in the west: ahead of them going, behind them coming home (the homeward scene is drawn mirrored)
 				glow(sx, sy, 420, 'rgb(255,150,80)', 0.32 * sunset * clearSky);
 				glow(sx, sy, 150, 'rgb(255,190,110)', 0.45 * sunset * clearSky);
-				ctx.save(); ctx.globalAlpha = (0.55 + 0.45 * sunset) * Math.max(0.25, clearSky);
+				ctx.save(); ctx.globalAlpha = (0.55 + 0.45 * sunset) * clearSky;
 				var sg = ctx.createRadialGradient(sx, sy - 8, 4, sx, sy, sr);
 				sg.addColorStop(0, '#fff2c0'); sg.addColorStop(0.6, '#ffb257'); sg.addColorStop(1, '#ff7a3d');
 				ctx.fillStyle = sg; ctx.beginPath(); ctx.arc(sx, sy, sr, 0, Math.PI * 2); ctx.fill();
@@ -1498,6 +1530,7 @@
 		var mw = moonWords(night.phase);
 		if (mw && night.day !== TOTAL && clearSky > 0.05) {
 			var mx = VW * night.moonX - skyDrift() * 0.5, my = TOPV + 0.2 * skyH + 80, mr = 22;   // drifting a little through the night   // clear of the date in the corner and of the Star
+			var sp = starPos(); if (Math.abs(mx - sp.x) < 140) mx = sp.x - 140;   // never on top of the Star (it moves into this part of the sky as Christmas nears)
 			// a full moon rises big and orange from behind the hills, and shrinks and whitens as it climbs
 			var full = night.phase > 0.44 && night.phase < 0.56, rise = full ? smooth(nightT() / 0.5) : 1;
 			my = 455 + (my - 455) * rise; mr = 34 + (22 - 34) * rise;
@@ -1575,7 +1608,7 @@
 			if (hash(i + 5000) < 0.5) continue;
 			var u = i * seg + hash(i + 6000) * seg * 0.6, x = u - sh + LEAD_X;
 			var restX = u - restShift + LEAD_X;
-			if (restX > LEAD_X - 600 && restX < LEAD_X + 200) continue;            // keep clear where they stop
+			if (restX > LEAD_X - 600 && restX < LEAD_X + 620) continue;            // keep clear where they stop, the fire and the kings round it too
 			var day = (u - LEAD_X) / (DAYW * SPEED.fg);
 			if (day < -PROLOGUE - 1 || day > END + 1) continue;
 			if (PIECES.some(function(p) { return !p.small && day > p.pass - 0.3 && day < p.pass + 0.15; })) continue;   // keep clear while a landmark is in view
@@ -1876,8 +1909,9 @@
 		if (!litSky(night.day)) return;                                  // only while there's daylight left in the sky, never at night
 		if (w === 'storm' || w === 'rain') a = smooth((t - 0.76) / 0.12);
 		else if (w === 'clouds') a = 1 - smooth((t - 0.15) / 0.25);   // (a clear sky after rain has no shower left to make one)
+		a *= 1 - smooth(evening() / 4);                                  // and it fades as night falls over the camp
 		if (a <= 0.01) return;
-		var cx = VW * 0.3, cy = 700, R = Math.min(560, VW * 0.42);   // opposite the setting sun, as a real rainbow is
+		var cx = VW * (homeward(night.day) ? 0.7 : 0.3), cy = 700, R = Math.min(560, VW * 0.42);   // opposite the setting sun, as a real rainbow is
 		var cols = ['255,90,90', '255,170,80', '255,235,110', '120,220,120', '110,170,255', '150,120,255', '200,130,255'];
 		ctx.save(); ctx.lineWidth = 6; ctx.globalAlpha = 0.16 * a;
 		cols.forEach(function(c, i) { ctx.strokeStyle = 'rgb(' + c + ')'; ctx.beginPath(); ctx.arc(cx, cy, R - i * 6, Math.PI * 1.08, Math.PI * 1.92); ctx.stroke(); });
@@ -1898,7 +1932,7 @@
 	// snow on the tops of the far mountains in winter. It is measured on the mountains themselves (every few units
 	// along the ridge, not across the screen), so it travels with them as they scroll instead of rippling; and only a
 	// peak that stands well above its own valleys gets a cap, deeper the higher it rises.
-	var SNOWY_FAR = ['jr-far-mountains', 'jr-far-mountains-2', 'jr-far-rocky-peaks', 'jr-far-judean-hills', 'jr-far-judean-hills-2'];   // the far hills with peaks
+	var SNOWY_FAR = ['jr-far-mountains', 'jr-far-mountains-2', 'jr-far-rocky-peaks'];   // the far hills with real peaks (Judea's are low and rounded)
 	function paintSnowCaps() {
 		if (!snowSeason(night.day)) return;
 		var sh = shiftOf('far'), STEP = 4, REACH = 40, u0 = Math.floor((-20 - LEAD_X + sh) / STEP) * STEP - REACH * STEP;
