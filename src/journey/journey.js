@@ -1338,11 +1338,17 @@
 	function pokeCamel(pt) {
 		var hit = camelBoxes.filter(function(b) { return pt.x > b.x0 && pt.x < b.x1 && pt.y > b.y0 && pt.y < b.y1; }).pop();
 		if (!hit) return false;
-		hit.k.poke = clock; sound.animal('camel-grunt', 0.42);
-		var urging = hit.i > 0 && walk > 0.5 && evening() === 0 && !(clock - hit.k.surge < 4.5) && !CARAVAN.some(function(o) { return clock - o.surge < 4.5; });
-		if (urging) hit.k.surge = clock;
-		// its king calls to it: urging it on as it tries to pass ("Hut, hut!", "Yalla!"), else soothing it ("Easy... easy")
-		if (hit.riding) setTimeout(function() { sound.animal('voice-' + hit.king + (urging ? '-urge' : '-calm'), 0.5); }, urging ? 250 : 600);
+		var urging = hit.i > 0 && walk > 0.5 && evening() === 0 && !(clock - hit.k.surge < 5) && !CARAVAN.some(function(o) { return clock - o.surge < 5; });
+		// its king calls to it straight away: urging it on ("Hut-hut-hut!", "Yalla!"), and a moment later it surges forward
+		// to pass; otherwise he soothes it ("Easy, easy") after its grumble
+		if (urging) {
+			if (hit.riding) sound.animal('voice-' + hit.king + '-urge', 0.95);
+			hit.k.surge = clock + 0.55;
+			setTimeout(function() { hit.k.poke = clock; sound.animal('camel-grunt', 0.42); }, 450);
+		} else {
+			hit.k.poke = clock; sound.animal('camel-grunt', 0.42);
+			if (hit.riding) setTimeout(function() { sound.animal('voice-' + hit.king + '-calm', 0.8); }, 550);
+		}
 		return true;
 	}
 	function camelNod(k, f0) {   // the head dips with each step while walking; at rest it looks slowly about
