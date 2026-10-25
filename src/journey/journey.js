@@ -221,8 +221,9 @@
 	(window.JOURNEY_PLAN || []).forEach(function(p) {
 		if (!p.howl || /rain|storm|sandstorm/.test(p.weather)) return;   // not out howling in the rain
 		var k = dayOf(p.d), st = stretch(k);
-		PIECES.push({night: k, key: 'howl', kind: 'howl', who: p.howl, art: 'jr-howl-' + p.howl, caption: p.howl === 'wolf' ? 'A wolf howls far away' : 'Jackals calling in the night',
-			h: p.howl === 'wolf' ? 92 : 78, layer: 'mid', pass: st[0] + 0.45 * (st[1] - st[0]), off: 380, small: true});
+		PIECES.push({night: k, key: 'howl', kind: 'howl', who: p.howl, art: 'jr-howl-' + p.howl, caption: p.howl === 'wolf' ? (hash(k * 7 + 31) < 1 / 3 ? 'A wolf howls far away' : 'Wolves howling in the hills') : 'Jackals calling in the night',
+			h: p.howl === 'wolf' ? 92 : 78, layer: 'mid', pass: st[0] + 0.45 * (st[1] - st[0]), off: 380, small: true,
+			count: p.howl === 'wolf' ? 1 + Math.floor(hash(k * 7 + 31) * 3) : 2 + Math.floor(hash(k * 7 + 31) * 3)});   // a wolf alone or a small pack (1-3); jackals in a family group (2-4)
 	});
 	// a lone jackal trotting across the hills on a few other desert and rocky nights
 	for (var kj = dayOf('10-09'); kj < dayOf('12-11'); kj++) {
@@ -230,7 +231,7 @@
 		if (pj.howl || pj.encounter === 'fox' || !/clear|haze|wind/.test(pj.weather) || hash(kj * 5 + 900) > 0.2) continue;
 		var stj = stretch(kj);
 		PIECES.push({night: kj, key: 'trotter', kind: 'trotter', who: 'jackal', art: 'jr-jackal-trot', caption: 'A jackal running over the hills', h: 78,
-			layer: 'mid', pass: stj[0] + 0.62 * (stj[1] - stj[0]), off: 380, small: true});
+			layer: 'mid', pass: stj[0] + 0.62 * (stj[1] - stj[0]), off: 380, small: true, count: hash(kj * 3 + 77) < 0.35 ? 2 : 1});
 	}
 	// far off in the first week: a great snow-capped mountain in the lands of the East, smoking gently
 	PIECES.push({night: 2, key: 'volcano', kind: 'volcano', art: 'jr-far-volcano', caption: '', h: 150, layer: 'far', pass: 2.6, off: 0});
@@ -1198,11 +1199,14 @@
 						ctx.restore();
 					};
 					if (pose === 'howl') {
-						if (p.who === 'jackal') { ctx.save(); ctx.translate(x - w * 1.25, 0); ctx.scale(-1, 1); ctx.drawImage(im, -w * 0.44, top + h * 0.12, w * 0.88, h * 0.88); ctx.restore(); }   // a second, facing the other way
+						for (var hi = 1; hi < (p.count || 1); hi++) { ctx.save(); ctx.translate(x - w * 1.2 * hi, 0); if (hi % 2) ctx.scale(-1, 1); ctx.drawImage(im, -w * 0.44, top + h * 0.12, w * 0.88, h * 0.88); ctx.restore(); }   // the rest of the pack
 						ctx.drawImage(im, x - w / 2, top, w, h);
 					} else {
 						var face = pose === 'stand' ? -1 : 1;   // trotting on its way; standing, it turns to look at the caravan
-						if (p.who === 'jackal' && p.kind === 'howl') one(px2 - w * 1.25 - (pose === 'trot' ? 30 : 0), 0.88, face);   // its mate a little behind
+						for (var mi = (p.count || 1) - 1; mi >= 1; mi--) {   // the rest of the pack, strung out behind the leader, a little smaller
+							var mr = rng(p.night * 13 + mi * 101), gap = w * (1.05 + 0.35 * mr()) * mi + (pose === 'trot' ? 22 * mi : 0);
+							one(px2 - gap, 0.84 + 0.1 * mr(), face);
+						}
 						one(px2, 1, face);
 					}
 					ctx.filter = 'none';
