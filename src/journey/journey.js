@@ -2306,7 +2306,7 @@
 		var f = findSpot(), key = findKey(), made = findsMade();
 		if (made.indexOf(key) >= 0 || Math.hypot(p.x - f.x, p.y - (f.y - 3)) > 24) return false;
 		made.push(key); try { localStorage.setItem(FIND_KEY, JSON.stringify(made)); } catch (err) {}
-		find = {got: findDay(), at: clock}; track('find', {item: f.kind[0], total: made.length});
+		find = {got: findDay(), at: clock}; setTimeout(journalGlint, 600); track('find', {item: f.kind[0], total: made.length});
 		return true;
 	}
 	var pip = {box: null, near: false, hop: -1, hopT: 0, u: null, state: 'trot', target: 0, until: 0, rng: null, last: 0, dir: 1, card: false};
@@ -2433,7 +2433,7 @@
 	function nearPip(evt, reach) { if (!pip.box) return false; var p = sceneXY(evt); return Math.hypot(p.x - pip.box.x, p.y - pip.box.y) < reach; }
 	var pipCard = document.getElementById('pip-card');
 	function findPip() {
-		track('pip_found');
+		track('pip_found'); setTimeout(journalGlint, 400);
 		pip.hop = 0; pip.hopT = 0;
 		if (HOMEMODE) {   // at home: a card for each week of the year, and how many days Pip has been found at home
 			var hk = ymd(now()), home = []; try { home = JSON.parse(localStorage.getItem(PIP_HOME_KEY) || '[]'); } catch (e) {}
@@ -3000,10 +3000,185 @@
 	soundBtn.hidden = !sound.hasAny();   // no button until there are recordings to play
 	if (sound.wanted()) soundBtn.classList.add('remembered');   // they had it on last time: browsers still need a click to start it
 	document.addEventListener('keydown', function(e) {
-		if (e.target.closest('input, textarea, select, button') || e.altKey || e.metaKey || e.ctrlKey) return;
+		if (e.target.closest('input, textarea, select, button, dialog') || e.altKey || e.metaKey || e.ctrlKey || (journalEl && journalEl.open)) return;
 		if (e.key === 'ArrowLeft' && !prevBtn.disabled) prevBtn.click();
 		if (e.key === 'ArrowRight' && !nextBtn.disabled) nextBtn.click();
 	});
+
+	// ----- Pip's Journal: every night Pip was found and every treasure picked up, in the Journey's own look -----
+	// A real dialog (keyboard, screen readers, scrolling), its background the scene's night sky drawn on a canvas, and
+	// every picture in it drawn by the scene's own code (Pip's art, the finds as they lie in the sand, the stable).
+	var journalEl = document.getElementById('journal'), journalBtn = document.getElementById('journal-btn'), homeWatch = null;
+	var JSEEN = 'journey-journal-seen', JEASTER = 'journey-easter';
+	function readList(key) { try { return JSON.parse(localStorage.getItem(key) || '[]'); } catch (e) { return []; } }
+	function withCtx(c, fn) { var main = ctx; ctx = c; try { fn(); } finally { ctx = main; } }
+	function smallCanvas(w, h, draw) {
+		var c = document.createElement('canvas'), r = window.devicePixelRatio || 1;
+		c.width = w * r; c.height = h * r; c.style.width = w + 'px'; c.style.height = h + 'px';
+		var g = c.getContext('2d'); g.scale(r, r); withCtx(g, function() { draw(g); });
+		return c;
+	}
+	function findIcon(kind, w, h, s) { return smallCanvas(w, h, function() { drawFind(kind, w / 2, h * 0.86, s); }); }
+	function journalData() {
+		var found = pipFound().map(function(md) { return dayOf(md); }).filter(function(k) { return k >= 0 && k <= END; });
+		var made = findsMade(), picked = [], kinds = {};
+		made.forEach(function(key) {
+			var kind;
+			if (/^\d+$/.test(key)) { var k = +key; if (k > END) return; picked.push(k); kind = FINDS[k % FINDS.length][0]; }
+			else if (/^home-/.test(key)) { var d = new Date(key.slice(5) + 'T12:00:00'), yd = Math.floor((d - new Date(d.getFullYear(), 0, 1)) / DAY); kind = FINDS[(1000 + yd) % FINDS.length][0]; }
+			if (kind) kinds[kind] = (kinds[kind] || 0) + 1;
+		});
+		var home = readList(PIP_HOME_KEY), weeks = {};
+		home.forEach(function(ymdStr) { var d = new Date(ymdStr + 'T12:00:00'); weeks[Math.floor(Math.floor((d - new Date(d.getFullYear(), 0, 1)) / DAY) / 7)] = 1; });
+		var best = 0, run = 0; for (var k = 0; k <= END; k++) { run = found.indexOf(k) >= 0 ? run + 1 : 0; best = Math.max(best, run); }
+		return {found: found, picked: picked, kinds: kinds, treasures: made.length, home: home, weeks: weeks, best: best, easter: readList(JEASTER).length > 0};
+	}
+	var BADGES = [
+		['pip', 'First find', 'Find Pip for the first time', function(d) { return d.found.length + d.home.length > 0; }],
+		['run', 'Seven in a row', 'Find Pip seven nights running', function(d) { return d.best >= 7; }],
+		['finds', 'A treasure hunter', 'Pick up five things in the sand', function(d) { return d.treasures >= 5; }],
+		['stable', 'Christmas Day', 'Find Pip on Christmas Day', function(d) { return d.found.indexOf(TOTAL) >= 0; }],
+		['star', 'All of Advent', 'Find Pip every night of December until Christmas', function(d) { for (var k = dayOf('12-01'); k < TOTAL; k++) if (d.found.indexOf(k) < 0) return false; return true; }],
+		['seven', 'All seven treasures', 'Find one of each treasure', function(d) { return Object.keys(d.kinds).length >= FINDS.length; }],
+		['sunrise', 'Easter morning', 'Visit the wise men on Easter Sunday', function(d) { return d.easter; }],
+		['friend', 'Pip’s best friend', 'Find Pip on all 98 nights', function(d) { return d.found.length >= END + 1; }]
+	];
+	function badgeIcon(kind) {   // little pictures in the Journey's style, for the medals
+		return smallCanvas(80, 80, function(g) {
+			var pipIm = art('jr-cr-sand-mouse');
+			var drawPip = function(x, y, h) { if (!pipIm) return; var w = h * pipIm.width / pipIm.height; g.filter = PIP_LOOK; g.drawImage(pipIm, x - w / 2, y - h, w, h); g.filter = 'none'; };
+			if (kind === 'pip') drawPip(40, 62, 46);
+			else if (kind === 'run') { for (var i = 0; i < 7; i++) { var a = Math.PI * (1.1 + 0.8 * i / 6); sparkle(40 + Math.cos(a) * 28, 50 + Math.sin(a) * 28, 6, 1); } drawPip(40, 66, 30); }
+			else if (kind === 'finds') { drawFind('coin', 26, 56, 2.4); drawFind('shell', 54, 54, 2.4); drawFind('feather', 40, 38, 2.2); }
+			else if (kind === 'stable') { var st = art('jr-lm-stable'); if (st) { var sw = 64, sh = sw * st.height / st.width; g.drawImage(st, 40 - sw / 2, 70 - sh, sw, sh); } sparkle(40, 14, 10, 1); }
+			else if (kind === 'star') { glow(40, 40, 36, 'rgb(255,219,89)', 0.7); sparkle(40, 40, 24, 1); }
+			else if (kind === 'seven') { FINDS.forEach(function(f, i) { var a = i / FINDS.length * Math.PI * 2 - Math.PI / 2; drawFind(f[0], 40 + Math.cos(a) * 24, 44 + Math.sin(a) * 24, 1.5); }); }
+			else if (kind === 'sunrise') { glow(40, 56, 40, 'rgb(255,190,120)', 0.8); g.fillStyle = '#ffd27a'; g.beginPath(); g.arc(40, 56, 16, Math.PI, 0); g.fill(); g.fillStyle = '#c98b3a'; g.fillRect(6, 56, 68, 4); }
+			else if (kind === 'friend') { var cm = art('jr-char-camel-1-kneel'); if (cm) { var cw = 60, ch = cw * cm.height / cm.width; g.drawImage(cm, 10, 70 - ch, cw, ch); } drawPip(60, 70, 22); }
+		});
+	}
+	function buildJournal() {
+		var d = journalData(), seen = readList(JSEEN), first = !localStorage.getItem(JSEEN), C = 2 * Math.PI * 44;
+		var nowSeen = d.found.map(function(k) { return 'p' + k; }).concat(d.picked.map(function(k) { return 'f' + k; }));
+		document.getElementById('jring').setAttribute('stroke-dasharray', '0 ' + C.toFixed(1));
+		setTimeout(function() { document.getElementById('jring').setAttribute('stroke-dasharray', (C * d.found.length / (END + 1)).toFixed(1) + ' ' + C.toFixed(1)); }, 120);
+		document.getElementById('jsub').innerHTML = d.found.length ? 'You’ve found Pip on <b>' + d.found.length + '</b> of ' + (END + 1) + ' nights · <b>' + (END + 1 - d.found.length) + '</b> to go'
+			: 'Pip hides somewhere in every night. <b>Tap him</b> when you spot him!';
+		document.getElementById('jsPip').textContent = d.found.length;
+		document.getElementById('jsTreasure').textContent = d.treasures;
+		document.getElementById('jsRun').textContent = d.best;
+		// the journey, night by night
+		var pj = document.getElementById('jp-journey'); pj.innerHTML = '';
+		var SPECIAL = {}; SPECIAL[TOTAL] = '★'; SPECIAL[dayOf('12-21')] = '♛'; SPECIAL[END] = '⌂';
+		var month = -1, grid;
+		for (var k = 0; k <= END; k++) (function(k) {
+			var dt = dateOfDay(k);
+			if (dt.getMonth() !== month) {
+				month = dt.getMonth();
+				var sec = document.createElement('div'); sec.className = 'month';
+				sec.innerHTML = '<h4>' + dt.toLocaleDateString('en-US', {month: 'long'}) + '</h4>';
+				grid = document.createElement('div'); grid.className = 'jgrid'; sec.appendChild(grid); pj.appendChild(sec);
+			}
+			var sk = SKIES[planFor(k).sky] || SKIES.night, f = d.found.indexOf(k) >= 0, p = d.picked.indexOf(k) >= 0, future = k > lastOpen;
+			var b = document.createElement('button'); b.type = 'button';
+			b.className = 'tile' + (future ? ' future' : '') + (k === TOTAL ? ' xmas' : '') + (k === realToday && !HOMEMODE ? ' tonight' : '') + (!first && f && seen.indexOf('p' + k) < 0 ? ' new' : '');
+			b.style.setProperty('--t', sk.top); b.style.setProperty('--m', sk.mid); b.style.setProperty('--l', sk.low);
+			b.innerHTML = '<span class="dune"></span><span class="d">' + dt.getDate() + '</span>' + (SPECIAL[k] ? '<span class="mark">' + SPECIAL[k] + '</span>' : '') +
+				(future ? '<span class="lock">✦</span>' : f ? '<span class="stamp"></span><img class="pip" src="/journey/art/jr-cr-sand-mouse.webp" alt="">' : '<span class="q">?</span>');
+			if (p && !future) { var c = findIcon(FINDS[k % FINDS.length][0], 30, 24, 1.6); c.className = 'item'; b.appendChild(c); }
+			b.setAttribute('aria-label', dt.toLocaleDateString('en-US', {month: 'long', day: 'numeric'}) + (future ? ', still to come' : f ? ', Pip found' : ', Pip not found yet') + (p && !future ? ', ' + FINDS[k % FINDS.length][1] : ''));
+			if (future) b.disabled = true; else b.addEventListener('click', function() { journalCard(k, d); });
+			grid.appendChild(b);
+		})(k);
+		// treasures
+		var shelf = document.getElementById('jshelf'); shelf.innerHTML = '';
+		FINDS.forEach(function(f) {
+			var n = d.kinds[f[0]] || 0, c = document.createElement('div');
+			c.className = 'case' + (n ? '' : ' none'); c.appendChild(findIcon(f[0], 110, 80, 6));
+			c.insertAdjacentHTML('beforeend', '<div class="name">' + (n ? f[1] : 'Not found yet') + '</div><div class="count">' + (n ? '× ' + n : '') + '</div><div class="glass"></div>');
+			shelf.appendChild(c);
+		});
+		// postcards from home
+		var cards = document.getElementById('jcards'), HC = window.PIP_HOME_CARDS || [], nweeks = Object.keys(d.weeks).length; cards.innerHTML = '';
+		document.getElementById('jhome-lead').textContent = nweeks ? 'Found Pip at home on ' + d.home.length + (d.home.length === 1 ? ' day' : ' days') + ': ' + nweeks + ' of ' + HC.length + ' postcards turned over.'
+			: 'From January to September, find Pip at the wise men’s home for a new postcard each week.';
+		HC.forEach(function(text, w) {
+			var got = d.weeks[w], pc = document.createElement('div');
+			pc.className = 'pc' + (got ? '' : ' back'); pc.style.setProperty('--r', (((w * 37) % 7) - 3) * 0.6 + 'deg');
+			if (got) { pc.innerHTML = '<b>Week ' + (w + 1) + '</b>'; pc.appendChild(document.createTextNode(text)); } else pc.innerHTML = '<span>✦<br>Week ' + (w + 1) + '</span>';
+			cards.appendChild(pc);
+		});
+		// badges
+		var bd = document.getElementById('jbadges'); bd.innerHTML = '';
+		BADGES.forEach(function(bg) {
+			var got = bg[3](d), el = document.createElement('div'), medal = document.createElement('div');
+			el.className = 'badge' + (got ? '' : ' locked'); medal.className = 'medal'; medal.appendChild(badgeIcon(bg[0])); el.appendChild(medal);
+			el.insertAdjacentHTML('beforeend', '<h5>' + bg[1] + '</h5><p>' + (got ? 'Earned!' : bg[2]) + '</p>');
+			el.setAttribute('aria-label', bg[1] + (got ? ', earned' : ', not yet: ' + bg[2]));
+			bd.appendChild(el);
+		});
+		try { localStorage.setItem(JSEEN, JSON.stringify(nowSeen)); } catch (e) {}
+		var earned = BADGES.filter(function(bg) { return bg[3](d); }).length;
+		track('journal_open', {found: d.found.length, treasures: d.treasures, badges: earned});
+	}
+	var jcard = document.getElementById('jcard');
+	function journalCard(k, d) {
+		var dt = dateOfDay(k), f = d.found.indexOf(k) >= 0, p = d.picked.indexOf(k) >= 0, it = FINDS[k % FINDS.length];
+		var key = String(dt.getMonth() + 1).padStart(2, '0') + '-' + String(dt.getDate()).padStart(2, '0');
+		jcard.innerHTML = '<h4 id="jcardT">Night ' + (k + 1) + '</h4><div class="when">' + longDate(dt) + '</div><div class="found"><div id="jcPip"></div><div id="jcItem"></div></div><p id="jcText"></p>' +
+			'<button type="button" id="jcWatch">Watch this night</button><button type="button" id="jcClose">Close</button>';
+		document.getElementById('jcText').textContent = f ? ((window.PIP_CARDS || {})[key] || '') : 'Pip was hiding somewhere this night. Watch it again to find him!';
+		if (f) { var im = new Image(); im.src = '/journey/art/jr-cr-sand-mouse.webp'; im.alt = ''; im.style.cssText = 'width:64px;filter:' + PIP_LOOK; var cp = document.getElementById('jcPip'); cp.appendChild(im); cp.appendChild(document.createTextNode('Pip found')); }
+		if (p) { var ci = document.getElementById('jcItem'); ci.appendChild(findIcon(it[0], 72, 54, 4)); ci.appendChild(document.createTextNode(it[1])); }
+		jcard.hidden = false;
+		document.getElementById('jcClose').onclick = function() { jcard.hidden = true; };
+		document.getElementById('jcWatch').onclick = function() { jcard.hidden = true; closeJournal(true); track('journal_watch', {to: k + 1}); if (HOMEMODE && homeWatch) homeWatch(k); else playNight(k, 0.8); };
+		document.getElementById('jcWatch').focus();
+	}
+	// the night sky behind it: the scene's own colours, twinkling stars, the Star glowing in the corner, dunes along the foot
+	var jsky = document.getElementById('jsky'), jstars = [];
+	for (var js = 0; js < 220; js++) jstars.push([Math.random(), Math.random() * 0.8, Math.random() * 1.4 + 0.4, Math.random() * 6]);
+	function journalSky(t) {
+		if (!journalEl.open) return;
+		var r = window.devicePixelRatio || 1, W = jsky.clientWidth, H = jsky.clientHeight;
+		if (jsky.width !== Math.round(W * r)) { jsky.width = Math.round(W * r); jsky.height = Math.round(H * r); }
+		var g = jsky.getContext('2d'); g.setTransform(r, 0, 0, r, 0, 0);
+		withCtx(g, function() {
+			var tt = t / 1000, sky = g.createLinearGradient(0, 0, 0, H);
+			sky.addColorStop(0, '#05081c'); sky.addColorStop(0.55, '#151a45'); sky.addColorStop(1, '#352658'); g.fillStyle = sky; g.fillRect(0, 0, W, H);
+			jstars.forEach(function(s) { g.globalAlpha = reduceMotion ? 0.6 : 0.35 + 0.4 * Math.sin(tt * 1.5 + s[3]); g.fillStyle = '#fff'; g.fillRect(s[0] * W, s[1] * H, s[2], s[2]); });
+			g.globalAlpha = 1;
+			var sx = W - 110, sy = 70, pl = reduceMotion ? 1 : 1 + 0.06 * Math.sin(tt * 1.3);
+			glow(sx, sy, 140 * pl, 'rgb(255,219,89)', 0.45); glow(sx, sy, 30 * pl, 'rgb(255,251,232)', 0.95); sparkle(sx, sy, 14, 0.9);
+			g.fillStyle = '#2a1f4a'; g.beginPath(); g.moveTo(0, H);
+			for (var x = 0; x <= W; x += 20) g.lineTo(x, H - 60 - 18 * Math.sin(x / 170) - 10 * Math.sin(x / 61));
+			g.lineTo(W, H); g.fill();
+		});
+		if (!reduceMotion) requestAnimationFrame(journalSky);
+	}
+	var jWasPlaying = false;
+	function openJournal() {
+		if (!pipCard.hidden) document.getElementById('pip-close').click();
+		buildJournal(); jcard.hidden = true;
+		jWasPlaying = playing; playing = false; updateControls();
+		journalEl.showModal(); requestAnimationFrame(journalSky);
+		journalEl.querySelector('.tabs button[aria-selected=true]').focus();
+	}
+	function closeJournal(leaving) {
+		if (journalEl.open) journalEl.close();
+		if (!leaving && jWasPlaying) { playing = true; updateControls(); }
+	}
+	journalBtn.addEventListener('click', openJournal);
+	document.getElementById('pip-journal').addEventListener('click', openJournal);
+	document.getElementById('jclose').addEventListener('click', function() { closeJournal(); });
+	journalEl.addEventListener('cancel', function(e) { e.preventDefault(); if (!jcard.hidden) jcard.hidden = true; else closeJournal(); });   // Escape: the night's card first, then the journal
+	journalEl.addEventListener('click', function(e) { if (e.target === journalEl) closeJournal(); });   // a click on the dimmed backdrop
+	var jtabs = [].slice.call(journalEl.querySelectorAll('.tabs button'));
+	jtabs.forEach(function(t, i) {
+		t.addEventListener('click', function() { jtabs.forEach(function(o) { o.setAttribute('aria-selected', o === t); document.getElementById('jp-' + o.dataset.p).hidden = o !== t; }); jcard.hidden = true; });
+		t.addEventListener('keydown', function(e) { var n = e.key === 'ArrowRight' ? 1 : e.key === 'ArrowLeft' ? -1 : 0; if (n) { var o = jtabs[(i + n + jtabs.length) % jtabs.length]; o.click(); o.focus(); e.preventDefault(); } });
+	});
+	function journalGlint() { journalBtn.classList.remove('glint'); void journalBtn.offsetWidth; journalBtn.classList.add('glint'); }   // "added to your journal"
 
 	// ----- test mode (/journey/?test): every night open, faster playback, weather override, the whole plan -----
 	if (TEST) (function() {
@@ -3203,6 +3378,8 @@
 			doneEl.querySelector('h2').textContent = 'He is risen!';
 			doneEl.querySelector('p').innerHTML = '“He is not here: for he is risen, as he said.” <span class="hint">(Matthew 28:6)</span><br>' + doneEl.querySelector('p').innerHTML;
 		} setRunning(true); track('home_visit', {days_to_go: toGo});
+		homeWatch = function(k) { again.click(); playNight(k, 0.8); };
+		if (EASTER()) { var ey = readList(JEASTER); if (ey.indexOf(now().getFullYear()) < 0) { ey.push(now().getFullYear()); try { localStorage.setItem(JEASTER, JSON.stringify(ey)); } catch (e) {} } }
 		again.addEventListener('click', function() {   // back on the road: every night of last year's journey can be watched
 			doneEl.hidden = true; HOMEMODE = false; lastOpen = END; realToday = END;
 			['when', 'title', 'caption', 'verse-end'].forEach(function(id) { document.getElementById(id).style.display = ''; });
