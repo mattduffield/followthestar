@@ -1339,7 +1339,10 @@
 		var hit = camelBoxes.filter(function(b) { return pt.x > b.x0 && pt.x < b.x1 && pt.y > b.y0 && pt.y < b.y1; }).pop();
 		if (!hit) return false;
 		hit.k.poke = clock; sound.animal('camel-grunt', 0.42);
-		if (hit.i > 0 && walk > 0.5 && evening() === 0 && !(clock - hit.k.surge < 4.5) && !CARAVAN.some(function(o) { return clock - o.surge < 4.5; })) hit.k.surge = clock;
+		var urging = hit.i > 0 && walk > 0.5 && evening() === 0 && !(clock - hit.k.surge < 4.5) && !CARAVAN.some(function(o) { return clock - o.surge < 4.5; });
+		if (urging) hit.k.surge = clock;
+		// its king calls to it: urging it on as it tries to pass ("Hut, hut!", "Yalla!"), else soothing it ("Easy... easy")
+		if (hit.riding) setTimeout(function() { sound.animal('voice-' + hit.king + (urging ? '-urge' : '-calm'), 0.5); }, urging ? 250 : 600);
 		return true;
 	}
 	function camelNod(k, f0) {   // the head dips with each step while walking; at rest it looks slowly about
@@ -1691,7 +1694,7 @@
 			var c = p.c, r = p.r, s = p.g.s, ri = (homeward(night.day) && art(c.rideHome)) || art(c.ride);   // going home their hands are empty: the gifts were given
 			var riding = e <= 0;
 			drawRigCamel(p.k, c.camel, r, p.cx, p.u, {alpha: 1 - p.kneelA, rider: riding ? ri : null, riderH: ri.height * p.ks, seat: SEATS[p.n], sink: p.sink});
-			camelBoxes.push({k: p.k, i: p.i, x0: p.cx - r.w * s * 0.45, x1: p.cx + r.w * s * 0.5, y0: p.g.y - r.h * s * (p.kneelA > 0.5 ? 0.6 : 1), y1: p.g.y});
+			camelBoxes.push({k: p.k, i: p.i, king: p.n + 1, riding: riding, x0: p.cx - r.w * s * 0.45, x1: p.cx + r.w * s * 0.5, y0: p.g.y - r.h * s * (p.kneelA > 0.5 ? 0.6 : 1), y1: p.g.y});
 			var kim = art(c.kneel), ks = r.kneelSeat, kw = kim.width * s, kh = kim.height * s;
 			var kx = ks ? p.seatX - ks[0] * s : p.cx - kw / 2, ky = p.g.y + 4 - (ks ? ks[3] : kh / s * (kim.base || 1)) * s;   // seats lined up
 			if (p.kneelA > 0) {
@@ -2671,6 +2674,7 @@
 		PIECES.forEach(function(p) { p.heard = false; p.seen = null; p.nextCall = 0; });
 		setNightSounds = function() {
 		var kinds = PIECES.filter(function(p) { return p.night === k; }).map(function(p) { return p.kind + ' ' + p.key; }).join(' ');
+		sound.preload(['camel-grunt', 'voice-1-urge', 'voice-1-calm', 'voice-2-urge', 'voice-2-calm', 'voice-3-urge', 'voice-3-calm']);   // (ready for a click on a camel)
 		sound.preload([/howl/.test(kinds) ? 'jackal' : '', /howl/.test(kinds) ? 'wolf' : '', /fox/.test(kinds) ? 'fox' : '', /sheep|shepherd/.test(kinds) ? 'sheep' : '', /sheep|shepherd/.test(kinds) ? 'lamb' : '', /herder/.test(kinds) ? 'goat' : '', /donkey|caravan/.test(kinds) ? 'donkey' : '', /jerusalem-gate|herod/.test(kinds) ? 'shofar' : ''].filter(Boolean));
 		};
 		setNightSounds();
