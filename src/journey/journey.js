@@ -1091,8 +1091,7 @@
 					ctx.drawImage(im, x - w / 2, top, w, h);
 					ctx.filter = 'none';
 					ctx.globalCompositeOperation = 'lighter';
-					glow(x, y - h * 0.22, w * 0.3, 'rgb(255,170,70)', 0.35 * flicker(7));
-					[-0.36, 0.36].forEach(function(f, j) { glow(x + f * w, y - h * 0.16, 40, 'rgb(255,160,60)', 0.8 * flicker(j * 5 + 1)); glow(x + f * w, y - h * 0.18, 12, 'rgb(255,240,190)', 0.9 * flicker(j * 5 + 1)); });
+					glow(x, y - h * 0.22, w * 0.3, 'rgb(255,170,70)', 0.35 * flicker(7));   // (warm light from within; no torches, which floated as bright dots)
 					ctx.globalCompositeOperation = 'source-over';
 				} else
 				ctx.drawImage(dark ? (im.dark || (im.dark = tinted(im, 0.45))) : im, x - w / 2, top, w, h);
@@ -1701,8 +1700,9 @@
 			my = 455 + (my - 455) * rise; mr = 40 + (26 - 40) * rise;
 			var moonCol = full ? 'rgb(' + Math.round(242 + 2 * rise) + ',' + Math.round(163 + 77 * rise) + ',' + Math.round(92 + 128 * rise) + ')' : '#f4f0dc';
 			var sunUp = Math.max(day, sunset);   // in daylight the moon is a pale ghost, brightening as the sun goes down
+			var lit = (1 - Math.cos(night.phase * 2 * Math.PI)) / 2;    // how much of it is lit: near new moon it can hardly be seen
 			ctx.globalAlpha = clearSky * (1 - 0.6 * sunUp);
-			glow(mx, my, 90 * mr / 22, rise < 1 ? 'rgb(250,180,110)' : 'rgb(220,225,255)', (0.18 + 0.12 * (1 - rise)) * (1 - sunUp));
+			glow(mx, my, 90 * mr / 22, rise < 1 ? 'rgb(250,180,110)' : 'rgb(220,225,255)', (0.18 + 0.12 * (1 - rise)) * (1 - sunUp) * Math.min(1, lit * 2.5));
 			// the moon is made on a little canvas of its own: its face, tinted, then the unlit part taken away (at night
 			// not quite all of it, leaving the faint earthshine; by day all of it, so the sky shows there)
 			if (!moonFace) moonFace = makeMoonFace();
@@ -1723,7 +1723,7 @@
 			else { g.arc(R, R, rr, -Math.PI / 2, Math.PI / 2, false); g.ellipse(R, R, Math.abs(kk) * rr, rr, 0, Math.PI / 2, -Math.PI / 2, kk < 0); }
 			g.fill();
 			if (day < 0.3) {   // at night the dark part is the night sky's colour, not see-through to the glow behind it
-				g.globalCompositeOperation = 'destination-over'; g.fillStyle = 'rgba(8,10,30,' + (0.9 * (1 - day / 0.3)).toFixed(3) + ')';
+				g.globalCompositeOperation = 'destination-over'; g.fillStyle = 'rgba(8,10,30,' + (0.9 * (1 - day / 0.3) * Math.min(1, lit * 4)).toFixed(3) + ')';
 				g.beginPath(); g.arc(R, R, rr, 0, Math.PI * 2); g.fill();
 			}
 			ctx.drawImage(mc, mx - mr, my - mr, mr * 2, mr * 2);
