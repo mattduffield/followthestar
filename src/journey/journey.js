@@ -270,7 +270,12 @@
 		if (/^jr-sky-/.test(n)) loadArt(n);
 		else if (/^jr-(far|mid|near)-/.test(n) && n !== 'jr-far-bethlehem' && n !== 'jr-far-pass') loadArt(n, skyline);
 		else loadArt(n, footing);
-	});	pump();
+	});
+	Object.keys(window.JOURNEY_CANINE_RIG || {}).forEach(function(who) {   // the jackal and the wolf, rigged for running (canine-rig.js)
+		loadArt('jr-run-' + who + '-body');
+		for (var i = 0; i < 4; i++) { loadArt('jr-run-' + who + '-leg' + i + '-upper'); loadArt('jr-run-' + who + '-leg' + i + '-lower'); }
+	});
+	pump();
 
 	function art(name) { return name && images[name] || null; }
 	// test mode: note the name of every picture drawn (for docs/qa, which shows on which nights each picture is used)
@@ -1158,7 +1163,26 @@
 						var yb = gy(cx - dw * 0.32), yf = gy(cx + dw * 0.32), slope = clamp(Math.atan2(yf - yb, dw * 0.64), -0.4, 0.4);
 						ctx.save(); ctx.translate(cx, (yb + yf) / 2 + 3); ctx.rotate(slope); ctx.scale(face, 1);
 						var dx = -dw / 2, dy = dh * 0.06 - (pim.base || 1) * dh - bob;
-						if (pose === 'trot' && !runF && !reduceMotion) {
+						var rg = pose === 'trot' && !runF && !reduceMotion && canineRig(p.who);
+						if (rg) {
+							// rigged from the trotting picture, like the camels: a trot, diagonal legs together (near hind
+							// with far front), each leg swinging at the hip and folding at the knee as it comes forward
+							var kk = dw / pim.width, ph4 = clock * 11 + p.night * 1.3 + cx * 0.013;
+							ctx.translate(dx, dy - Math.abs(Math.cos(ph4)) * dh * 0.025); ctx.scale(kk, kk);
+							var leg = function(i) {
+								var L = rg.legs[i], o = (i === 0 || i === 3) ? 0 : Math.PI, phi = ph4 + o;
+								var swing = -0.42 * Math.sin(phi) * (L.front ? 1 : 0.85), fold = (L.front ? 0.9 : 0.6) * Math.max(0, Math.cos(phi));
+								ctx.save();
+								ctx.translate(L.hip[0], L.hip[1]); ctx.rotate(swing); ctx.translate(-L.hip[0], -L.hip[1]);
+								ctx.drawImage(art('jr-run-' + p.who + '-leg' + i + '-upper'), 0, 0);
+								ctx.translate(L.knee[0], L.knee[1]); ctx.rotate(fold); ctx.translate(-L.knee[0], -L.knee[1]);
+								ctx.drawImage(art('jr-run-' + p.who + '-leg' + i + '-lower'), 0, 0);
+								ctx.restore();
+							};
+							leg(1); leg(3);                                       // the far legs, behind the body
+							ctx.drawImage(art('jr-run-' + p.who + '-body'), 0, 0);
+							leg(0); leg(2);
+						} else if (pose === 'trot' && !runF && !reduceMotion) {
 							// no run frames: the trotting picture's legs swing in turn (front pair and back pair sheared opposite
 							// ways each stride), the body rising a little at each push off
 							var ph3 = clock * 9 + p.night * 1.3 + cx * 0.01, sw = Math.sin(ph3), cut = 0.58, iw = pim.width, ih = pim.height;
@@ -1291,6 +1315,12 @@
 	// looks slowly about at rest), the eyes blink, and the tail swishes. The neck is drawn in thin strips, each turned a
 	// little more about the base of the neck than the one before, so it bends smoothly with no seam. Blinking draws the
 	// fur just above the eye down over it, so the lid is the camel's own colour. All three camels share these points.
+	function canineRig(who) {   // the rig for the jackal or the wolf, once all its pieces have loaded
+		var r = window.JOURNEY_CANINE_RIG && JOURNEY_CANINE_RIG[who];
+		if (!r || !art('jr-run-' + who + '-body')) return null;
+		for (var i = 0; i < 4; i++) if (!art('jr-run-' + who + '-leg' + i + '-upper') || !art('jr-run-' + who + '-leg' + i + '-lower')) return null;
+		return r;
+	}
 	var CANINE_H = {jackal: {stand: 398, trot: 403, howl: 437}, wolf: {stand: 396, trot: 397, howl: 444}};   // each pose's height on its sheet
 	var CAMEL_FACE = {
 		body: {axis: 'x', a: 470, b: 570, pivot: [505, 290], eye: [619.5, 39.5, 15, 9], tail: [20, 188, 54, 262]},
