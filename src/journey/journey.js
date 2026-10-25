@@ -1850,7 +1850,11 @@
 		var base = cam * DAYW - LEAD_X;                          // world position of the screen's left edge
 		if (pip.u == null) { pip.u = base + Math.max(40, LEAD_X - CHAR_BACK[2] - 160); pip.target = pip.u; pip.state = 'sit'; pip.until = clock + 3 + pip.rng() * 3; }
 		var e = evening();
-		if (e > 0.6) { pipEvening(dt, base); return; }
+		if (e > 0.6) {
+			if (!pip.eve) { pip.eve = true; pip.state = 'sit'; pip.called = false; pip.until = clock + 0.8; }   // (his walking target was a place on the road; in the evening they're places on the screen)
+			pipEvening(dt, base); return;
+		}
+		pip.eve = false;
 		var sx = pip.u - base;
 		if (show && show.mode === 'sofar' && e === 0) {
 			// the time-lapse races along far faster than a mouse can run, so he keeps up with the caravan instead
@@ -1875,13 +1879,13 @@
 			// he sits a while; if the caravan has left him far behind, he sets off sooner
 			if (clock > pip.until || sx < 30 || sx > VW - 30) {
 				var off = PIP_SPOTS[Math.floor(pip.rng() * PIP_SPOTS.length)];
-				pip.target = cam * DAYW + off + (walk > 0.5 ? 60 : 0);    // a little ahead of where that spot is now, as they're moving
+				pip.target = clamp(cam * DAYW + off + (walk > 0.5 ? 60 : 0), base + 40, base + VW - 40);    // a little ahead of where that spot is now, as they're moving (and on screen)
 				pip.state = 'trot';
 			}
 		} else {
 			var tgt = pip.target, d2 = Math.sign(tgt - pip.u), step = 150 * dt;
 			pip.dir = d2 || pip.dir;
-			if (Math.abs(tgt - pip.u) <= step) { pip.u = tgt; pip.state = 'sit'; pip.until = clock + 5 + pip.rng() * 5; }
+			if (Math.abs(tgt - pip.u) <= step || (d2 > 0 ? pip.u >= base + VW - 25 : pip.u <= base + 25)) { pip.u = clamp(tgt, base + 24, base + VW - 24); pip.state = 'sit'; pip.until = clock + 5 + pip.rng() * 5; }   // (or he's reached the edge of the screen)
 			else pip.u += d2 * step;
 		}
 		pip.u = clamp(pip.u, base + 24, base + VW - 24);             // always on screen
