@@ -64,6 +64,8 @@ footer .contactInfo p {font-size:20px; font-weight: 200; margin-top:5px;}
 footer .contactInfo a {color:#fff;}
 footer .contactInfo .location, footer .contactInfo .coordinators {display:flex; flex-direction:column;}
 footer .contactInfo .footer-link {margin-top:auto;}
+footer .credits {color:#ccc; font-weight:200; margin-top:20px;}
+footer .credits a {color:#fff;}
 
 @media screen and (max-width:500px) {
 	footer .contactInfo {flex-direction: column;}
