@@ -442,38 +442,44 @@
 	function drawTilePart(im, layer, x, n, f0, f1, exact) {   // (exact: no overlap with the next part, for adding parts together)
 		var b = box(im, layer), dx = x + f0 * b.w, dw = (f1 - f0) * b.w, o = exact ? 0 : 0.5;
 		var s0 = (n % 2 ? 1 - f1 : f0) * im.width, sw = (f1 - f0) * im.width;
+		// the outermost columns of a land picture are pale (left from cutting out the background): never use them, or where
+		// two copies meet they line up into a thin pale line that flickers as the land scrolls
+		var E = 3, lo = Math.max(s0, E), hi = Math.min(s0 + sw, im.width - E);
+		if (hi > lo && (lo !== s0 || hi !== s0 + sw)) { s0 = lo; sw = hi - lo; }
 		if (n % 2) { ctx.save(); ctx.translate(dx + dw, 0); ctx.scale(-1, 1); ctx.drawImage(im, s0, 0, sw, im.height, -o, b.y, dw + 2 * o, b.h); ctx.restore(); }
 		else ctx.drawImage(im, s0, 0, sw, im.height, dx - o, b.y, dw + 2 * o, b.h);
 		if (b.y + b.h < VH + 10) { var by = b.y + b.h - (exact ? 0 : 1); ctx.fillStyle = im.bottom; ctx.fillRect(dx - o, by, dw + 2 * o, VH + 10 - by); }
 	}
-	var fadeCv = null;
-	function fadeCanvas() {   // a canvas the size of the scene's, for mixing two pictures of land where they meet
-		if (!fadeCv) fadeCv = document.createElement('canvas');
-		if (fadeCv.width !== canvas.width || fadeCv.height !== canvas.height) { fadeCv.width = canvas.width; fadeCv.height = canvas.height; }
-		return fadeCv;
+	var fadeCvs = [];
+	function fadeCanvas(i) {   // canvases the size of the scene's, for mixing two pictures of land where they meet
+		var c = fadeCvs[i] || (fadeCvs[i] = document.createElement('canvas'));
+		if (c.width !== canvas.width || c.height !== canvas.height) { c.width = canvas.width; c.height = canvas.height; }
+		return c;
 	}
 	function paintLayerArt(layer) {
 		var w = LAYER[layer].w, u0 = shiftOf(layer) - LEAD_X, n = Math.floor(u0 / w);
 		for (var x = n * w - u0; x < VW; x += w, n++) {
 			var cur = tileInfo(layer, n), prev = tileInfo(layer, n - 1);
 			if (prev.im && prev.im !== cur.im) {
-				// the land changes here: over the first part of the tile the old art turns into the new, strip by strip.
-				// Each strip is a true mix of the two (colour and see-through-ness alike), made on a canvas of its own by
-				// adding the old at (1 - t) to the new at t; drawn straight over each other instead, the old hills showed
-				// through the new as a see-through band, and where they stood taller, as a box with a hard edge.
-				var fc = fadeCanvas(), main = ctx, STRIPS = 48;
-				ctx = fc.getContext('2d');
-				ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, fc.width, fc.height); ctx.setTransform(main.getTransform());
-				ctx.globalCompositeOperation = 'lighter';
-				for (var s = 0; s < STRIPS; s++) {
-					var t = smooth((s + 0.5) / STRIPS), f0 = s * FADE / STRIPS, f1 = (s + 1) * FADE / STRIPS;
-					ctx.globalAlpha = 1 - t; drawTilePart(prev.im, layer, x, n, f0, f1, true);
-					ctx.globalAlpha = t; drawTilePart(cur.im, layer, x, n, f0, f1, true);
-				}
-				ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1;
+				// the land changes here: over the first part of the tile the old art turns into the new. Each is drawn whole on
+				// a canvas of its own and faded across with a smooth mask (the old out, the new in), then the two are added
+				// together, so the mix is true in colour and see-through-ness alike, with no strips and so no seams
+				var fa = fadeCanvas(0), fb = fadeCanvas(1), main = ctx, w0 = box(cur.im, layer).w, x0 = x, x1 = x + FADE * w0;
+				// the new art is drawn whole across the tile; across the fade the old art is mixed in, so there's no join
+				[[fa, cur.im, false], [fb, prev.im, true]].forEach(function(job) {
+					ctx = job[0].getContext('2d');
+					ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1;
+					ctx.clearRect(0, 0, job[0].width, job[0].height); ctx.setTransform(main.getTransform());
+					drawTilePart(job[1], layer, x, n, 0, job[2] ? FADE : 1, true);
+					var g = ctx.createLinearGradient(x0, 0, x1, 0);
+					for (var k = 0; k <= 8; k++) { var t = smooth(k / 8); g.addColorStop(k / 8, 'rgba(0,0,0,' + (job[2] ? 1 - t : t).toFixed(4) + ')'); }
+					ctx.globalCompositeOperation = 'destination-in'; ctx.fillStyle = g;
+					ctx.fillRect(x0 - 1, -2000, (job[2] ? x1 - x0 : w0) + 2, 6000);   // (the mask is solid from the end of the fade on)
+					ctx.globalCompositeOperation = 'source-over';
+				});
+				ctx = fa.getContext('2d'); ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalCompositeOperation = 'lighter'; ctx.drawImage(fb, 0, 0); ctx.restore();
 				ctx = main;
-				ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.drawImage(fc, 0, 0); ctx.restore();
-				drawTilePart(cur.im, layer, x, n, FADE, 1);
+				ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.drawImage(fa, 0, 0); ctx.restore();
 			}
 			else if (cur.im) drawTilePart(cur.im, layer, x, n, 0, 1);
 		}
@@ -1058,7 +1064,6 @@
 			// the howlers belong to their own night only (the far hills move so slowly they'd still be there the next night),
 			// and only once their picture has loaded (no stand-in)
 			if ((p.kind === 'howl' || p.kind === 'trotter') && (p.night !== night.day || !art(p.art))) return;
-			if (p.kind === 'trotter' && !animFrames('jr-an-' + p.who + '-run-', 4)) return;   // (only once it has its running frames)
 			if ((p.kind === 'angel' || p.kind === 'camp') && p.night !== night.day) return;   // (the angel came in a dream, and last night's camp was packed up: neither carries into the next night)
 			var x = screenX(layer, pieceU(p));
 			if (x < -600 || x > VW + 600) return;
@@ -1102,9 +1107,9 @@
 					ctx.filter = 'brightness(0.78) saturate(0.85) hue-rotate(-6deg)';
 					var SH = CANINE_H[p.who], q = clamp((VW * 1.1 - x) / (VW * 0.3), 0, 1);   // (so it's howling well before it passes behind the caravan)
 					var runF = animFrames('jr-an-' + p.who + '-run-', 4);   // its run cycle (round 14); until then it just sits and howls
-					var pose = p.kind === 'trotter' ? 'trot' : !runF ? 'howl' : q < 0.5 ? 'trot' : q < 0.75 ? 'stand' : 'howl';
+					var pose = p.kind === 'trotter' ? 'trot' : q < 0.5 ? 'trot' : 'stand';   // they run along the ridge, then stop and stand looking at you (and call)
 					var off = p.kind === 'trotter' ? -220 + 440 * clamp((VW * 1.1 - x) / (VW * 1.2), 0, 1) : pose === 'trot' ? -120 * (1 - q / 0.5) : 0;
-					p.howling = pose === 'howl';
+					p.howling = pose === 'stand';
 					var pim = pose === 'howl' ? im : pose === 'trot' && runF ? runF[Math.floor(clock * 10 + p.night) % 4] : art('jr-' + p.who + '-' + pose) || im;
 					var ph2 = pose === 'howl' ? h : h * SH[pose] / SH.howl, pw = ph2 * pim.width / pim.height;
 					var bob = 0;
@@ -1113,7 +1118,21 @@
 					var ptop = ry + 3 + ph2 * 0.06 - (pim.base || 1) * ph2 - bob;
 					var one = function(cx, scale, face) {   // face: 1 as drawn (nose to the right), -1 turned round
 						ctx.save(); ctx.translate(cx, 0); ctx.scale(face, 1);
-						ctx.drawImage(pim, -pw * scale / 2, ptop + ph2 * (1 - scale), pw * scale, ph2 * scale); ctx.restore();
+						var dw = pw * scale, dh = ph2 * scale, dx = -dw / 2, dy = ptop + ph2 * (1 - scale);
+						if (pose === 'trot' && !runF && !reduceMotion) {
+							// no run frames: the trotting picture's legs swing in turn (front pair and back pair sheared opposite
+							// ways each stride), the body rising a little at each push off
+							var ph3 = clock * 9 + p.night * 1.3 + cx * 0.01, sw = Math.sin(ph3), cut = 0.58, iw = pim.width, ih = pim.height;
+							var up = Math.abs(Math.cos(ph3)) * dh * 0.03;
+							ctx.drawImage(pim, 0, 0, iw, ih * cut + 1, dx, dy - up, dw, dh * cut + 1);
+							[[0, 0.5, -1], [0.5, 1, 1]].forEach(function(part) {   // back legs, front legs
+								ctx.save(); ctx.translate(dx + dw * (part[0] + part[1]) / 2, dy + dh * cut - up);
+								ctx.transform(1, 0, 0.45 * sw * part[2], 1, 0, 0);
+								ctx.drawImage(pim, iw * part[0], ih * cut, iw * (part[1] - part[0]), ih * (1 - cut), -dw * (part[1] - part[0]) / 2, 0, dw * (part[1] - part[0]) + 0.5, dh * (1 - cut) + up);
+								ctx.restore();
+							});
+						} else ctx.drawImage(pim, dx, dy, dw, dh);
+						ctx.restore();
 					};
 					if (pose === 'howl') {
 						if (p.who === 'jackal') { ctx.save(); ctx.translate(x - w * 1.25, 0); ctx.scale(-1, 1); ctx.drawImage(im, -w * 0.44, top + h * 0.12, w * 0.88, h * 0.88); ctx.restore(); }   // a second, facing the other way
@@ -2040,7 +2059,7 @@
 	// Something small to find in the sand at camp each evening (besides Pip): click it to pick it up
 	var FIND_KEY = 'journey-finds';
 	var FINDS = [['feather', 'A desert lark’s feather'], ['sandal', 'Someone’s lost sandal'], ['shell', 'A little shell, far from the sea'],
-		['coin', 'An old copper coin'], ['bead', 'A blue glass bead'], ['shard', 'A piece of painted pottery'], ['date', 'A fallen date']];
+		['coin', 'An old copper coin'], ['ring', 'An old signet ring'], ['shard', 'A piece of painted pottery'], ['date', 'A fallen date']];
 	var find = {got: -1};
 	function findsMade() { try { return JSON.parse(localStorage.getItem(FIND_KEY) || '[]'); } catch (e) { return []; } }
 	function findSpot() {   // tonight's: a place on the sand, clear of the fire and the caravan
@@ -2066,16 +2085,26 @@
 		if (have) return;
 		ctx.save(); ctx.globalAlpha = smooth((e - 4) / 1.5);
 		glow(f.x, f.y - 3, 16, 'rgb(255,240,200)', 0.3 + 0.2 * Math.sin(clock * 2.2));   // a glint, so it can be spotted
-		drawFind(f.kind[0], f.x, f.y, 1.8);
+		drawFind(f.kind[0], f.x, f.y, 2.2);
 		ctx.restore();
 	}
 	function drawFind(kind, x, y, s) {
 		ctx.save(); ctx.translate(x, y); ctx.scale(s, s);
+		ctx.fillStyle = 'rgba(70,35,10,0.45)'; ctx.beginPath(); ctx.ellipse(0.5, 0.4, 6.5, 1.8, 0, 0, Math.PI * 2); ctx.fill();   // its shadow in the sand, so it stands out
 		if (kind === 'feather') { ctx.fillStyle = '#ece4d4'; ctx.beginPath(); ctx.ellipse(0, -2, 7, 2, -0.3, 0, Math.PI * 2); ctx.fill(); ctx.strokeStyle = '#8a7a66'; ctx.lineWidth = 0.6; ctx.beginPath(); ctx.moveTo(-8, 1); ctx.lineTo(7, -4); ctx.stroke(); }
 		else if (kind === 'sandal') { ctx.fillStyle = '#7a4a24'; ctx.beginPath(); ctx.ellipse(0, -1.5, 7, 2.6, 0.1, 0, Math.PI * 2); ctx.fill(); ctx.strokeStyle = '#4a2a12'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(-2, -3); ctx.lineTo(2, -4.5); ctx.stroke(); }
 		else if (kind === 'shell') { ctx.fillStyle = '#f2d6c4'; ctx.beginPath(); ctx.arc(0, -2, 4, Math.PI, 0); ctx.lineTo(0, 0); ctx.fill(); ctx.strokeStyle = '#c99a86'; ctx.lineWidth = 0.6; for (var i = -2; i <= 2; i++) { ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(i * 1.8, -5.5); ctx.stroke(); } }
-		else if (kind === 'coin') { ctx.fillStyle = '#b8743a'; ctx.beginPath(); ctx.ellipse(0, -1.5, 4, 2.4, 0, 0, Math.PI * 2); ctx.fill(); ctx.strokeStyle = '#e4a56a'; ctx.lineWidth = 0.7; ctx.beginPath(); ctx.ellipse(0, -1.5, 2.6, 1.4, 0, 0, Math.PI * 2); ctx.stroke(); }
-		else if (kind === 'bead') { ctx.fillStyle = '#3a8fd8'; ctx.beginPath(); ctx.arc(0, -2.5, 2.8, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = 'rgba(255,255,255,0.7)'; ctx.beginPath(); ctx.arc(-0.8, -3.4, 0.9, 0, Math.PI * 2); ctx.fill(); }
+		else if (kind === 'coin') { ctx.fillStyle = '#4a2a12'; ctx.beginPath(); ctx.ellipse(0, -1.5, 4.8, 3, 0, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = '#b8743a'; ctx.beginPath(); ctx.ellipse(0, -1.5, 4, 2.4, 0, 0, Math.PI * 2); ctx.fill(); ctx.strokeStyle = '#e4a56a'; ctx.lineWidth = 0.7; ctx.beginPath(); ctx.ellipse(0, -1.5, 2.6, 1.4, 0, 0, Math.PI * 2); ctx.stroke(); }
+		else if (kind === 'ring') {   // a bronze signet ring lying in the sand: the band seen at a slant, its flat seal engraved and catching the light
+			ctx.lineWidth = 2.6; ctx.strokeStyle = '#3a2410'; ctx.beginPath(); ctx.ellipse(0.6, -1.6, 3.6, 1.7, -0.15, 0, Math.PI * 2); ctx.stroke();   // a dark edge all round, against the sand
+			ctx.fillStyle = '#3a2410'; ctx.beginPath(); ctx.ellipse(-3.2, -2.8, 2.9, 2.5, -0.2, 0, Math.PI * 2); ctx.fill();
+			ctx.lineWidth = 1.4; ctx.strokeStyle = '#7a4f1e'; ctx.beginPath(); ctx.ellipse(0.6, -1.6, 3.6, 1.7, -0.15, 0, Math.PI * 2); ctx.stroke();   // the band's shadowed far side
+			ctx.strokeStyle = '#d9a441'; ctx.beginPath(); ctx.ellipse(0.6, -1.6, 3.6, 1.7, -0.15, 0.1, Math.PI * 0.95); ctx.stroke();               // its lit near side
+			ctx.fillStyle = '#b07a2c'; ctx.beginPath(); ctx.ellipse(-3.2, -2.8, 2.3, 1.9, -0.2, 0, Math.PI * 2); ctx.fill();                        // the seal face
+			ctx.fillStyle = '#e6bf62'; ctx.beginPath(); ctx.ellipse(-3.4, -3.1, 1.6, 1.25, -0.2, 0, Math.PI * 2); ctx.fill();
+			ctx.strokeStyle = '#8a5a20'; ctx.lineWidth = 0.5; ctx.beginPath(); ctx.moveTo(-4.3, -3.3); ctx.lineTo(-2.5, -2.9); ctx.moveTo(-3.6, -3.9); ctx.lineTo(-3.3, -2.3); ctx.stroke();   // the engraving
+			ctx.fillStyle = 'rgba(255,248,220,0.9)'; ctx.beginPath(); ctx.arc(-3.9, -3.6, 0.45, 0, Math.PI * 2); ctx.fill();                        // a glint
+		}
 		else if (kind === 'shard') { ctx.fillStyle = '#b5603a'; ctx.beginPath(); ctx.moveTo(-5, 0); ctx.lineTo(-3, -4); ctx.lineTo(4, -3); ctx.lineTo(5, 0); ctx.fill(); ctx.strokeStyle = '#2e4d7a'; ctx.lineWidth = 0.9; ctx.beginPath(); ctx.moveTo(-3, -2); ctx.lineTo(3, -1.6); ctx.stroke(); }
 		else { ctx.fillStyle = '#7a3a1c'; ctx.beginPath(); ctx.ellipse(0, -2, 3.4, 2, 0.4, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = 'rgba(255,200,150,0.5)'; ctx.beginPath(); ctx.ellipse(-1, -2.8, 1.2, 0.6, 0.4, 0, Math.PI * 2); ctx.fill(); }
 		ctx.restore();
