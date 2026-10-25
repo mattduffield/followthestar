@@ -1700,8 +1700,9 @@
 			var full = night.phase > 0.44 && night.phase < 0.56, rise = full ? smooth(nightT() / 0.5) : 1;
 			my = 455 + (my - 455) * rise; mr = 40 + (26 - 40) * rise;
 			var moonCol = full ? 'rgb(' + Math.round(242 + 2 * rise) + ',' + Math.round(163 + 77 * rise) + ',' + Math.round(92 + 128 * rise) + ')' : '#f4f0dc';
-			ctx.globalAlpha = clearSky;
-			glow(mx, my, 90 * mr / 22, rise < 1 ? 'rgb(250,180,110)' : 'rgb(220,225,255)', 0.18 + 0.12 * (1 - rise));
+			var sunUp = Math.max(day, sunset);   // in daylight the moon is a pale ghost, brightening as the sun goes down
+			ctx.globalAlpha = clearSky * (1 - 0.6 * sunUp);
+			glow(mx, my, 90 * mr / 22, rise < 1 ? 'rgb(250,180,110)' : 'rgb(220,225,255)', (0.18 + 0.12 * (1 - rise)) * (1 - sunUp));
 			// the moon is made on a little canvas of its own: its face, tinted, then the unlit part taken away (at night
 			// not quite all of it, leaving the faint earthshine; by day all of it, so the sky shows there)
 			if (!moonFace) moonFace = makeMoonFace();
