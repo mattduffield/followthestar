@@ -3162,7 +3162,7 @@
 		buildJournal(); jcard.hidden = true;
 		jWasPlaying = playing; playing = false; updateControls();
 		journalEl.showModal(); requestAnimationFrame(journalSky);
-		journalEl.querySelector('.tabs button[aria-selected=true]').focus();
+		journalEl.querySelector('.tabs button[aria-selected=true]').focus({preventScroll: true}); journalEl.querySelector('.jbody').scrollTop = 0;
 	}
 	function closeJournal(leaving) {
 		if (journalEl.open) journalEl.close();

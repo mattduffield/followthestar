@@ -288,6 +288,34 @@ dialog.journal[open] {animation:j-rise .55s cubic-bezier(.2,.9,.3,1.2);}
 	.journal .tabs {padding:6px 10px 0; overflow-x:auto;} .journal .tabs button {font-size:13px; padding:9px 12px;}
 	.player .btn.journal-btn span {display:none;}
 }
+@media (max-width:640px), (max-height:560px) {   /* phones: a compact header, and the whole journal scrolls as one (the desktop is untouched) */
+	dialog.journal {width:100vw; height:100dvh; max-width:none; border-radius:0;}
+	.journal .jframe {border-radius:0;}
+	.journal .jbody {overflow-y:auto; -webkit-overflow-scrolling:touch; display:block;}
+	.journal .jhead {flex-wrap:wrap; gap:8px 10px; padding:12px 14px 8px;}
+	.journal .jtitle {max-width:calc(100% - 110px);}
+	.journal .ring {width:52px; height:52px;}
+	.journal .ring img {width:34px;}
+	.journal .jtitle h2 {font-size:21px;}
+	.journal .jtitle p {font-size:12px; margin-top:2px;}
+	.journal .stats {display:flex; gap:6px; margin:0; width:100%;}
+	.journal .stat {flex:1; min-width:0; padding:5px 4px; border-radius:10px; display:flex; align-items:baseline; justify-content:center; gap:5px;}
+	.journal .stat .n {font-size:16px;} .journal .stat .l {font-size:10px;}
+	.journal .jclose {top:12px; right:12px; width:36px; height:36px; font-size:18px;}
+	.journal .tabs .long {display:none;}
+	.journal .tabs {position:sticky; top:0; z-index:2; padding:4px 52px 0 8px; background:linear-gradient(rgba(10,13,44,.96),rgba(10,13,44,.85));}
+	.journal .tabs button {font-size:12.5px; padding:8px 10px 10px; white-space:nowrap;}
+	.journal .jpage {overflow:visible; margin:0 6px 10px; padding:14px 10px 18px;}
+	.journal .jgrid {grid-template-columns:repeat(7,1fr); gap:5px;}
+	.journal .tile {font-size:11px; border-radius:8px;}
+	.journal .tile .item {width:22px; height:18px;}
+	.journal .shelf {grid-template-columns:repeat(2,1fr); gap:10px;}
+	.journal .cards {grid-template-columns:repeat(2,1fr);}
+	.journal .badges {grid-template-columns:repeat(2,1fr); gap:14px;}
+	.journal .medal {width:84px; height:84px;} .journal .medal canvas {transform:scale(.8);}
+	.journal .jcard {position:fixed;}
+	.player .btn.journal-btn {min-width:0; padding:9px 14px;}
+}
 @media (prefers-reduced-motion:reduce) {.journal *, dialog.journal[open], .player .btn.journal-btn.glint {animation:none !important; transition:none !important;}}
 </style>
 </head>
@@ -352,7 +380,7 @@ dialog.journal[open] {animation:j-rise .55s cubic-bezier(.2,.9,.3,1.2);}
 							<div class="stats"><div class="stat"><div class="n" id="jsPip">0</div><div class="l">Nights</div></div><div class="stat"><div class="n" id="jsTreasure">0</div><div class="l">Treasures</div></div><div class="stat"><div class="n" id="jsRun">0</div><div class="l">Best run</div></div></div>
 						</div>
 						<nav class="tabs" role="tablist">
-							<button type="button" role="tab" aria-selected="true" data-p="journey">The Journey</button><button type="button" role="tab" aria-selected="false" data-p="treasures">Treasures</button><button type="button" role="tab" aria-selected="false" data-p="home">Home in the East</button><button type="button" role="tab" aria-selected="false" data-p="badges">Badges</button>
+							<button type="button" role="tab" aria-selected="true" data-p="journey"><span class="long">The </span>Journey</button><button type="button" role="tab" aria-selected="false" data-p="treasures">Treasures</button><button type="button" role="tab" aria-selected="false" data-p="home">Home<span class="long"> in the East</span></button><button type="button" role="tab" aria-selected="false" data-p="badges">Badges</button>
 						</nav>
 						<section class="jpage" id="jp-journey" role="tabpanel"></section>
 						<section class="jpage" id="jp-treasures" role="tabpanel" hidden><h3>Treasures from the road</h3><div class="shelf" id="jshelf"></div></section>
@@ -432,15 +460,15 @@ dialog.journal[open] {animation:j-rise .55s cubic-bezier(.2,.9,.3,1.2);}
 	</footer>
 
 	<script src="/assets/js/site.js" defer></script>
-	<script src="/journey/camels.js?v=202610251556" defer></script>
-	<script src="/journey/camel-rig.js?v=202610251556" defer></script>
-	<script src="/journey/art-ready.js?v=202610251556" defer></script>
-	<script src="/journey/readings.js?v=202610251556" defer></script>
-	<script src="/journey/pip.js?v=202610251556" defer></script>
-	<script src="/journey/sayings.js?v=202610251556" defer></script>
-	<script src="/journey/plan.js?v=202610251556" defer></script>
-	<script src="/journey/audio-ready.js?v=202610251556" defer></script>
-	<script src="/journey/sound.js?v=202610251556" defer></script>
-	<script src="/journey/journey.js?v=202610251556" defer></script>
+	<script src="/journey/camels.js?v=202610251602" defer></script>
+	<script src="/journey/camel-rig.js?v=202610251602" defer></script>
+	<script src="/journey/art-ready.js?v=202610251602" defer></script>
+	<script src="/journey/readings.js?v=202610251602" defer></script>
+	<script src="/journey/pip.js?v=202610251602" defer></script>
+	<script src="/journey/sayings.js?v=202610251602" defer></script>
+	<script src="/journey/plan.js?v=202610251602" defer></script>
+	<script src="/journey/audio-ready.js?v=202610251602" defer></script>
+	<script src="/journey/sound.js?v=202610251602" defer></script>
+	<script src="/journey/journey.js?v=202610251602" defer></script>
 </body>
 </html>
