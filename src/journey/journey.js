@@ -1613,7 +1613,8 @@
 	// a bronze brazier on three legs, its fire burning, by the palace steps at home (Firefly art if it's in)
 	function paintBrazier(x) {
 		var y = kingY(x), im = art('jr-pr-brazier');
-		if (im && im.base) { var bh = 64, bw = bh * im.width / im.height; ctx.drawImage(im, x - bw / 2, y + 4 - im.base * bh, bw, bh); }
+		var fy = y - 44;
+		if (im && im.base) { var bh = 60, bw = bh * im.width / im.height, bt = y + 4 - im.base * bh; ctx.drawImage(im, x - bw / 2, bt, bw, bh); fy = bt + bh * 0.1; }   // (the fire sits in its bowl)
 		else {
 			ctx.strokeStyle = '#3a2410'; ctx.lineWidth = 3; ctx.lineCap = 'round';
 			[[-14, 0], [14, 0], [0, 3]].forEach(function(l) { ctx.beginPath(); ctx.moveTo(x + l[0] * 0.4, y - 34); ctx.lineTo(x + l[0], y + l[1]); ctx.stroke(); });   // the legs
@@ -1621,7 +1622,7 @@
 			ctx.fillStyle = g; ctx.beginPath(); ctx.moveTo(x - 20, y - 46); ctx.quadraticCurveTo(x, y - 24, x + 20, y - 46); ctx.closePath(); ctx.fill();   // the bowl
 			ctx.fillStyle = '#e6bf62'; ctx.fillRect(x - 21, y - 48, 42, 3);   // its rim
 		}
-		paintFire(x, 1, 0.55, {y: y - 44, s: 0.6, id: 'brazier'});
+		paintFire(x, 1, 0.55, {y: fy, s: 0.6, id: 'brazier'});
 	}
 	var CAMP_FIRES = {'jr-lm-camp': [400, 282, 0.34], 'jr-lm-camp-2': [545, 515, 0.22], 'jr-lm-camp-3': [530, 505, 0.24]};   // where each camp's fire is, in its picture's pixels, and its size per 100 of the camp's height
 	function paintFire(x, a, grow, opt) {
