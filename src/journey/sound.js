@@ -74,7 +74,7 @@ var JourneySound = (function() {
 		bed('amb-sandstorm', BEDS['amb-sandstorm'] * state.sandstorm);
 		bed('amb-rain', BEDS['amb-rain'] * state.rain * (1 - state.storm));
 		bed('amb-storm-rain', BEDS['amb-storm-rain'] * state.storm);
-		bed('amb-campfire', state.camp ? BEDS['amb-campfire'] : 0);
+		bed('amb-campfire', BEDS['amb-campfire'] * (state.camp || 0));   // as loud as the fire is lit
 		bed('amb-water', BEDS['amb-water'] * state.water);
 		bed('amb-sheep', BEDS['amb-sheep'] * state.sheep);
 		bed('amb-camel-bells', BEDS['amb-camel-bells'] * state.walking);

@@ -1384,7 +1384,7 @@
 	// hot white-yellow at the root to red at the tip, and added together so they glow where they overlap), a pool of
 	// firelight on the sand, sparks drifting up and a thin smoke. grow (0..1) is how far it has caught: it's lit once the
 	// kings have walked over, starting small and building to a steady fire.
-	var embers = [], smoke = [], fireClock = 0;
+	var embers = [], smoke = [], fireClock = 0, fireNow = 0;
 	function paintFire(x, a, grow) {
 		if (a <= 0) return;
 		grow = grow == null ? 1 : grow;
@@ -1548,7 +1548,8 @@
 				ctx.restore();
 			}
 		});
-		if (kind === 'fire') paintFire(fireX(), smooth((e - fireLit) / 0.8), smooth((e - fireLit) / 3.5));   // lit when the first of them gets there, catching and building up
+		fireNow = kind === 'fire' ? smooth((e - fireLit) / 3.5) : 0;   // (the crackle is heard as the fire catches, not before)
+		if (kind === 'fire') paintFire(fireX(), smooth((e - fireLit) / 0.8), fireNow);   // lit when the first of them gets there, catching and building up
 	}
 	// the page waits for the wise men and their camels to load, so nothing stands in for them first; if the art is
 	// very slow (or missing) it gives up after a few seconds and uses the logo's camels
@@ -2397,7 +2398,7 @@
 			// what they're passing: water near the river and oases, sheep near the shepherds
 			var nearBy = function(kinds) { return PIECES.some(function(p) { return kinds.indexOf(p.kind) >= 0 && Math.abs(cam - p.pass) < 0.18; }) ? 1 : 0; };
 			sound.update({fast: show && show.mode === 'sofar' && playing && evening() === 0 ? 3 : 1, wind: night.wind * (w === 'wind' ? 1 : 0.4), rain: w === 'rain' || w === 'storm' ? lv : 0, sandstorm: w === 'sandstorm' ? lv : 0,
-				storm: w === 'storm' ? lv : 0, clear: (w === 'clear' || w === 'haze') && night.day !== TOTAL, camp: eveningKind() === 'fire' && evening() > 1.8,
+				storm: w === 'storm' ? lv : 0, clear: (w === 'clear' || w === 'haze') && night.day !== TOTAL, camp: evening() > 0 ? fireNow : 0,
 				water: nearBy(['river', 'oasis', 'heron', 'well']), sheep: nearBy(['shepherds', 'sheep']), walking: walk});
 			// the animals they pass call out now and then while they're in view (sheep and lambs, goats, a donkey)
 			PIECES.forEach(function(p) {
