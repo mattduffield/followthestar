@@ -173,7 +173,7 @@
 		herod:            {kind: 'palace', art: 'jr-lm-herod-palace', alt: 'jr-lm-jerusalem', caption: 'King Herod: “Go and search diligently for the young child”', h: 270, at: 1, off: 320},
 		jerusalem:        {kind: 'jerusalem', art: 'jr-lm-jerusalem', caption: 'Leaving Jerusalem, the Star goes before them', h: 300, at: 0.3},
 		angel:            {kind: 'angel', art: 'jr-en-angel', caption: 'Warned in a dream, they go home another way', h: 150, at: 0.92, off: 260},
-		home:             {kind: 'palace', art: 'jr-lm-east-palace', caption: 'Home again', h: 290, at: 1, off: 300},
+		home:             {kind: 'palace', art: 'jr-lm-east-palace', caption: 'Home again', h: 400, at: 1, off: 330, layer: 'road'},   // close and large, lit to welcome them home
 		shepherds: {kind: 'shepherds', art: 'jr-lm-shepherds', caption: 'Shepherds keeping watch', h: 140},
 		bethlehem: {kind: 'bethlehem', art: 'jr-lm-bethlehem', caption: 'Bethlehem', h: 210, at: 0.5},
 		stable:    {kind: 'stable', art: 'jr-lm-stable', caption: 'They have found him', h: 165, layer: 'road', at: 1, off: 390}
@@ -183,7 +183,7 @@
 		herder:    {art: 'jr-en-goat-herder', caption: 'A herder and his goats', h: 110, flip: true},
 		heron:     {art: 'jr-en-herons', caption: 'Herons by the water', h: 105},
 		farm:      {art: 'jr-en-farmhouse', caption: 'A farmhouse with a lamp still lit', h: 115},
-		owl:       {art: 'jr-en-owl', caption: 'An owl in a palm tree', h: 170},
+		owl:       {art: 'jr-en-owl', caption: 'An owl in a palm tree', h: 300},
 		tents:     {art: 'jr-en-bedouin-tents', caption: 'The tents of desert herders', h: 105},
 		fox:       {art: 'jr-en-fox', caption: 'A desert fox watching them pass', h: 70, flip: true},
 		merchants: {art: 'jr-en-merchants', caption: 'Merchants heading the other way', h: 85, kind: 'caravan'},
@@ -1041,6 +1041,7 @@
 					y = ridge + 3;
 				}
 				if (p.kind === 'angel') glow(x, y - h * 0.5, h * 1.1, 'rgb(255,236,180)', 0.35 * (0.8 + 0.2 * Math.sin(clock * 1.5)));
+				if (p.key === 'home') glow(x, y - h * 0.4, h * 1.25, 'rgb(255,186,105)', 0.42 * (0.85 + 0.15 * flicker(4)));   // home: warm light all round it
 				var top = y + h * 0.06 - im.base * h;
 				ctx.save();
 				if (p.flip) { ctx.translate(x, 0); ctx.scale(-1, 1); ctx.translate(-x, 0); }
@@ -1057,8 +1058,25 @@
 					ctx.filter = p.art === 'jr-far-pass' && art('jr-far-pass') ? 'none' : 'brightness(0.72) saturate(0.8)';   // (the strip is already shaded like the far hills)
 					ctx.drawImage(im.soft, x - w / 2, top + h * 0.18, w, h);
 					ctx.filter = 'none';
+				} else if (p.key === 'home') {
+					// every lamp lit for their return: the palace glows warm, with torches burning either side of the gate
+					ctx.filter = 'brightness(1.28) saturate(1.15) sepia(0.18)';
+					ctx.drawImage(im, x - w / 2, top, w, h);
+					ctx.filter = 'none';
+					ctx.globalCompositeOperation = 'lighter';
+					glow(x, y - h * 0.22, w * 0.3, 'rgb(255,170,70)', 0.35 * flicker(7));
+					[-0.36, 0.36].forEach(function(f, j) { glow(x + f * w, y - h * 0.16, 40, 'rgb(255,160,60)', 0.8 * flicker(j * 5 + 1)); glow(x + f * w, y - h * 0.18, 12, 'rgb(255,240,190)', 0.9 * flicker(j * 5 + 1)); });
+					ctx.globalCompositeOperation = 'source-over';
 				} else
 				ctx.drawImage(dark ? (im.dark || (im.dark = tinted(im, 0.45))) : im, x - w / 2, top, w, h);
+				if (p.key === 'owl' && art(p.art)) {   // its eyes catch the light, so it can be seen up in the palm; now and then it blinks
+					var shut = Math.sin(clock * 0.8 + p.night) > 0.95;
+					[0.609, 0.651].forEach(function(fx) {
+						var ex = x - w / 2 + fx * w, ey = top + 0.184 * h;
+						glow(ex, ey, h * 0.035, 'rgb(255,214,110)', shut ? 0.15 : 0.7);
+						if (!shut) { ctx.fillStyle = '#ffe9a8'; ctx.beginPath(); ctx.arc(ex, ey, Math.max(1.2, h * 0.008), 0, Math.PI * 2); ctx.fill(); }
+					});
+				}
 				ctx.restore();
 			} else drawStandIn(p, x, groundUnder(layer, x, 120) + 4);
 		});
@@ -1068,7 +1086,7 @@
 	// The wise men as characters (round 4): each king has his own camel, in his colour
 	var CHARS = [1, 2, 3].map(function(n) {
 		return {camel: 'jr-char-camel-' + n, kneel: 'jr-char-camel-' + n + '-kneel', ride: 'jr-char-king-' + n + '-ride', walk: 'jr-char-king-' + n + '-walk', pray: 'jr-char-king-' + n + '-kneel',
-			walkFree: 'jr-char-king-' + n + '-walk-free', rest: 'jr-char-king-' + n + '-rest'};
+			walkFree: 'jr-char-king-' + n + '-walk-free', rest: 'jr-char-king-' + n + '-rest', rideHome: 'jr-char-king-' + n + '-ride-home'};
 	});
 	var RIDE_H = 0.74, SEAT = [0.43, 0.8];   // a riding king's height (of the camel picture's) and where he sits in his own picture
 	var CHAR_H = 150, CHAR_BACK = [0, 220, 440];
@@ -1436,7 +1454,7 @@
 		kings.forEach(function(q) { drawKing(q.im, q.x, q.y, q.im.height * q.ks, q.dir, q.bob || 0, q.tilt || 0, q.a, q.ph); });
 		// 2. the camels, and the kings still on them
 		plan.forEach(function(p) {
-			var c = p.c, r = p.r, s = p.g.s, ri = art(c.ride);
+			var c = p.c, r = p.r, s = p.g.s, ri = (homeward(night.day) && art(c.rideHome)) || art(c.ride);   // going home their hands are empty: the gifts were given
 			var riding = e <= 0;
 			drawRigCamel(p.k, c.camel, r, p.cx, p.u, {alpha: 1 - p.kneelA, rider: riding ? ri : null, riderH: ri.height * p.ks, seat: SEATS[p.n]});
 			var kim = art(c.kneel), ks = r.kneelSeat, kw = kim.width * s, kh = kim.height * s;
@@ -2282,7 +2300,7 @@
 				if (!playing || cam < p.pass - 0.16 || cam > p.pass + 0.12) return;
 				if (show && show.mode === 'sofar') sound.preload(/sheep|shepherds/.test(p.kind) ? ['sheep', 'lamb'] : p.kind === 'herder' ? ['goat'] : ['donkey']);
 				// (the merchants' caravan: their camels grumbling and a donkey braying, a little quieter as they're farther off)
-				var calls = /sheep|shepherds/.test(p.kind) ? ['sheep', 'lamb'] : p.kind === 'herder' ? ['goat', 'goat', 'sheep'] : p.kind === 'donkey' ? ['donkey'] : p.kind === 'caravan' ? ['camel-grunt', 'camel-grunt', 'donkey', 'camel-grunt'] : p.kind === 'howl' ? [p.who] : p.kind === 'fox' ? ['fox'] : null;
+				var calls = /sheep|shepherds/.test(p.kind) ? ['sheep', 'lamb'] : p.kind === 'herder' ? ['goat', 'goat', 'sheep'] : p.kind === 'donkey' ? ['donkey'] : p.kind === 'caravan' ? ['camel-grunt', 'camel-grunt', 'donkey', 'camel-grunt'] : p.kind === 'howl' ? [p.who] : p.kind === 'fox' ? ['fox'] : p.kind === 'owl' ? ['owl'] : null;
 				if (calls && clock > (p.nextCall || 0)) {
 					var lapse = show && show.mode === 'sofar';
 					if (p.nextCall || lapse) sound.animal(calls[Math.floor(Math.random() * calls.length)], p.kind === 'caravan' ? 0.22 : p.kind === 'fox' ? 0.24 : p.kind === 'howl' ? 0.3 : 0.35);   // (far off, and the fox's cry kept soft)
