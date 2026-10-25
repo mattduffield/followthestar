@@ -1327,8 +1327,24 @@
 		im.lid = [at(e[0] - e[2] * 0.6, e[1] - e[3] - 7), at(e[0] - e[2] * 0.3, e[1] + e[3] + 7)];
 		return im.lid;
 	}
+	// clicking a camel: it grumbles and tosses its head; one of the back two, while walking, also tries to pass
+	var camelBoxes = [];
+	function surgeAt(k) {   // 0..1: how far into its attempt to pass (up, along, level a moment, back)
+		if (!(k.surge > 0)) return 0;
+		var f = (clock - k.surge) / 4.5;
+		if (f >= 1 || f < 0) return 0;
+		return f < 0.4 ? smooth(f / 0.4) : f < 0.6 ? 1 : 1 - smooth((f - 0.6) / 0.4);
+	}
+	function pokeCamel(pt) {
+		var hit = camelBoxes.filter(function(b) { return pt.x > b.x0 && pt.x < b.x1 && pt.y > b.y0 && pt.y < b.y1; }).pop();
+		if (!hit) return false;
+		hit.k.poke = clock; sound.animal('camel-grunt', 0.42);
+		if (hit.i > 0 && walk > 0.5 && evening() === 0 && !(clock - hit.k.surge < 4.5) && !CARAVAN.some(function(o) { return clock - o.surge < 4.5; })) hit.k.surge = clock;
+		return true;
+	}
 	function camelNod(k, f0) {   // the head dips with each step while walking; at rest it looks slowly about
-		return walk * 0.035 * Math.sin(4 * Math.PI * f0 - 0.7) + (1 - walk) * 0.03 * Math.sin(clock * 0.45 + k.seed * 7) * Math.sin(clock * 0.17 + k.seed * 3);
+		var pk = clock - (k.poke || -9), toss = pk < 0.9 ? -0.16 * Math.sin(Math.PI * pk / 0.9) : 0;   // (clicked: a toss of the head)
+		return toss + walk * 0.035 * Math.sin(4 * Math.PI * f0 - 0.7) + (1 - walk) * 0.03 * Math.sin(clock * 0.45 + k.seed * 7) * Math.sin(clock * 0.17 + k.seed * 3);
 	}
 	function camelSwish(k) {   // now and then the tail flicks
 		var t = clock * 0.5 + k.seed * 5, burst = Math.max(0, Math.sin(t)) * Math.max(0, Math.sin(t * 0.37 + 1));
@@ -1614,16 +1630,22 @@
 		var e = evening(), kind = eveningKind();
 		paintPrints();
 		var plan = CARAVAN.map(function(k, i) {
-			var n = order[i], c = CHARS[n], r = rigReady(c.camel), cx = LEAD_X - CHAR_BACK[i], u = cam * DAYW - CHAR_BACK[i];
-			k.ah = CHAR_H; if (k.art !== c.camel) { k.art = c.camel; k.wasPlanted = []; }
+			// a camel clicked while walking tries to pass the one ahead: it hurries forward, stepping out towards us (a little
+			// lower and larger) so it goes alongside, draws level, then gives up and drops back into line
+			var sg = surgeAt(k), gap = i > 0 ? CHAR_BACK[i] - CHAR_BACK[i - 1] : 0;
+			var n = order[i], c = CHARS[n], r = rigReady(c.camel), cx = LEAD_X - CHAR_BACK[i] + gap * 0.95 * sg, u = cam * DAYW - CHAR_BACK[i] + gap * 0.95 * sg;
+			if (i > 0 && sg > 0.9 && !CARAVAN[i - 1].answered) { CARAVAN[i - 1].answered = true; CARAVAN[i - 1].poke = clock; sound.animal('camel-grunt', 0.32); }   // the one ahead grumbles at it
+			if (sg === 0) CARAVAN.forEach(function(o) { if (o !== k && !(o.surge > clock - 5)) o.answered = false; });
+			k.ah = CHAR_H * (1 + 0.07 * sg); if (k.art !== c.camel) { k.art = c.camel; k.wasPlanted = []; }
 			var t0 = 0.8 + [0, 0.22, 0.12][i];                         // nearly together, a little out of step
-			var p = {k: k, c: c, r: r, cx: cx, u: u, n: n, t0: t0,
+			var p = {k: k, c: c, r: r, cx: cx, u: u, n: n, t0: t0, sink: 22 * sg, sg: sg, i: i,
 				// the camel goes down (its walking picture becomes its kneeling one, from the same sheet) and its king comes
 				// down with it in the same moment; then he stands up behind it and walks off
 				kneelA: smooth((e - t0) / 0.5),
 				stand: smooth((e - 2.0 - i * 0.35) / 0.45),           // once all three camels are down, the kings get up in turn
 				spot: kingSpot(i), walkStart: 2.6 + i * 0.35};
-			p.g = drawRigCamel(k, c.camel, r, cx, u, {alpha: 0});    // where the camel stands (nothing drawn yet)
+			p.g = drawRigCamel(k, c.camel, r, cx, u, {alpha: 0, sink: 22 * sg});    // where the camel stands (nothing drawn yet)
+			p.g.y += 22 * sg;
 			p.ks = kingScale(c);
 			p.seatX = cx + (r.saddle[0] - r.w / 2) * p.g.s; p.seatY = p.g.y - (r.h - r.saddle[1]) * p.g.s;
 			return p;
@@ -1663,18 +1685,21 @@
 			drawKing(q.im, q.x, q.y, q.im.height * q.ks, q.dir, q.bob || 0, q.tilt || 0, q.a, q.ph, q.look || 0);
 			if (q.a > 0.5) { var hh = q.im.height * q.ks * (q.im.base || 1); breathe('king' + q.n, q.x + q.dir * hh * 0.1, q.y - hh * 0.86, q.dir, 1); }   // (standing about at the fire)
 		});
-		// 2. the camels, and the kings still on them
-		plan.forEach(function(p) {
+		// 2. the camels, and the kings still on them (one stepping out to pass is nearer us, so drawn last)
+		camelBoxes = [];
+		plan.slice().sort(function(a, b) { return a.sg - b.sg; }).forEach(function(p) {
 			var c = p.c, r = p.r, s = p.g.s, ri = (homeward(night.day) && art(c.rideHome)) || art(c.ride);   // going home their hands are empty: the gifts were given
 			var riding = e <= 0;
-			drawRigCamel(p.k, c.camel, r, p.cx, p.u, {alpha: 1 - p.kneelA, rider: riding ? ri : null, riderH: ri.height * p.ks, seat: SEATS[p.n]});
+			drawRigCamel(p.k, c.camel, r, p.cx, p.u, {alpha: 1 - p.kneelA, rider: riding ? ri : null, riderH: ri.height * p.ks, seat: SEATS[p.n], sink: p.sink});
+			camelBoxes.push({k: p.k, i: p.i, x0: p.cx - r.w * s * 0.45, x1: p.cx + r.w * s * 0.5, y0: p.g.y - r.h * s * (p.kneelA > 0.5 ? 0.6 : 1), y1: p.g.y});
 			var kim = art(c.kneel), ks = r.kneelSeat, kw = kim.width * s, kh = kim.height * s;
 			var kx = ks ? p.seatX - ks[0] * s : p.cx - kw / 2, ky = p.g.y + 4 - (ks ? ks[3] : kh / s * (kim.base || 1)) * s;   // seats lined up
 			if (p.kneelA > 0) {
 				ctx.save(); ctx.globalAlpha = p.kneelA;
 				ctx.translate(kx, ky); ctx.scale(kw / kim.width, kh / kim.height);
 				var nz = (clock * 0.11 + p.k.seed * 3) % 1, nuzzle = nz < 0.12 && !reduceMotion ? Math.sin(Math.PI * nz / 0.12) * 0.13 : 0;   // now and then it stretches its head forward and down
-				drawCamelFace(kim, CAMEL_FACE.kneel, (1 - walk) * 0.04 * Math.sin(clock * 0.4 + p.k.seed * 7) + nuzzle, camelBlink(p.k), 0);
+				var pk2 = clock - (p.k.poke || -9), toss2 = pk2 < 0.9 ? -0.16 * Math.sin(Math.PI * pk2 / 0.9) : 0;
+				drawCamelFace(kim, CAMEL_FACE.kneel, (1 - walk) * 0.04 * Math.sin(clock * 0.4 + p.k.seed * 7) + nuzzle + toss2, camelBlink(p.k), 0);
 				ctx.restore();
 				if (p.kneelA > 0.5) breathe('camel' + p.k.n, kx + 590 / kim.width * kw, ky + 85 / kim.height * kh, 1, s * 4);   // (its nose, kneeling)
 			}
@@ -2252,9 +2277,9 @@
 		pip.wasPlaying = playing; playing = false; pip.card = true; updateControls();   // the scene waits while the card is open
 		pipCard.hidden = false; verseEl.style.visibility = 'hidden'; pipCard.querySelector('button').focus();
 	}
-	canvas.addEventListener('click', function(evt) { if (nearPip(evt, evt.pointerType === 'touch' ? 40 : 26)) findPip(); else if (pickUp(sceneXY(evt)) || traceAt(sceneXY(evt))) return; else if (evt.pointerType !== 'touch') pipCall(evt); });
-	canvas.addEventListener('pointerdown', function(evt) { if (evt.pointerType === 'touch') { if (nearPip(evt, 40)) { evt.preventDefault(); findPip(); } else if (!pickUp(sceneXY(evt)) && !traceAt(sceneXY(evt))) pipCall(evt); } });
-	canvas.addEventListener('mousemove', function(evt) { pip.near = nearPip(evt, 70); pip.lookX = sceneXY(evt).x; var k = constellation(), sp = sceneXY(evt); canvas.style.cursor = nearPip(evt, 26) || (k && daylight() < 0.2 && k.pts.some(function(q) { return Math.hypot(q[0] - sp.x, q[1] - sp.y) < 40; })) ? 'pointer' : ''; });
+	canvas.addEventListener('click', function(evt) { if (nearPip(evt, evt.pointerType === 'touch' ? 40 : 26)) findPip(); else if (pickUp(sceneXY(evt)) || pokeCamel(sceneXY(evt)) || traceAt(sceneXY(evt))) return; else if (evt.pointerType !== 'touch') pipCall(evt); });
+	canvas.addEventListener('pointerdown', function(evt) { if (evt.pointerType === 'touch') { if (nearPip(evt, 40)) { evt.preventDefault(); findPip(); } else if (!pickUp(sceneXY(evt)) && !pokeCamel(sceneXY(evt)) && !traceAt(sceneXY(evt))) pipCall(evt); } });
+	canvas.addEventListener('mousemove', function(evt) { pip.near = nearPip(evt, 70); pip.lookX = sceneXY(evt).x; var k = constellation(), sp = sceneXY(evt); canvas.style.cursor = nearPip(evt, 26) || camelBoxes.some(function(b) { return sp.x > b.x0 && sp.x < b.x1 && sp.y > b.y0 && sp.y < b.y1; }) || (k && daylight() < 0.2 && k.pts.some(function(q) { return Math.hypot(q[0] - sp.x, q[1] - sp.y) < 40; })) ? 'pointer' : ''; });
 	canvas.addEventListener('mouseleave', function() { pip.near = false; });
 	document.getElementById('pip-close').addEventListener('click', function() {
 		pipCard.hidden = true; verseEl.style.visibility = ''; pip.card = false;
@@ -2829,6 +2854,7 @@
 			moon: function() { return {phase: night.phase, words: moonWords(night.phase), day: night.day, cover: wx.cover, moonX: night.moonX, sh: shiftOf('sky'), VW: VW}; },
 			pip: function() { return pip.box && {x: pip.box.x, y: pip.box.y, target: pip.target, called: pip.called, state: pip.state}; },
 			findPip: function() { findPip(); },
+			camels: function() { return camelBoxes.map(function(b) { return {i: b.i, x: (b.x0 + b.x1) / 2, y: (b.y0 + b.y1) / 2, surge: surgeAt(b.k)}; }); },
 			find: function() { var f = findSpot(); return {x: f.x, y: f.y, kind: f.kind[0]}; },
 			trace: function() { traced = {t: clock, day: night.day}; var k = constellation(); return k && k.c.name; },
 			drawn: function() { var d = Object.keys(drawnNames).sort(); drawnNames = {}; return d; },
