@@ -192,7 +192,11 @@
 		ibex:      {art: 'jr-en-ibex', caption: 'Wild ibex on the rocks', h: 110, flip: true},
 		lanterns:  {art: 'jr-en-lantern-travelers', caption: 'Other travelers with lanterns', h: 105, flip: true},
 		sheep:     {art: 'jr-en-sheep', caption: 'A shepherd and his sheep', h: 110, flip: true},
-		donkey:    {art: 'jr-en-donkey', caption: 'A traveler with a donkey', h: 110, flip: true}
+		donkey:    {art: 'jr-en-donkey', caption: 'A traveler with a donkey', h: 110, flip: true},
+		kite:      {art: 'jr-en-kite-boy', caption: 'A boy flying his kite in the wind', h: 150},
+		potter:    {art: 'jr-en-potter', caption: 'A potter at her wheel', h: 115},
+		'well-women': {art: 'jr-en-well-women', caption: 'Women drawing water at the well', h: 135},
+		shepherdess: {art: 'jr-en-shepherdess', caption: 'A shepherdess with her lambs', h: 135}
 	};
 	var CAMPS = ['jr-lm-camp', 'jr-lm-camp-2', 'jr-lm-camp-3'];
 
@@ -2535,7 +2539,7 @@
 		PIECES.forEach(function(p) { p.heard = false; p.seen = null; p.nextCall = 0; });
 		setNightSounds = function() {
 		var kinds = PIECES.filter(function(p) { return p.night === k; }).map(function(p) { return p.kind + ' ' + p.key; }).join(' ');
-		sound.preload([/howl/.test(kinds) ? 'jackal' : '', /howl/.test(kinds) ? 'wolf' : '', /fox/.test(kinds) ? 'fox' : '', /sheep|shepherds/.test(kinds) ? 'sheep' : '', /sheep|shepherds/.test(kinds) ? 'lamb' : '', /herder/.test(kinds) ? 'goat' : '', /donkey|caravan/.test(kinds) ? 'donkey' : '', /jerusalem-gate|herod/.test(kinds) ? 'shofar' : ''].filter(Boolean));
+		sound.preload([/howl/.test(kinds) ? 'jackal' : '', /howl/.test(kinds) ? 'wolf' : '', /fox/.test(kinds) ? 'fox' : '', /sheep|shepherd/.test(kinds) ? 'sheep' : '', /sheep|shepherd/.test(kinds) ? 'lamb' : '', /herder/.test(kinds) ? 'goat' : '', /donkey|caravan/.test(kinds) ? 'donkey' : '', /jerusalem-gate|herod/.test(kinds) ? 'shofar' : ''].filter(Boolean));
 		};
 		setNightSounds();
 		if (pipCard) { pipCard.hidden = true; verseEl.style.visibility = ''; pip.card = false; }
@@ -2789,7 +2793,7 @@
 				if (!playing || cam < p.pass - 0.16 || cam > p.pass + 0.12) return;
 				if (show && show.mode === 'sofar') sound.preload(/sheep|shepherds/.test(p.kind) ? ['sheep', 'lamb'] : p.kind === 'herder' ? ['goat'] : ['donkey']);
 				// (the merchants' caravan: their camels grumbling and a donkey braying, a little quieter as they're farther off)
-				var calls = /sheep|shepherds/.test(p.kind) ? ['sheep', 'lamb'] : p.kind === 'herder' ? ['goat', 'goat', 'sheep'] : p.kind === 'donkey' ? ['donkey'] : p.kind === 'caravan' ? ['camel-grunt', 'camel-grunt', 'donkey', 'camel-grunt'] : p.kind === 'howl' ? [p.who] : p.kind === 'fox' ? ['fox'] : p.kind === 'owl' ? ['owl'] : null;
+				var calls = /sheep|shepherd/.test(p.kind) ? ['sheep', 'lamb'] : p.kind === 'herder' ? ['goat', 'goat', 'sheep'] : p.kind === 'donkey' ? ['donkey'] : p.kind === 'caravan' ? ['camel-grunt', 'camel-grunt', 'donkey', 'camel-grunt'] : p.kind === 'howl' ? [p.who] : p.kind === 'fox' ? ['fox'] : p.kind === 'owl' ? ['owl'] : null;
 				if (calls && clock > (p.nextCall || 0)) {
 					var lapse = show && show.mode === 'sofar';
 					if (p.nextCall || lapse) sound.animal(calls[Math.floor(Math.random() * calls.length)], p.kind === 'caravan' ? 0.22 : p.kind === 'fox' ? 0.24 : p.kind === 'howl' ? 0.3 : 0.35);   // (far off, and the fox's cry kept soft)
