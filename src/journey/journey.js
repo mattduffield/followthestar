@@ -221,6 +221,14 @@
 		PIECES.push({night: k, key: 'howl', kind: 'howl', who: p.howl, art: 'jr-howl-' + p.howl, caption: p.howl === 'wolf' ? 'A wolf howls far away' : 'Jackals calling in the night',
 			h: p.howl === 'wolf' ? 52 : 46, layer: 'mid', pass: st[0] + 0.45 * (st[1] - st[0]), off: 380, small: true});
 	});
+	// a lone jackal trotting across the hills on a few other desert and rocky nights
+	for (var kj = dayOf('10-09'); kj < dayOf('12-11'); kj++) {
+		var pj = planFor(kj);
+		if (pj.howl || pj.encounter === 'fox' || !/clear|haze|wind/.test(pj.weather) || hash(kj * 5 + 900) > 0.2) continue;
+		var stj = stretch(kj);
+		PIECES.push({night: kj, key: 'trotter', kind: 'trotter', who: 'jackal', art: 'jr-jackal-trot', caption: 'A jackal trotting over the hills', h: 46,
+			layer: 'mid', pass: stj[0] + 0.62 * (stj[1] - stj[0]), off: 380, small: true});
+	}
 	// far off in the first week: a great snow-capped mountain in the lands of the East, smoking gently
 	PIECES.push({night: 2, key: 'volcano', kind: 'volcano', art: 'jr-far-volcano', caption: '', h: 150, layer: 'far', pass: 2.6, off: 0});
 	// Bethlehem on the far hills, ahead of them through the last nights
@@ -1049,7 +1057,7 @@
 			if (p.layer !== layer) return;
 			// the howlers belong to their own night only (the far hills move so slowly they'd still be there the next night),
 			// and only once their picture has loaded (no stand-in)
-			if (p.kind === 'howl' && (p.night !== night.day || !art(p.art))) return;
+			if ((p.kind === 'howl' || p.kind === 'trotter') && (p.night !== night.day || !art(p.art))) return;
 			if ((p.kind === 'angel' || p.kind === 'camp') && p.night !== night.day) return;   // (the angel came in a dream, and last night's camp was packed up: neither carries into the next night)
 			var x = screenX(layer, pieceU(p));
 			if (x < -600 || x > VW + 600) return;
@@ -1076,7 +1084,7 @@
 					for (var gx = -0.4; gx <= 0.4; gx += 0.1) low = Math.max(low, layerY(layer, x + gx * w - LEAD_X + shf));
 					y = Math.max(y, low + 4);
 				}
-				if (p.kind === 'howl') {   // sitting right on the visible ridge line under its paws, never above it
+				if (p.kind === 'howl' || p.kind === 'trotter') {   // right on the visible ridge line under its paws, never above it
 					var sh2 = shiftOf(layer), ridge = -1e9;
 					for (var fx = -0.35; fx <= 0.35; fx += 0.175) ridge = Math.max(ridge, layerY(layer, x + fx * w - LEAD_X + sh2));
 					y = ridge + 3;
@@ -1086,11 +1094,33 @@
 				var top = y + h * 0.06 - im.base * h;
 				ctx.save();
 				if (p.flip) { ctx.translate(x, 0); ctx.scale(-1, 1); ctx.translate(-x, 0); }
-				if (p.kind === 'howl') {
-					// off on the hills in the moonlight: dimmed and cooled a little to sit in the night; jackals call in a pair
+				if (p.kind === 'howl' || p.kind === 'trotter') {
+					// Off on the hills in the moonlight, dimmed and cooled a little to sit in the night. On a howl night they trot
+					// along the ridge as it comes into view, stop and stand looking at the caravan, then sit and howl (jackals
+					// in a pair). All three poses are from one sheet, drawn at the sheet's own scale to one another.
 					ctx.filter = 'brightness(0.78) saturate(0.85) hue-rotate(-6deg)';
-					if (p.who === 'jackal') { ctx.save(); ctx.translate(x - w * 1.25, 0); ctx.scale(-1, 1); ctx.drawImage(im, -w * 0.44, top + h * 0.12, w * 0.88, h * 0.88); ctx.restore(); }   // a second, facing the other way
-					ctx.drawImage(im, x - w / 2, top, w, h);
+					var SH = CANINE_H[p.who], q = clamp((VW * 1.1 - x) / (VW * 0.3), 0, 1);   // (so it's howling well before it passes behind the caravan)
+					var pose = p.kind === 'trotter' ? 'trot' : q < 0.5 ? 'trot' : q < 0.75 ? 'stand' : 'howl';
+					var off = p.kind === 'trotter' ? -220 + 440 * clamp((VW * 1.1 - x) / (VW * 1.2), 0, 1) : pose === 'trot' ? -120 * (1 - q / 0.5) : 0;
+					p.howling = pose === 'howl';
+					var pim = pose === 'howl' ? im : art('jr-' + p.who + '-' + pose) || im;
+					var ph2 = pose === 'howl' ? h : h * SH[pose] / SH.howl, pw = ph2 * pim.width / pim.height;
+					var bob = pose === 'trot' && !reduceMotion ? Math.abs(Math.sin(clock * 7 + p.night)) * 2 : 0;
+					var px2 = x + off, shr = shiftOf(layer), ry = -1e9;   // the ridge under where it is now, as it trots
+					for (var rx = -0.35; rx <= 0.35; rx += 0.175) ry = Math.max(ry, layerY(layer, px2 + rx * pw - LEAD_X + shr));
+					var ptop = ry + 3 + ph2 * 0.06 - (pim.base || 1) * ph2 - bob;
+					var one = function(cx, scale, face) {   // face: 1 as drawn (nose to the right), -1 turned round
+						ctx.save(); ctx.translate(cx, 0); ctx.scale(face, 1);
+						ctx.drawImage(pim, -pw * scale / 2, ptop + ph2 * (1 - scale), pw * scale, ph2 * scale); ctx.restore();
+					};
+					if (pose === 'howl') {
+						if (p.who === 'jackal') { ctx.save(); ctx.translate(x - w * 1.25, 0); ctx.scale(-1, 1); ctx.drawImage(im, -w * 0.44, top + h * 0.12, w * 0.88, h * 0.88); ctx.restore(); }   // a second, facing the other way
+						ctx.drawImage(im, x - w / 2, top, w, h);
+					} else {
+						var face = pose === 'stand' ? -1 : 1;   // trotting on its way; standing, it turns to look at the caravan
+						if (p.who === 'jackal' && p.kind === 'howl') one(px2 - w * 1.25 - (pose === 'trot' ? 30 : 0), 0.88, face);   // its mate a little behind
+						one(px2, 1, face);
+					}
 					ctx.filter = 'none';
 				} else if (p.kind === 'pass') {
 					// a distant range the road winds into: its edges feathered into the hills and sky, hazed like the far
@@ -1201,6 +1231,7 @@
 	// looks slowly about at rest), the eyes blink, and the tail swishes. The neck is drawn in thin strips, each turned a
 	// little more about the base of the neck than the one before, so it bends smoothly with no seam. Blinking draws the
 	// fur just above the eye down over it, so the lid is the camel's own colour. All three camels share these points.
+	var CANINE_H = {jackal: {stand: 398, trot: 403, howl: 437}, wolf: {stand: 396, trot: 397, howl: 444}};   // each pose's height on its sheet
 	var CAMEL_FACE = {
 		body: {axis: 'x', a: 470, b: 570, pivot: [505, 290], eye: [619.5, 39.5, 15, 9], tail: [20, 188, 54, 262]},
 		kneel: {axis: 'y', xr: 380, a: 300, b: 120, pivot: [470, 330], eye: [473.5, 40.5, 15, 9]}
@@ -2818,7 +2849,7 @@
 				if (!playing || cam < p.pass - 0.16 || cam > p.pass + 0.12) return;
 				if (show && show.mode === 'sofar') sound.preload(/sheep|shepherds/.test(p.kind) ? ['sheep', 'lamb'] : p.kind === 'herder' ? ['goat'] : ['donkey']);
 				// (the merchants' caravan: their camels grumbling and a donkey braying, a little quieter as they're farther off)
-				var calls = /sheep|shepherd/.test(p.kind) ? ['sheep', 'lamb'] : p.kind === 'herder' ? ['goat', 'goat', 'sheep'] : p.kind === 'donkey' ? ['donkey'] : p.kind === 'caravan' ? ['camel-grunt', 'camel-grunt', 'donkey', 'camel-grunt'] : p.kind === 'howl' ? [p.who] : p.kind === 'fox' ? ['fox'] : p.kind === 'owl' ? ['owl'] : null;
+				var calls = /sheep|shepherd/.test(p.kind) ? ['sheep', 'lamb'] : p.kind === 'herder' ? ['goat', 'goat', 'sheep'] : p.kind === 'donkey' ? ['donkey'] : p.kind === 'caravan' ? ['camel-grunt', 'camel-grunt', 'donkey', 'camel-grunt'] : p.kind === 'howl' ? (p.howling ? [p.who] : null) : p.kind === 'fox' ? ['fox'] : p.kind === 'owl' ? ['owl'] : null;
 				if (calls && clock > (p.nextCall || 0)) {
 					var lapse = show && show.mode === 'sofar';
 					if (p.nextCall || lapse) sound.animal(calls[Math.floor(Math.random() * calls.length)], p.kind === 'caravan' ? 0.22 : p.kind === 'fox' ? 0.24 : p.kind === 'howl' ? 0.3 : 0.35);   // (far off, and the fox's cry kept soft)
