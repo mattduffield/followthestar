@@ -258,6 +258,24 @@
 	});	pump();
 
 	function art(name) { return name && images[name] || null; }
+	// test mode: note the name of every picture drawn (for docs/qa, which shows on which nights each picture is used)
+	var drawnNames = {};
+	if (TEST) (function() {
+		var orig = CanvasRenderingContext2D.prototype.drawImage, known = new WeakMap();
+		function nameOf(im) {
+			if (known.has(im)) return known.get(im);
+			var n = im && im.src && /\/art\/([^/?]+)\.webp/.exec(im.src);
+			n = n ? n[1] : null;
+			if (!n) for (var k in images) { var o = images[k]; if (o.dark === im || o.soft === im || o.soft2 === im || o.bent === im) { n = k; break; } }
+			if (im) known.set(im, n);
+			return n;
+		}
+		CanvasRenderingContext2D.prototype.drawImage = function(im) {
+			var n = nameOf(im);
+			if (n) drawnNames[n.replace(/-(body|leg\d-(upper|lower))$/, '')] = 1;
+			return orig.apply(this, arguments);
+		};
+	})();
 	function animFrames(prefix, n) { var f = []; for (var i = 0; i < n; i++) { if (!art(prefix + i)) return null; f.push(art(prefix + i)); } return f; }
 	function pixels(im) {
 		var c = document.createElement('canvas'), w = Math.min(im.width, 1600), h = Math.round(im.height * w / im.width);
@@ -1362,21 +1380,76 @@
 		return [{x: fx - 70, dir: 1}, {x: fx + 68, dir: -1}, {x: fx - 128, dir: 1, back: true}][i];   // close to the fire, but not in it
 	}
 	function kingY(x) { return groundY(x - LEAD_X + cam * DAYW) + 4; }
-	function paintFire(x, a) {
+	// The campfire: a ring of stones, crossed logs glowing at their ends, flames that lick and flicker (each tongue drawn
+	// hot white-yellow at the root to red at the tip, and added together so they glow where they overlap), a pool of
+	// firelight on the sand, sparks drifting up and a thin smoke. grow (0..1) is how far it has caught: it's lit once the
+	// kings have walked over, starting small and building to a steady fire.
+	var embers = [], smoke = [], fireClock = 0;
+	function paintFire(x, a, grow) {
 		if (a <= 0) return;
-		var y = kingY(x);
+		grow = grow == null ? 1 : grow;
+		var y = kingY(x), dt = clamp(clock - fireClock, 0, 0.1); fireClock = clock;
+		var size = 0.25 + 0.75 * grow;
 		ctx.save(); ctx.globalAlpha = a;
-		glow(x, y - 26, 210, 'rgb(255,160,60)', 0.55 * flicker(3));
-		glow(x, y - 14, 60, 'rgb(255,220,140)', 0.6 * flicker(5));
-		ctx.fillStyle = '#4a2a14'; ctx.save(); ctx.translate(x, y - 4); ctx.rotate(0.35); ctx.fillRect(-24, -3.5, 48, 7); ctx.rotate(-0.7); ctx.fillRect(-24, -3.5, 48, 7); ctx.restore();
-		[[0, 56, '#ff9a2e'], [0, 40, '#ffd166'], [0, 22, '#fff3c4']].forEach(function(f, n) {
-			var hgt = f[1] * (0.85 + 0.25 * Math.sin(clock * (9 + n * 3) + n)), w = 15 - n * 4;
-			ctx.fillStyle = f[2]; ctx.beginPath(); ctx.moveTo(x - w, y - 4);
-			ctx.quadraticCurveTo(x - w * 0.6 + Math.sin(clock * 7 + n) * 2, y - hgt * 0.6, x + Math.sin(clock * 5 + n) * 3, y - 4 - hgt);
-			ctx.quadraticCurveTo(x + w * 0.6, y - hgt * 0.5, x + w, y - 4); ctx.fill();
+		// firelight on the sand and on whoever stands near
+		ctx.globalCompositeOperation = 'lighter';
+		ctx.save(); ctx.translate(x, y); ctx.scale(1, 0.32);
+		glow(0, 0, 230 * size, 'rgb(255,130,40)', 0.16 * flicker(3) * grow);
+		ctx.restore();
+		glow(x, y - 30, 190 * size, 'rgb(255,150,60)', 0.22 * flicker(5) * grow);
+		ctx.globalCompositeOperation = 'source-over';
+		// the stones and the logs
+		for (var i = 0; i < 9; i++) {
+			var t = i / 9 * Math.PI * 2, sx = x + Math.cos(t) * 26, sy = y - 2 + Math.sin(t) * 6;
+			if (Math.sin(t) < -0.2) continue;   // (the back of the ring is hidden behind the fire)
+			ctx.fillStyle = '#3b3140'; ctx.beginPath(); ctx.ellipse(sx, sy, 7, 4.5, 0, 0, Math.PI * 2); ctx.fill();
+			ctx.fillStyle = 'rgba(255,150,70,' + (0.35 * grow * flicker(i)).toFixed(3) + ')'; ctx.beginPath(); ctx.ellipse(sx, sy - 1.5, 5, 2, 0, Math.PI, 0); ctx.fill();
+		}
+		[[0.38, '#3d2414'], [-0.42, '#4a2c17'], [0.05, '#35200f']].forEach(function(l) {
+			ctx.save(); ctx.translate(x, y - 5); ctx.rotate(l[0]);
+			ctx.fillStyle = l[1]; ctx.beginPath(); ctx.roundRect ? ctx.roundRect(-22, -3.5, 44, 7, 3.5) : ctx.rect(-22, -3.5, 44, 7); ctx.fill();
+			ctx.fillStyle = 'rgba(255,' + Math.round(110 + 60 * flicker(l[0] * 9)) + ',40,' + (0.85 * grow).toFixed(2) + ')';   // embers glowing in the wood
+			ctx.fillRect(-8, -2, 16, 3.5);
+			ctx.restore();
+		});
+		// the flames: tongues of different heights, swaying and flickering, each with its own rhythm; the tall ones red
+		// and orange, painted over each other, the short ones in front yellow
+		var tongues = [[-11, 0.62, 1.3], [9, 0.7, 2.1], [-3, 1, 0.4], [4, 0.85, 3.3], [-8, 0.5, 4.7], [12, 0.45, 5.9]];
+		tongues.sort(function(p, q) { return q[1] - p[1]; });   // tallest at the back
+		tongues.forEach(function(tg, n) {
+			var ph = tg[2], wob = Math.sin(clock * 7.3 + ph) * 0.5 + Math.sin(clock * 13.1 + ph * 2) * 0.3 + Math.sin(clock * 3.1 + ph) * 0.2;
+			var hgt = 58 * tg[1] * size * (0.82 + 0.22 * wob), w = (11 - n * 0.6) * size, bx = x + tg[0] * size, by = y - 6;
+			var lean = Math.sin(clock * 2.3 + ph) * 5 * size + night.wind * 6, tipX = bx + lean + Math.sin(clock * 9 + ph) * 3;
+			var g = ctx.createLinearGradient(0, by, 0, by - hgt), hot = tg[1] < 0.7;
+			g.addColorStop(0, hot ? 'rgba(255,224,120,0.95)' : 'rgba(255,170,60,0.95)'); g.addColorStop(0.35, hot ? 'rgba(255,170,50,0.9)' : 'rgba(245,110,30,0.85)');
+			g.addColorStop(0.75, 'rgba(215,60,20,0.55)'); g.addColorStop(1, 'rgba(160,30,10,0)');
+			ctx.fillStyle = g; ctx.beginPath(); ctx.moveTo(bx - w, by);
+			ctx.bezierCurveTo(bx - w * 1.1, by - hgt * 0.45, tipX - w * 0.5 + lean * 0.3, by - hgt * 0.7, tipX, by - hgt);
+			ctx.bezierCurveTo(tipX + w * 0.4 + lean * 0.3, by - hgt * 0.7, bx + w * 1.1, by - hgt * 0.4, bx + w, by);
+			ctx.closePath(); ctx.fill();
+		});
+		ctx.globalCompositeOperation = 'lighter';
+		glow(x, y - 12 * size, 16 * size, 'rgb(255,230,150)', 0.45 * grow * flicker(2));   // the hot heart, low in the fire
+		// sparks rising from it
+		if (!reduceMotion && Math.random() < dt * 14 * grow) embers.push({x: x + (Math.random() - 0.5) * 20, y: y - 20, vx: (Math.random() - 0.5) * 18 + night.wind * 20, vy: -50 - Math.random() * 60, life: 1.2 + Math.random() * 1.4, t: 0});
+		embers = embers.filter(function(e) {
+			e.t += dt; e.x += (e.vx + Math.sin(clock * 3 + e.life * 9) * 12) * dt; e.y += e.vy * dt; e.vy *= 0.995;
+			var f = 1 - e.t / e.life; if (f <= 0) return false;
+			ctx.fillStyle = 'rgba(255,' + Math.round(150 + 80 * f) + ',60,' + f.toFixed(2) + ')'; ctx.fillRect(e.x, e.y, 1.6, 1.6);
+			return true;
+		});
+		ctx.globalCompositeOperation = 'source-over';
+		// and a thin smoke drifting away above it
+		if (!reduceMotion && Math.random() < dt * 3 * grow) smoke.push({x: x + (Math.random() - 0.5) * 8, y: y - 50 * size, r: 6, t: 0, life: 4 + Math.random() * 2});
+		smoke = smoke.filter(function(p) {
+			p.t += dt; p.y -= 16 * dt; p.x += (6 + night.wind * 30) * dt; p.r += 5 * dt;
+			var f = 1 - p.t / p.life; if (f <= 0) return false;
+			glow(p.x, p.y, p.r, 'rgb(150,140,160)', 0.12 * f * Math.min(1, p.t * 2));
+			return true;
 		});
 		ctx.restore();
 	}
+
 	// The kings' stride: their robes hide their legs, so the hem and feet move instead. The bottom of the picture is
 	// cut off and drawn in two halves (back and front foot) that step forward and back in turn, with the hem
 	// swinging; the body above rises a touch over each step. Set KING_STRIDE to false to go back to the plain walk.
@@ -1432,12 +1505,13 @@
 			return p;
 		});
 		// 1. kings who are down, walking behind the camels to their places
-		var kings = [];
+		var kings = [], fireLit = 1e9;
 		plan.forEach(function(p, i) {
 			if (p.stand <= 0) return;
 			var c = p.c, gifts = p.spot.pray;
 			var x0 = p.seatX - 6, dist = Math.abs(p.spot.x - x0);
 			var walkDur = Math.max(1, Math.min(dist / 50, EVENING - p.walkStart - 1.6)), wt = clamp((e - p.walkStart) / walkDur, 0, 1);
+			fireLit = Math.min(fireLit, p.walkStart + walkDur);   // the first king to reach the fireplace lights it
 			var ew = wt * wt * (3 - 2 * wt), x = x0 + (p.spot.x - x0) * ew, y = kingY(x) - 5;
 			var stepping = wt > 0 && wt < 1, ph = dist * ew / 26 * Math.PI;
 			var bob = stepping ? (1 - Math.cos(2 * ph)) * 1.1 : 0, tilt = stepping ? Math.sin(ph) * 0.012 : 0;
@@ -1474,7 +1548,7 @@
 				ctx.restore();
 			}
 		});
-		if (kind === 'fire' && !night.plan.camp) paintFire(fireX(), smooth((e - 1.6) / 1.2));   // (a camp of tents has its own fire)
+		if (kind === 'fire') paintFire(fireX(), smooth((e - fireLit) / 0.8), smooth((e - fireLit) / 3.5));   // lit when the first of them gets there, catching and building up
 	}
 	// the page waits for the wise men and their camels to load, so nothing stands in for them first; if the art is
 	// very slow (or missing) it gives up after a few seconds and uses the logo's camels
@@ -1679,11 +1753,6 @@
 	var PIP_KEY = 'journey-pip-found';
 	var pip = {box: null, near: false, hop: -1, hopT: 0, u: null, state: 'trot', target: 0, until: 0, rng: null, last: 0, dir: 1, card: false};
 	function pipFound() { try { return JSON.parse(localStorage.getItem(PIP_KEY) || '[]'); } catch (e) { return []; } }
-	function pipHide() {   // where Pip hides tonight, once they've stopped (scene x)
-		if (eveningKind() === 'manger') return screenX('road', pieceU(STABLE)) - 150;
-		var r = Math.floor(hash(night.day * 13 + 5) * 4);
-		return [fireX() + 30, LEAD_X + 105, LEAD_X - 330, LEAD_X - CHAR_BACK[2] - 120][r];
-	}
 	var PIP_SPOTS = [130, -110, -330, 250, -470, 60];          // around the caravan, from the lead camel (scene units)
 	function pipReset() {
 		pip.rng = rng(night.day * 977 + 31); pip.u = null; pip.sx = null; pip.state = 'trot'; pip.until = 0; pip.hop = -1; pip.last = clock;
@@ -1692,12 +1761,7 @@
 		var base = cam * DAYW - LEAD_X;                          // world position of the screen's left edge
 		if (pip.u == null) { pip.u = base + Math.max(40, LEAD_X - CHAR_BACK[2] - 160); pip.target = pip.u; pip.state = 'sit'; pip.until = clock + 3 + pip.rng() * 3; }
 		var e = evening();
-		if (e > 2.9) {                                          // evening: off to tonight's hiding place, and stay there
-			var hideU = base + pipHide();
-			if (Math.abs(hideU - pip.u) > 2) { pip.state = 'trot'; var d = Math.sign(hideU - pip.u); pip.dir = d; pip.u += d * Math.min(Math.abs(hideU - pip.u), 150 * dt); }
-			else pip.state = 'sit';
-			return;
-		}
+		if (e > 2.9) { pipEvening(dt, base); return; }
 		var sx = pip.u - base;
 		if (show && show.mode === 'sofar' && e === 0) {
 			// the time-lapse races along far faster than a mouse can run, so he keeps up with the caravan instead
@@ -1733,6 +1797,43 @@
 		}
 		pip.u = clamp(pip.u, base + 24, base + VW - 24);             // always on screen
 	}
+	// In the evening Pip explores the camp: he trots to a spot, stops and looks about (turning now and then, sometimes
+	// a hop or two), then off somewhere else. He keeps to his own side of the fire and never goes near it. Click or tap
+	// the sand and he runs over to that spot (with a happy hop when he gets there); bring the pointer near and he turns
+	// to look at it and bounces.
+	function pipFireZone() { if (eveningKind() !== 'fire') return null; var fx = fireX(); return [fx - 75, fx + 75]; }
+	function pipSafe(fromX, x) {   // the nearest place to x he can get to from fromX without going through the fire
+		x = clamp(x, 30, VW - 30);
+		var z = pipFireZone();
+		if (!z) return x;
+		if (fromX <= z[0] + 1) return Math.min(x, z[0]);
+		if (fromX >= z[1] - 1) return Math.max(x, z[1]);
+		return fromX - z[0] < z[1] - fromX ? z[0] : z[1];   // (if he's somehow in it, straight out the nearer side)
+	}
+	function pipEvening(dt, base) {
+		var sx = pip.u - base;
+		if (pip.state === 'sit') {
+			if (pip.near) { pip.until = Math.max(pip.until, clock + 1); return; }   // he stays to watch the pointer
+			if (pip.rng() < dt * 0.35) pip.face = -(pip.face || 1);               // looking about
+			if (pip.rng() < dt * 0.25 && !(pip.skip > clock)) pip.skip = clock + 0.9; // a little hop or two
+			if (clock > pip.until) { pip.target = pipSafe(sx, 40 + pip.rng() * (VW - 80)); pip.state = 'trot'; pip.called = false; }
+		} else {
+			var d = Math.sign(pip.target - sx), step = (pip.called ? 190 : 110) * dt;
+			pip.dir = d || pip.dir;
+			if (Math.abs(pip.target - sx) <= step) {
+				sx = pip.target; pip.state = 'sit'; pip.face = pip.dir; pip.until = clock + 1.5 + pip.rng() * 3;
+				if (pip.called) { pip.skip = clock + 1.2; pip.called = false; }
+			} else sx += d * step;
+		}
+		pip.u = base + clamp(sx, 24, VW - 24);
+	}
+	function pipCall(evt) {   // a click or tap on the sand in the evening: Pip comes running to that spot
+		if (evening() <= 2.9 || pip.card || pip.u == null) return false;
+		var p = sceneXY(evt), base = cam * DAYW - LEAD_X;
+		if (p.y < groundY(base + p.x) - 70) return false;                        // (only on the ground, not the sky)
+		pip.target = pipSafe(pip.u - base, p.x); pip.state = 'trot'; pip.called = true;
+		return true;
+	}
 	// Pip is drawn from the sand mouse, warmed a little: darker than the sand, so he's easier to spot. He moves in
 	// little springy hops (squashing as he lands) with a soft shadow on the sand that shrinks as he jumps; when found
 	// he gives a big hop, then keeps bouncing happily while his card is open.
@@ -1748,11 +1849,12 @@
 		if (pip.hop >= 0) { pip.hopT += dt; var q = Math.min(1, pip.hopT / 0.7); hop = Math.sin(q * Math.PI) * 30; if (q > 0.92) squash = 0.2; if (pip.hopT > 0.75) pip.hop = -1; }
 		else if (pip.card) hop = Math.abs(Math.sin(clock * 4.5)) * 9;                // happy bounces while his card is open
 		else if (pip.near && !moving) hop = 3 + Math.abs(Math.sin(clock * 6)) * 2;   // a little excited bounce when a pointer comes near
+		else if (pip.skip > clock && !moving) { var sk = (clock * 2.6) % 1; hop = Math.sin(sk * Math.PI) * 9; squash = sk < 0.1 ? 0.15 : 0; }   // hopping in place
 		var waving = false;   // (always the original Pip)
 		var im = waving ? art('jr-pip-wave') : art('jr-cr-sand-mouse');
 		if (!im) return;
 		var lapse = show && show.mode === 'sofar' && evening() === 0;
-		var h = waving ? 26 : 20, w = h * im.width / im.height, dir = lapse ? 1 : moving ? pip.dir : (hash(night.day) < 0.5 ? 1 : -1);
+		var h = waving ? 26 : 20, w = h * im.width / im.height, dir = lapse ? 1 : moving ? pip.dir : pip.near && pip.lookX != null ? (pip.lookX < x ? -1 : 1) : pip.face || (hash(night.day) < 0.5 ? 1 : -1);
 		// his shadow, smaller and fainter the higher he is
 		var sh = 1 - Math.min(1, hop / 34);
 		ctx.fillStyle = 'rgba(70,35,10,' + (0.28 * sh).toFixed(3) + ')';
@@ -1781,9 +1883,10 @@
 		pip.wasPlaying = playing; playing = false; pip.card = true; updateControls();   // the scene waits while the card is open
 		pipCard.hidden = false; verseEl.style.visibility = 'hidden'; pipCard.querySelector('button').focus();
 	}
-	canvas.addEventListener('click', function(evt) { if (nearPip(evt, evt.pointerType === 'touch' ? 40 : 26)) findPip(); });
-	canvas.addEventListener('pointerdown', function(evt) { if (evt.pointerType === 'touch' && nearPip(evt, 40)) { evt.preventDefault(); findPip(); } });
-	canvas.addEventListener('mousemove', function(evt) { pip.near = nearPip(evt, 70); canvas.style.cursor = nearPip(evt, 26) ? 'pointer' : ''; });
+	canvas.addEventListener('click', function(evt) { if (nearPip(evt, evt.pointerType === 'touch' ? 40 : 26)) findPip(); else if (evt.pointerType !== 'touch') pipCall(evt); });
+	canvas.addEventListener('pointerdown', function(evt) { if (evt.pointerType === 'touch') { if (nearPip(evt, 40)) { evt.preventDefault(); findPip(); } else pipCall(evt); } });
+	canvas.addEventListener('mousemove', function(evt) { pip.near = nearPip(evt, 70); pip.lookX = sceneXY(evt).x; canvas.style.cursor = nearPip(evt, 26) ? 'pointer' : ''; });
+	canvas.addEventListener('mouseleave', function() { pip.near = false; });
 	document.getElementById('pip-close').addEventListener('click', function() {
 		pipCard.hidden = true; verseEl.style.visibility = ''; pip.card = false;
 		if (pip.wasPlaying) { pip.wasPlaying = false; playing = true; updateControls(); }
@@ -2247,8 +2350,9 @@
 		// for automated review: jump to a moment of a night and hold it there
 		window.journeyTest = {
 			moon: function() { return {phase: night.phase, words: moonWords(night.phase), day: night.day, cover: wx.cover, moonX: night.moonX, sh: shiftOf('sky'), VW: VW}; },
-			pip: function() { return pip.box; },
+			pip: function() { return pip.box && {x: pip.box.x, y: pip.box.y, target: pip.target, called: pip.called, state: pip.state}; },
 			findPip: function() { findPip(); },
+			drawn: function() { var d = Object.keys(drawnNames).sort(); drawnNames = {}; return d; },
 			blink: function(v) { holdBlink = v; },
 			owl: function() { spawnCritter('owl'); },
 			bugs: function() { return critters.filter(function(c) { return /scorpion|centipede|spider|beetle|snake/.test(c.kind); }).map(function(c) { return [c.u - cam * DAYW + LEAD_X, roadY(c.u) + c.depth]; }); },
