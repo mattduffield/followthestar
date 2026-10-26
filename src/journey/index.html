@@ -49,6 +49,10 @@ main {overflow:visible;}
 /* the scene fills the screen and plays on its own */
 .stage {position:relative; height:100vh; height:100svh; overflow:hidden; background:#070b22;}
 .stage canvas {display:block; width:100%; height:100%;}
+/* the scene is played, not read: a double click or a long press on it (or on its buttons, words and dialogs) never
+   selects and highlights text, and a phone shows no copy menu or grey tap flash; a typed answer can still be selected */
+.stage {-webkit-user-select:none; user-select:none; -webkit-touch-callout:none; -webkit-tap-highlight-color:transparent;}
+.stage input, .stage textarea {-webkit-user-select:text; user-select:text;}
 
 .overlay {position:absolute; left:0; right:0; pointer-events:none; text-align:center; text-shadow:0 1px 6px rgba(0,0,0,0.6);}
 .title {top:22%; transition:opacity 0.6s;}
@@ -478,16 +482,16 @@ dialog.journal[open] {animation:j-rise .55s cubic-bezier(.2,.9,.3,1.2);}
 	</footer>
 
 	<script src="/assets/js/site.js" defer></script>
-	<script src="/journey/camels.js?v=202610260924" defer></script>
-	<script src="/journey/camel-rig.js?v=202610260924" defer></script>
-	<script src="/journey/canine-rig.js?v=202610260924" defer></script>
-	<script src="/journey/art-ready.js?v=202610260924" defer></script>
-	<script src="/journey/readings.js?v=202610260924" defer></script>
-	<script src="/journey/pip.js?v=202610260924" defer></script>
-	<script src="/journey/sayings.js?v=202610260924" defer></script>
-	<script src="/journey/plan.js?v=202610260924" defer></script>
-	<script src="/journey/audio-ready.js?v=202610260924" defer></script>
-	<script src="/journey/sound.js?v=202610260924" defer></script>
-	<script src="/journey/journey.js?v=202610260924" defer></script>
+	<script src="/journey/camels.js?v=202610260931" defer></script>
+	<script src="/journey/camel-rig.js?v=202610260931" defer></script>
+	<script src="/journey/canine-rig.js?v=202610260931" defer></script>
+	<script src="/journey/art-ready.js?v=202610260931" defer></script>
+	<script src="/journey/readings.js?v=202610260931" defer></script>
+	<script src="/journey/pip.js?v=202610260931" defer></script>
+	<script src="/journey/sayings.js?v=202610260931" defer></script>
+	<script src="/journey/plan.js?v=202610260931" defer></script>
+	<script src="/journey/audio-ready.js?v=202610260931" defer></script>
+	<script src="/journey/sound.js?v=202610260931" defer></script>
+	<script src="/journey/journey.js?v=202610260931" defer></script>
 </body>
 </html>
