@@ -125,15 +125,27 @@ header, .player, .rotate {transition:transform 0.5s ease, opacity 0.5s ease;}
 .tucked header {transform:translateY(-100%);}
 .tucked .player {transform:translateY(160%); opacity:0;}
 .tucked .when {top:12px;}
-.tap-hint {position:absolute; left:50%; bottom:14px; transform:translateX(-50%); background:rgba(7,11,34,0.65); color:#e8e3ff; border-radius:16px; padding:5px 12px; font:300 12px Inter,Arial,sans-serif; opacity:0; transition:opacity 0.6s; pointer-events:none;}
+.tap-hint {position:absolute; top:max(16px, env(safe-area-inset-top)); right:max(60px, calc(env(safe-area-inset-right) + 50px)); background:rgba(7,11,34,0.65); color:#e8e3ff; border-radius:16px; padding:5px 12px; font:300 12px Inter,Arial,sans-serif; opacity:0; transition:opacity 0.6s; pointer-events:none;}
 .tucked .tap-hint.show {opacity:1;}
 .player .btn.away {visibility:hidden;}
 #play {min-width:132px;} #tonight-btn {min-width:150px;} #sofar {min-width:176px;}
 .player .sound[aria-pressed="true"] {background:#FFDB59; color:#070b22;}
 .player .sound.remembered[aria-pressed="false"] {animation: nudge-glow 2s ease-in-out 3;}
 @keyframes nudge-glow {50% {box-shadow:0 0 0 4px rgba(255,219,89,0.35);}}
-.rotate {position:absolute; left:50%; top:34%; transform:translateX(-50%); background:rgba(7,11,34,0.7); border:1px solid rgba(255,255,255,0.3); border-radius:20px; padding:6px 14px; font:300 13px Inter,Arial,sans-serif; color:#e8e3ff; white-space:nowrap; display:none;}
-@media (orientation:portrait) and (max-width:600px) {.rotate {display:block;}}
+.rotate {position:absolute; inset:0; z-index:6; display:none; flex-direction:column; align-items:center; justify-content:center; gap:10px; padding:24px; background:rgba(7,11,34,0.94); color:#e8e3ff; text-align:center; font:300 15px Inter,Arial,sans-serif;}
+.rotate h2 {font:400 24px Merienda,Georgia,serif; color:#FFDB59; margin:6px 0 0;}
+.rotate p {margin:0; color:#d9d4f5;}
+.rotate svg {animation:turn-phone 2.6s ease-in-out infinite;}
+@keyframes turn-phone {0%, 25% {transform:rotate(0);} 55%, 100% {transform:rotate(-90deg);}}
+@media (orientation:portrait) and (max-width:600px) {.rotate {display:flex;}}
+@media (prefers-reduced-motion:reduce) {.rotate svg {animation:none; transform:rotate(-90deg);}}
+/* More, Hide and the handle are for sideways phones only; elsewhere every button shows in one row as before */
+.player .more, .player .hide, .handle {display:none;}
+.more-items {display:contents;}
+.player #full {order:1;}
+.handle {position:absolute; top:max(8px, env(safe-area-inset-top)); right:max(10px, env(safe-area-inset-right)); z-index:4; width:40px; height:40px; border-radius:50%; background:rgba(7,11,34,0.6); border:1px solid #FFDB59; color:#FFDB59; font-size:18px; line-height:1; cursor:pointer; align-items:center; justify-content:center; transition:opacity 0.4s;}
+.handle.nudge {animation:nudge-glow 1.6s ease-in-out 3;}
+.handle:focus-visible {outline:2px solid #fff; outline-offset:2px;}
 
 /* where they are today */
 .today {position:relative; z-index:2; background:#070b22; padding:40px 24px 50px;}
@@ -196,6 +208,32 @@ header, .player, .rotate {transition:transform 0.5s ease, opacity 0.5s ease;}
 	.player .nights button {width:34px; height:32px;}
 	.player .btn {padding:6px 12px; font-size:12px; min-width:0;}
 	#play {min-width:118px;} #tonight-btn {min-width:124px;} #sofar {min-width:150px;}
+}
+/* Sideways phones: one slim row (the night, Play, Sound, More, Hide), the rest in the More menu. While the night plays
+   the row steps aside, and only the handle in the top corner brings it back: a tap on the scene always goes to the
+   scene (Pip, a camel, a king), never to the buttons */
+@media screen and (max-height:500px) and (orientation:landscape) {
+	.player {flex-wrap:nowrap; gap:6px; bottom:max(6px, env(safe-area-inset-bottom));}
+	.player .nights button {width:30px; height:30px; font-size:13px;}
+	.player .nights span {width:96px; font-size:13px;}
+	.player .nights small {font-size:10px;}
+	.player .btn {padding:6px 11px; font-size:11px; min-width:0;}
+	#play {min-width:84px;}
+	.player .more, .player .hide {display:inline-block;}
+	.player .hide {font-size:14px; padding:4px 11px;}
+	.more-items {display:none; position:absolute; bottom:calc(100% + 8px); left:50%; transform:translateX(-50%); flex-direction:column; align-items:stretch; gap:8px; padding:10px; background:rgba(7,11,34,0.9); border:1px solid rgba(255,219,89,0.45); border-radius:16px; box-shadow:0 10px 30px rgba(0,0,0,0.5);}
+	.player.more-open .more-items {display:flex;}
+	.player.more-open .more {background:#FFDB59; color:#070b22;}
+	.more-items .btn {min-width:210px; padding:9px 14px; font-size:12px; text-align:center;}
+	.more-items #tonight-btn, .more-items #sofar {min-width:210px;}
+	.more-items .btn.away, .more-items .btn[hidden] {display:none;}
+	.more-items .btn.journal-btn {justify-content:center;}
+	.player .more-items .btn.journal-btn span {display:inline;}
+	.more-items #full {order:0; font-size:12px;}
+	.more-items #full::after {content:' Full screen';}
+	.is-full .more-items #full::after {content:' Leave full screen';}
+	.handle {display:flex;}
+	body:not(.tucked) .handle {opacity:0; pointer-events:none;}
 }
 /* ----- Pip's Journal: a dialog in the Journey's own look (its night sky behind, paper-cut tiles on parchment) ----- */
 /* asked before the journey so far starts, so a stray click doesn't set it off */
@@ -294,7 +332,7 @@ dialog.journal[open] {animation:j-rise .55s cubic-bezier(.2,.9,.3,1.2);}
 .journal .badge.locked h5 {color:#7a6a5a;}
 .player .btn.journal-btn {display:inline-flex; align-items:center; gap:6px;}
 .player .btn.journal-btn img {height:18px; filter:sepia(.6) saturate(1.6) brightness(1.15);}
-.player .btn.journal-btn.glint {animation:j-glint 1.2s ease-out 2;}
+.player .btn.journal-btn.glint, .player .btn.more.glint {animation:j-glint 1.2s ease-out 2;}
 @keyframes j-glint {0% {box-shadow:0 0 0 0 rgba(255,219,89,.9);} 100% {box-shadow:0 0 0 14px rgba(255,219,89,0);}}
 .pip-card .pip-journal {margin-left:6px;}
 @media (max-width:640px) {
@@ -332,7 +370,7 @@ dialog.journal[open] {animation:j-rise .55s cubic-bezier(.2,.9,.3,1.2);}
 	.journal .jcard {position:fixed;}
 	.player .btn.journal-btn {min-width:0; padding:9px 14px;}
 }
-@media (prefers-reduced-motion:reduce) {.journal *, dialog.journal[open], .player .btn.journal-btn.glint {animation:none !important; transition:none !important;}}
+@media (prefers-reduced-motion:reduce) {.journal *, dialog.journal[open], .player .btn.journal-btn.glint, .player .btn.more.glint {animation:none !important; transition:none !important;}}
 </style>
 </head>
 
@@ -374,12 +412,17 @@ dialog.journal[open] {animation:j-rise .55s cubic-bezier(.2,.9,.3,1.2);}
 					<button type="button" id="next" aria-label="Next night">▶</button>
 				</div>
 				<button type="button" class="btn" id="play">Pause</button>
-				<button type="button" class="btn away" id="tonight-btn">Back to tonight</button>
-				<button type="button" class="btn" id="sofar">The journey so far</button>
-				<button type="button" class="btn journal-btn" id="journal-btn" aria-haspopup="dialog"><img src="/journey/art/jr-cr-sand-mouse.webp" alt=""><span>Pip’s Journal</span></button>
+				<div class="more-items" id="more-items">
+					<button type="button" class="btn away" id="tonight-btn">Back to tonight</button>
+					<button type="button" class="btn" id="sofar">The journey so far</button>
+					<button type="button" class="btn journal-btn" id="journal-btn" aria-haspopup="dialog"><img src="/journey/art/jr-cr-sand-mouse.webp" alt=""><span>Pip’s Journal</span></button>
+					<button type="button" class="btn full" id="full" aria-label="Full screen" title="Full screen" hidden>⛶</button>
+				</div>
 				<button type="button" class="btn sound" id="sound" aria-pressed="false">Sound off</button>
-				<button type="button" class="btn full" id="full" aria-label="Full screen" title="Full screen" hidden>⛶</button>
+				<button type="button" class="btn more" id="more-btn" aria-expanded="false" aria-controls="more-items">More</button>
+				<button type="button" class="btn hide" id="hide-btn" aria-label="Hide the buttons" title="Hide the buttons">⌄</button>
 			</div>
+			<button type="button" class="handle" id="handle" aria-label="Show the buttons" title="Show the buttons">☰</button>
 			<div class="overlay done" id="done" hidden>
 				<h2>The wise men are home</h2>
 				<p>Thank you for following the journey with us. See you next Advent.</p>
@@ -419,8 +462,12 @@ dialog.journal[open] {animation:j-rise .55s cubic-bezier(.2,.9,.3,1.2);}
 				<small class="pip-count"></small>
 				<button type="button" id="pip-close">Keep travelling</button><button type="button" class="pip-journal" id="pip-journal">My journal</button>
 			</div>
-			<div class="tap-hint" id="tap-hint">Tap the scene for the buttons</div>
-			<div class="rotate" id="rotate">Turn your phone sideways for the full view</div>
+			<div class="tap-hint" id="tap-hint">The buttons are here</div>
+			<div class="rotate" id="rotate" role="note">
+				<svg viewBox="0 0 64 64" width="64" height="64" aria-hidden="true"><rect x="20" y="8" width="24" height="44" rx="4" fill="none" stroke="#FFDB59" stroke-width="3"/><circle cx="32" cy="46" r="2" fill="#FFDB59"/></svg>
+				<h2>Turn your phone sideways</h2>
+				<p>The Journey is made to be watched sideways.</p>
+			</div>
 		</div>
 	</section>
 
@@ -482,16 +529,16 @@ dialog.journal[open] {animation:j-rise .55s cubic-bezier(.2,.9,.3,1.2);}
 	</footer>
 
 	<script src="/assets/js/site.js" defer></script>
-	<script src="/journey/camels.js?v=202610261312" defer></script>
-	<script src="/journey/camel-rig.js?v=202610261312" defer></script>
-	<script src="/journey/canine-rig.js?v=202610261312" defer></script>
-	<script src="/journey/art-ready.js?v=202610261312" defer></script>
-	<script src="/journey/readings.js?v=202610261312" defer></script>
-	<script src="/journey/pip.js?v=202610261312" defer></script>
-	<script src="/journey/sayings.js?v=202610261312" defer></script>
-	<script src="/journey/plan.js?v=202610261312" defer></script>
-	<script src="/journey/audio-ready.js?v=202610261312" defer></script>
-	<script src="/journey/sound.js?v=202610261312" defer></script>
-	<script src="/journey/journey.js?v=202610261312" defer></script>
+	<script src="/journey/camels.js?v=202610261447" defer></script>
+	<script src="/journey/camel-rig.js?v=202610261447" defer></script>
+	<script src="/journey/canine-rig.js?v=202610261447" defer></script>
+	<script src="/journey/art-ready.js?v=202610261447" defer></script>
+	<script src="/journey/readings.js?v=202610261447" defer></script>
+	<script src="/journey/pip.js?v=202610261447" defer></script>
+	<script src="/journey/sayings.js?v=202610261447" defer></script>
+	<script src="/journey/plan.js?v=202610261447" defer></script>
+	<script src="/journey/audio-ready.js?v=202610261447" defer></script>
+	<script src="/journey/sound.js?v=202610261447" defer></script>
+	<script src="/journey/journey.js?v=202610261447" defer></script>
 </body>
 </html>

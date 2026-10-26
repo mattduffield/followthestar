@@ -1476,8 +1476,9 @@
 		var lm = night.plan && night.plan.landmark, kind = eveningKind();
 		return EASTER() ? 'easter' : HOMEMODE ? 'rest' : kind === 'manger' ? 'christmas' : lm === 'home' ? 'home' : kind === 'palace' ? 'herod' : homeward(night.day) ? 'road' : 'fire';
 	}
-	function talkToKing(pt) {
-		var hit = kingBoxes.filter(function(b) { return pt.x > b.x0 && pt.x < b.x1 && pt.y > b.y0 && pt.y < b.y1; }).pop();
+	function talkToKing(pt, pad) {   // (pad: a finger gets a little room all round)
+		pad = pad || 0;
+		var hit = kingBoxes.filter(function(b) { return pt.x > b.x0 - pad && pt.x < b.x1 + pad && pt.y > b.y0 - pad && pt.y < b.y1 + pad; }).pop();
 		if (hit && talking()) return true;   // (someone is already speaking: the click is swallowed)
 		if (hit && hit.n === 0) {   // the armillary sphere
 			var ARM = ['An armillary sphere: the wise men’s model of the heavens.', 'Its rings show the paths of the sun and the stars.', '“The heavens declare the glory of God” (Psalm 19:1).'];
@@ -1539,8 +1540,9 @@
 		if (f >= 1 || f < 0) return 0;
 		return f < 0.4 ? smooth(f / 0.4) : f < 0.6 ? 1 : 1 - smooth((f - 0.6) / 0.4);
 	}
-	function pokeCamel(pt) {
-		var hit = camelBoxes.filter(function(b) { return pt.x > b.x0 && pt.x < b.x1 && pt.y > b.y0 && pt.y < b.y1; }).pop();
+	function pokeCamel(pt, pad) {
+		pad = pad || 0;
+		var hit = camelBoxes.filter(function(b) { return pt.x > b.x0 - pad && pt.x < b.x1 + pad && pt.y > b.y0 - pad && pt.y < b.y1 + pad; }).pop();
 		if (!hit) return false;
 		if (talking() || clock - (hit.k.poke || -9) < 1.2 || clock - (hit.k.surge || -9) < 4.5) return true;   // (still busy from the last click)
 		var urging = hit.i > 0 && walk > 0.5 && evening() === 0 && !(clock - hit.k.surge < 5) && !CARAVAN.some(function(o) { return clock - o.surge < 5; });
@@ -2561,7 +2563,7 @@
 	}
 	var lastTap = 0;
 	canvas.addEventListener('click', function(evt) { if (performance.now() - lastTap < 800) return; if (nearPip(evt, evt.pointerType === 'touch' ? 40 : 26)) findPip(); else if (pickUp(sceneXY(evt)) || talkToKing(sceneXY(evt)) || pokeCamel(sceneXY(evt)) || traceAt(sceneXY(evt))) return; else if (evt.pointerType !== 'touch') pipCall(evt); });
-	canvas.addEventListener('pointerdown', function(evt) { if (evt.pointerType === 'touch') { lastTap = performance.now(); if (nearPip(evt, 40)) { evt.preventDefault(); findPip(); } else if (!pickUp(sceneXY(evt)) && !talkToKing(sceneXY(evt)) && !pokeCamel(sceneXY(evt)) && !traceAt(sceneXY(evt))) pipCall(evt); } });
+	canvas.addEventListener('pointerdown', function(evt) { if (evt.pointerType === 'touch') { lastTap = performance.now(); if (nearPip(evt, 40)) { evt.preventDefault(); findPip(); } else if (!pickUp(sceneXY(evt)) && !talkToKing(sceneXY(evt), 16) && !pokeCamel(sceneXY(evt), 16) && !traceAt(sceneXY(evt))) pipCall(evt); } });
 	canvas.addEventListener('mousemove', function(evt) { pip.near = nearPip(evt, 70); pip.lookX = sceneXY(evt).x; var k = constellation(), sp = sceneXY(evt); canvas.style.cursor = nearPip(evt, 26) || kingBoxes.some(function(b) { return sp.x > b.x0 && sp.x < b.x1 && sp.y > b.y0 && sp.y < b.y1; }) || camelBoxes.some(function(b) { return sp.x > b.x0 && sp.x < b.x1 && sp.y > b.y0 && sp.y < b.y1; }) || (k && daylight() < 0.2 && k.pts.some(function(q) { return Math.hypot(q[0] - sp.x, q[1] - sp.y) < 40; })) ? 'pointer' : ''; });
 	canvas.addEventListener('mouseleave', function() { pip.near = false; });
 	document.getElementById('pip-close').addEventListener('click', function() {
@@ -3002,7 +3004,7 @@
 		cam = show.from + (show.to - show.from) * easeWalk(t);
 		show.spawns.forEach(function(s) { if (!s.done && t >= s.at) { s.done = true; spawnCritter(s.kind); } });
 		if (show.mode === 'sofar') soFarDay(clamp(Math.floor(cam + 0.15), 0, realToday));   // (it ends on tonight)
-		if (show.elapsed >= show.seconds + showTail()) { playing = false; updateControls(); document.body.classList.remove('tucked'); }
+		if (show.elapsed >= show.seconds + showTail()) { playing = false; updateControls(); if (shortScreen()) nudgeHandle(); else document.body.classList.remove('tucked'); }
 	}
 
 	// ----- words over the scene -----
@@ -3053,7 +3055,11 @@
 	fullBtn.addEventListener('click', function() {
 		track('full_screen');
 		if (fsEl()) (document.exitFullscreen || document.webkitExitFullscreen).call(document);
-		else (stageEl.requestFullscreen || stageEl.webkitRequestFullscreen).call(stageEl);
+		else {
+			var lock = function() { if (screen.orientation && screen.orientation.lock) screen.orientation.lock('landscape').catch(function() {}); };   // (Android: held sideways while full screen)
+			var req = (stageEl.requestFullscreen || stageEl.webkitRequestFullscreen).call(stageEl);
+			if (req && req.then) req.then(lock).catch(function() {}); else lock();
+		}
 	});
 	function onFull() {
 		var on = !!fsEl();
@@ -3063,22 +3069,36 @@
 		setTimeout(resize, 50);
 	}
 	document.addEventListener('fullscreenchange', onFull); document.addEventListener('webkitfullscreenchange', onFull);
-	// on a short (sideways phone) screen, tuck the header and buttons away a few seconds after the night starts
-	// playing; a tap anywhere on the scene brings them back for a few seconds
-	var tuckTimer = null, tapHinted = false;
+	// On a sideways phone the header and buttons step aside a few seconds after the night starts (or after the buttons were
+	// last used), so the whole scene is clear to tap: Pip, the camels, the kings. Only the handle in the top corner brings
+	// them back; a tap on the scene always goes to the scene
+	var tuckTimer = null, tapHinted = false, playerEl = document.querySelector('.player'), handleEl = document.getElementById('handle');
+	var moreBtn = document.getElementById('more-btn');
 	function shortScreen() { return window.innerHeight <= 500 && window.innerWidth > window.innerHeight; }
+	function setMore(open) { playerEl.classList.toggle('more-open', open); moreBtn.setAttribute('aria-expanded', open ? 'true' : 'false'); }
+	function tuck() {
+		if (!shortScreen()) return;
+		if (!pipCard.hidden || document.querySelector('dialog[open]')) { tuckTimer = setTimeout(tuck, 2000); return; }   // (not while Pip's card, the journal or a question is open)
+		setMore(false);
+		document.body.classList.add('tucked');
+		if (!tapHinted) { tapHinted = true; var th = document.getElementById('tap-hint'); th.classList.add('show'); setTimeout(function() { th.classList.remove('show'); }, 3500); }   // the first time only
+	}
 	function untuck(wait) {
 		document.body.classList.remove('tucked');
 		clearTimeout(tuckTimer);
-		tuckTimer = setTimeout(function() {
-			if (!(shortScreen() && playing && pipCard.hidden)) return;
-			document.body.classList.add('tucked');
-			if (!tapHinted) { tapHinted = true; var th = document.getElementById('tap-hint'); th.classList.add('show'); setTimeout(function() { th.classList.remove('show'); }, 3500); }   // the first time only
-		}, wait || 4000);
+		tuckTimer = setTimeout(tuck, wait || 4000);
 	}
-	stageEl.addEventListener('pointerdown', function(e) { if (document.body.classList.contains('tucked')) untuck(4000); });
-	document.querySelector('.player').addEventListener('pointerdown', function() { untuck(6000); });
+	function nudgeHandle() { handleEl.classList.remove('nudge'); void handleEl.offsetWidth; handleEl.classList.add('nudge'); }
+	handleEl.addEventListener('click', function() { untuck(6000); playBtn.focus({preventScroll: true}); });
+	document.getElementById('hide-btn').addEventListener('click', function() { clearTimeout(tuckTimer); setMore(false); tuck(); });
+	moreBtn.addEventListener('click', function() { setMore(!playerEl.classList.contains('more-open')); untuck(8000); });
+	document.getElementById('more-items').addEventListener('click', function(e) { if (e.target.closest('button')) setMore(false); });   // (a choice made: the menu closes)
+	document.addEventListener('pointerdown', function(e) { if (playerEl.classList.contains('more-open') && !playerEl.contains(e.target)) setMore(false); });
+	playerEl.addEventListener('pointerdown', function() { untuck(6000); });
 	window.addEventListener('scroll', function() { if (window.scrollY > 10) untuck(4000); }, {passive: true});
+	window.addEventListener('resize', function() { if (!shortScreen()) { clearTimeout(tuckTimer); setMore(false); document.body.classList.remove('tucked'); } else untuck(4000); });
+	// a phone held upright: the scene waits behind "Turn your phone sideways" until it's turned
+	var uprightMQ = window.matchMedia('(orientation:portrait) and (max-width:600px)');
 	var prevBtn = document.getElementById('prev'), nextBtn = document.getElementById('next'), playBtn = document.getElementById('play');
 	var soFarBtn = document.getElementById('sofar'), tonightBtn = document.getElementById('tonight-btn'), dayEl = document.getElementById('ctl-day');
 	function updateControls() {
@@ -3308,7 +3328,10 @@
 		t.addEventListener('click', function() { jtabs.forEach(function(o) { o.setAttribute('aria-selected', o === t); document.getElementById('jp-' + o.dataset.p).hidden = o !== t; }); jcard.hidden = true; });
 		t.addEventListener('keydown', function(e) { var n = e.key === 'ArrowRight' ? 1 : e.key === 'ArrowLeft' ? -1 : 0; if (n) { var o = jtabs[(i + n + jtabs.length) % jtabs.length]; o.click(); o.focus(); e.preventDefault(); } });
 	});
-	function journalGlint() { journalBtn.classList.remove('glint'); void journalBtn.offsetWidth; journalBtn.classList.add('glint'); }   // "added to your journal"
+	function journalGlint() {
+		journalBtn.classList.remove('glint'); void journalBtn.offsetWidth; journalBtn.classList.add('glint');
+		if (shortScreen()) { if (document.body.classList.contains('tucked')) nudgeHandle(); else { moreBtn.classList.remove('glint'); void moreBtn.offsetWidth; moreBtn.classList.add('glint'); } }   // (the journal is in the More menu there)
+	}   // "added to your journal"
 
 	// ----- test mode (/journey/?test): every night open, faster playback, weather override, the whole plan -----
 	if (TEST) (function() {
@@ -3384,6 +3407,7 @@
 	// ----- the frame loop (stops while the scene is off screen or the tab is hidden) -----
 	var last = performance.now(), running = false, visible = true, soundClock = 0;
 	function frame(ts) {
+		if (uprightMQ.matches) { last = ts; if (running) requestAnimationFrame(frame); return; }   // (a phone held upright: the scene waits until it's turned)
 		var dt = Math.min(0.05, (ts - last) / 1000) * timeScale; last = ts; clock += dt;
 		var before = cam;
 		advanceShow(dt);
