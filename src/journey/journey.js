@@ -1181,7 +1181,7 @@
 								ctx.restore();
 							};
 							leg(1); leg(3);                                       // the far legs, behind the body
-							ctx.drawImage(art('jr-run-' + p.who + '-body'), 0, 0);
+							ctx.drawImage(nodBody(p.who, 0.075 * Math.sin(2 * ph4 + 0.6)), 0, 0);   // the head dips as the front feet land
 							leg(0); leg(2);
 						} else if (pose === 'trot' && !runF && !reduceMotion) {
 							// no run frames: the trotting picture's legs swing in turn (front pair and back pair sheared opposite
@@ -1319,6 +1319,23 @@
 	// looks slowly about at rest), the eyes blink, and the tail swishes. The neck is drawn in thin strips, each turned a
 	// little more about the base of the neck than the one before, so it bends smoothly with no seam. Blinking draws the
 	// fur just above the eye down over it, so the lid is the camel's own colour. All three camels share these points.
+	// the head and neck nod as they run: from x = a (the neck's root) to x = b the body turns more and more about the
+	// pivot, so the head dips and lifts; put together at full size, then drawn in one piece (no seams)
+	var CANINE_NECK = {jackal: {a: 360, b: 470, pivot: [395, 330]}, wolf: {a: 345, b: 450, pivot: [380, 330]}};
+	function nodBody(who, theta) {
+		var im = art('jr-run-' + who + '-body'), N = CANINE_NECK[who];
+		if (!N || Math.abs(theta) < 0.002) return im;
+		var cv = im.nodCv || (im.nodCv = document.createElement('canvas'));
+		if (cv.width !== im.width) { cv.width = im.width; cv.height = im.height; }
+		var g = cv.getContext('2d'); g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, cv.width, cv.height);
+		g.drawImage(im, 0, 0, N.a + 2, im.height, 0, 0, N.a + 2, im.height);
+		for (var x = N.a; x < im.width; x += 4) {
+			var th = theta * smooth((x + 2 - N.a) / (N.b - N.a)), sw = Math.min(8, im.width - x);
+			g.save(); g.translate(N.pivot[0], N.pivot[1]); g.rotate(th); g.translate(-N.pivot[0], -N.pivot[1]);
+			g.drawImage(im, x, 0, sw, im.height, x, 0, sw, im.height); g.restore();
+		}
+		return cv;
+	}
 	function canineRig(who) {   // the rig for the jackal or the wolf, once all its pieces have loaded
 		var r = window.JOURNEY_CANINE_RIG && JOURNEY_CANINE_RIG[who];
 		if (!r || !art('jr-run-' + who + '-body')) return null;
