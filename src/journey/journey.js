@@ -1063,17 +1063,7 @@
 				ctx.beginPath(); ctx.moveTo(-12, -2); ctx.bezierCurveTo(-20, -1, -24, -3, -26, 1); ctx.bezierCurveTo(-22, 0, -17, 1, -11, 1); ctx.fill();   // tail along the ground
 				ctx.restore();
 				break;
-			case 'volcano':
-				var vc = '#2c2850';
-				shape([x - 230, y + 4, x - 40, y - 150, x + 40, y - 150, x + 250, y + 4], vc);
-				shape([x - 62, y - 108, x - 40, y - 150, x + 40, y - 150, x + 66, y - 106, x + 30, y - 118, x + 8, y - 104, x - 20, y - 120], '#cacee0');   // snow (solid, so a cloud behind the mountain can't show through)
-				glow(x, y - 150, 40, 'rgb(255,140,70)', 0.18 * flicker(4));   // a faint glow at the top
-				for (var sm = 0; sm < 6; sm++) {   // a thin plume of smoke drifting with the wind
-					var age = ((clock * 0.12 + sm / 6) % 1);
-					ctx.fillStyle = 'rgba(150,145,175,' + (0.22 * (1 - age)).toFixed(3) + ')';
-					ctx.beginPath(); ctx.ellipse(x + age * 120, y - 158 - age * 110, 10 + age * 34, 6 + age * 16, 0, 0, Math.PI * 2); ctx.fill();
-				}
-				break;
+			case 'volcano': drawVolcano(x, y); break;
 			case 'angel': glow(x, y - 300, 140, 'rgb(255,236,180)', 0.45); person(x, y - 250, 2.4, 'rgba(255,248,225,0.9)'); break;
 			case 'gazelles': case 'ibex': for (var g = 0; g < 4; g++) animal(x + g * 34 - 50, y - (g % 2) * 4, 1.1, col, p.kind, clock * 3 + g); break;
 			case 'fox': case 'hare': animal(x, y, 1.3, col, p.kind, clock * 6); break;
@@ -1101,6 +1091,58 @@
 		var y = 0, n = 0, sh = shiftOf(layer);
 		for (var f = -0.5; f <= 0.5; f += 0.25) { y += layerY(layer, x + f * halfW - LEAD_X + (layer === 'road' ? cam * DAYW : sh), 'ground'); n++; }
 		return y / n;
+	}
+	// The great mountain of the East (like Damavand in Persia, a sleeping volcano), drawn until it has its picture: a
+	// broad cone whose slopes sweep up steeper and steeper to a small ragged summit, lit by the moon on one side and in
+	// shadow on the other, snow on its upper slopes reaching down the gullies in long tongues, its foot lost in the haze,
+	// and a thin wisp of steam drifting off the top
+	function drawVolcano(x, y) {
+		var top = y - 168;
+		var cone = function() {
+			ctx.beginPath(); ctx.moveTo(x - 270, y + 6);
+			ctx.bezierCurveTo(x - 140, y - 12, x - 56, top + 52, x - 24, top + 5);
+			ctx.lineTo(x - 13, top - 1); ctx.lineTo(x - 5, top + 4); ctx.lineTo(x + 7, top); ctx.lineTo(x + 21, top + 6);
+			ctx.bezierCurveTo(x + 58, top + 58, x + 150, y - 14, x + 280, y + 6);
+			ctx.closePath();
+		};
+		ctx.save();
+		cone();
+		var g = ctx.createLinearGradient(0, top, 0, y);
+		g.addColorStop(0, '#3b3668'); g.addColorStop(1, '#2a2650');
+		ctx.fillStyle = g; ctx.fill(); ctx.clip();
+		// the snow: a ragged lower edge, with rounded tongues reaching down the gullies
+		var TONGUES = [[-54, 18], [-34, 30], [-15, 22], [4, 36], [22, 24], [40, 30], [58, 14]];
+		ctx.beginPath(); ctx.moveTo(x - 130, top - 20);
+		for (var dx = -130; dx <= 130; dx += 2) {
+			var sy = top + 34 + 4 * Math.sin(dx * 0.31) + 2 * Math.sin(dx * 0.83);
+			TONGUES.forEach(function(t) { sy += t[1] * Math.exp(-(dx - t[0]) * (dx - t[0]) / 50); });
+			ctx.lineTo(x + dx, sy);
+		}
+		ctx.lineTo(x + 130, top - 20); ctx.closePath();
+		var sg = ctx.createLinearGradient(0, top, 0, top + 90);
+		sg.addColorStop(0, '#d6daec'); sg.addColorStop(1, '#a9adc9');
+		ctx.fillStyle = sg; ctx.fill();
+		// gullies running down from the top
+		ctx.strokeStyle = 'rgba(12,10,34,0.11)'; ctx.lineWidth = 2; ctx.lineCap = 'round';
+		[-4, -2.5, -1, 1.5, 3, 4.5].forEach(function(j) {
+			ctx.beginPath(); ctx.moveTo(x + j * 5, top + 16 + Math.abs(j) * 3);
+			ctx.quadraticCurveTo(x + j * 20, top + 90, x + j * 46, y - 10); ctx.stroke();
+		});
+		// the far side of the mountain in shadow (the moon is on the left)
+		ctx.beginPath(); ctx.moveTo(x + 2, top - 10);
+		ctx.bezierCurveTo(x + 8, top + 50, x + 26, top + 110, x + 70, y + 10);
+		ctx.lineTo(x + 300, y + 10); ctx.lineTo(x + 300, top - 10); ctx.closePath();
+		ctx.fillStyle = 'rgba(10,8,34,0.36)'; ctx.fill();
+		// its foot fading into the haze of the plain
+		var hz = ctx.createLinearGradient(0, y - 100, 0, y + 6);
+		hz.addColorStop(0, 'rgba(120,112,170,0)'); hz.addColorStop(1, 'rgba(120,112,170,0.55)');
+		ctx.fillStyle = hz; ctx.fillRect(x - 300, y - 100, 600, 110);
+		ctx.restore();
+		glow(x, top + 2, 30, 'rgb(255,140,70)', 0.1 * flicker(4));   // the faintest warmth at the top
+		for (var sm = 0; sm < 14; sm++) {   // a thin wisp of steam, soft puffs drifting off with the wind
+			var age = (clock * 0.05 + sm / 14) % 1;
+			glow(x + age * 150 + Math.sin(age * 6 + sm) * 6, top - 4 - age * 110, 8 + age * 38, 'rgb(170,165,198)', 0.2 * (1 - age) * Math.min(1, age * 6));
+		}
 	}
 	function paintPieces(layer) {
 		PIECES.forEach(function(p) {
