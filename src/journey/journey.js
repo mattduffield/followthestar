@@ -655,7 +655,9 @@
 			var span = VW + cw * 2, speed = (8 + night.wind * 40) * depth;
 			var x = ((r() * span - clock * speed - sh * depth * 3) % span + span) % span - cw;
 			var y = TOPV + (dark ? 20 + r() * 230 * depth : 40 + r() * 280);
-			var a = (dark ? 0.97 : w === 'clouds' ? 0.95 : 0.5) * coverage * (0.85 + depth * 0.15);   // near enough solid: the sky mustn't show through
+			var a = (dark ? 0.97 : w === 'clouds' || which === 'front' ? 0.95 : 0.5) * coverage * (0.85 + depth * 0.15);   // near enough solid: the sky mustn't show through
+			// (a cloud in front of the far hills is always solid: see-through, the mountain behind shows through it and the
+			// cloud seems to be both in front of the mountain and behind it)
 			if (a < 0.02) continue;
 			ctx.globalAlpha = a;
 			ctx.drawImage(softUnder(cloudArt(dark, i)), x, y, cw, ch);
@@ -1064,7 +1066,7 @@
 			case 'volcano':
 				var vc = '#2c2850';
 				shape([x - 230, y + 4, x - 40, y - 150, x + 40, y - 150, x + 250, y + 4], vc);
-				shape([x - 62, y - 108, x - 40, y - 150, x + 40, y - 150, x + 66, y - 106, x + 30, y - 118, x + 8, y - 104, x - 20, y - 120], 'rgba(230,235,250,0.85)');   // snow
+				shape([x - 62, y - 108, x - 40, y - 150, x + 40, y - 150, x + 66, y - 106, x + 30, y - 118, x + 8, y - 104, x - 20, y - 120], '#cacee0');   // snow (solid, so a cloud behind the mountain can't show through)
 				glow(x, y - 150, 40, 'rgb(255,140,70)', 0.18 * flicker(4));   // a faint glow at the top
 				for (var sm = 0; sm < 6; sm++) {   // a thin plume of smoke drifting with the wind
 					var age = ((clock * 0.12 + sm / 6) % 1);
@@ -2830,7 +2832,6 @@
 		else ctx.setTransform(dpr * S, 0, 0, dpr * S, 0, dpr * (canvas.clientHeight - VH * S));
 		paintSky();
 		paintStar();
-		paintCritters(true);                                             // the owl and bats
 		paintCranes();
 		paintVultures();
 		paintClouds(wx.level, 'back');
@@ -2839,6 +2840,7 @@
 		paintLayer('far'); paintSnowCaps(); paintPieces('far');
 		paintDustWall();
 		paintClouds(wx.level, 'front');                                  // the big, near clouds pass in front of the far hills
+		paintCritters(true);                                             // the owl and bats, flying in front of the far hills
 		if (night.weather === 'haze') { var g = ctx.createLinearGradient(0, 380, 0, 520); g.addColorStop(0, 'rgba(160,140,200,0)'); g.addColorStop(1, 'rgba(160,140,200,0.2)'); ctx.fillStyle = g; ctx.fillRect(0, 380, VW, 140); }
 		if (night.weather === 'fog') paintMist(468, 0.5, 0.4, 1);
 		var mm = morningMist(); if (mm > 0.01) paintMist(472, 0.55 * mm, 0.4, 1.1);
@@ -3058,7 +3060,27 @@
 		else playing = true;
 		updateControls();
 	});
-	soFarBtn.addEventListener('click', playSoFar);
+	// The journey so far asks first, so a stray click doesn't throw away tonight's night for a long time-lapse
+	var askEl = document.getElementById('sofar-ask'), askWasPlaying = false;
+	function askSoFar() {
+		if (!askEl || !askEl.showModal) { playSoFar(); return; }
+		var n = realToday + 1, s = Math.min(90, 12 + (stretch(realToday)[1] + PROLOGUE) * 1.4) + EVENING;
+		var long = s < 50 ? 'under a minute' : s < 80 ? 'about a minute' : s < 110 ? 'about a minute and a half' : 'about two minutes';
+		document.getElementById('sofar-ask-p').textContent = (n === 1 ? 'Watch the wise men set out, from the very start up to tonight' : 'Watch all ' + n + ' nights of the journey, from the very start up to tonight') + ', in ' + long + '.';
+		askWasPlaying = playing; playing = false; updateControls();
+		askEl.showModal(); document.getElementById('sofar-go').focus();
+	}
+	function closeAsk(go) {
+		if (askEl.open) askEl.close();
+		if (go) playSoFar(); else if (askWasPlaying) { playing = true; updateControls(); }
+	}
+	soFarBtn.addEventListener('click', askSoFar);
+	if (askEl) {
+		document.getElementById('sofar-go').addEventListener('click', function() { closeAsk(true); });
+		document.getElementById('sofar-no').addEventListener('click', function() { closeAsk(false); });
+		askEl.addEventListener('cancel', function(e) { e.preventDefault(); closeAsk(false); });   // (Escape)
+		askEl.addEventListener('click', function(e) { if (e.target === askEl) closeAsk(false); });   // (a click outside it)
+	}
 	var soundBtn = document.getElementById('sound');
 	function soundLabel(on) { soundBtn.textContent = on ? 'Sound on' : 'Sound off'; soundBtn.setAttribute('aria-pressed', on ? 'true' : 'false'); }
 	soundBtn.addEventListener('click', function() { var son = sound.toggle(); track('sound', {on: son ? 'yes' : 'no'}); soundLabel(son); sound.music(viewIdx, viewIdx === TOTAL, TOTAL - viewIdx); setNightSounds(); });
