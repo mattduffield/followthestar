@@ -44,7 +44,7 @@
 	function now() { return forced || new Date(); }
 
 	var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-	var sound = window.JourneySound || {preload: function() {}, update: function() {}, thunder: function() {}, hoot: function() {}, animal: function() {}, music: function() {}, toggle: function() { return false; }, wanted: function() { return false; }, hasAny: function() { return false; }};
+	var sound = window.JourneySound || {preload: function() {}, update: function() {}, thunder: function() {}, hoot: function() {}, animal: function() { return 0; }, squeak: function() {}, isOn: function() { return false; }, music: function() {}, toggle: function() { return false; }, wanted: function() { return false; }, hasAny: function() { return false; }};
 
 	// ----- seeded randomness: the same night always looks the same -----
 	function rng(seed) {
@@ -1418,12 +1418,23 @@
 	// Click a wise man standing about in the evening and he says something, in his own voice, about where they are:
 	// at the fire on the way (or on the way home), at Herod's palace, at the manger, or home again (sayings.js)
 	var kingBoxes = [], said = null, lastSaid = {};
+	// One voice at a time: while a king is speaking (or his words are still up) another click on a king or a camel does
+	// nothing, so they never talk over each other however fast they're clicked
+	var voiceUntil = 0;   // (performance.now(), ms)
+	function talking() { return performance.now() < voiceUntil || !!(said && clock - said.at < said.dur); }
+	function speak(name, volume, delay) {
+		if (!sound.isOn()) return;
+		voiceUntil = Math.max(voiceUntil, performance.now() + (delay || 0) + 1600);   // (until we know how long it is)
+		var go = function() { var d = sound.animal(name, volume); if (d) voiceUntil = performance.now() + 1000 * d; };
+		if (delay) setTimeout(go, delay); else go();
+	}
 	function sayPlace() {
 		var lm = night.plan && night.plan.landmark, kind = eveningKind();
 		return EASTER() ? 'easter' : HOMEMODE ? 'rest' : kind === 'manger' ? 'christmas' : lm === 'home' ? 'home' : kind === 'palace' ? 'herod' : homeward(night.day) ? 'road' : 'fire';
 	}
 	function talkToKing(pt) {
 		var hit = kingBoxes.filter(function(b) { return pt.x > b.x0 && pt.x < b.x1 && pt.y > b.y0 && pt.y < b.y1; }).pop();
+		if (hit && talking()) return true;   // (someone is already speaking: the click is swallowed)
 		if (hit && hit.n === 0) {   // the armillary sphere
 			var ARM = ['An armillary sphere: the wise men’s model of the heavens.', 'Its rings show the paths of the sun and the stars.', '“The heavens declare the glory of God” (Psalm 19:1).'];
 			lastSaid.arm = ((lastSaid.arm == null ? -1 : lastSaid.arm) + 1) % ARM.length;
@@ -1437,7 +1448,7 @@
 		lastSaid[key] = i;
 		said = {n: hit.n, text: lines[i], at: clock, dur: 2.2 + lines[i].length * 0.06};
 		track('king_talk', {king: ['', 'gold', 'frankincense', 'myrrh'][hit.n], place: place});
-		sound.animal('voice-' + hit.n + '-say-' + place + '-' + (i + 1), 0.9);
+		speak('voice-' + hit.n + '-say-' + place + '-' + (i + 1), 0.9);
 		return true;
 	}
 	function paintSaid() {   // the words over his head, fading in and out
@@ -1487,17 +1498,18 @@
 	function pokeCamel(pt) {
 		var hit = camelBoxes.filter(function(b) { return pt.x > b.x0 && pt.x < b.x1 && pt.y > b.y0 && pt.y < b.y1; }).pop();
 		if (!hit) return false;
+		if (talking() || clock - (hit.k.poke || -9) < 1.2 || clock - (hit.k.surge || -9) < 4.5) return true;   // (still busy from the last click)
 		var urging = hit.i > 0 && walk > 0.5 && evening() === 0 && !(clock - hit.k.surge < 5) && !CARAVAN.some(function(o) { return clock - o.surge < 5; });
 		// its king calls to it straight away: urging it on ("Hut-hut-hut!", "Yalla!"), and a moment later it surges forward
 		// to pass; otherwise he soothes it ("Easy, easy") after its grumble
 		if (urging) {
-			if (hit.riding) sound.animal('voice-' + hit.king + '-urge', 0.95);
+			if (hit.riding) speak('voice-' + hit.king + '-urge', 0.95);
 			hit.k.surge = clock + 0.55;
 			track('camel', {pass: 'yes'});
 			setTimeout(function() { hit.k.poke = clock; sound.animal('camel-grunt', 0.42); }, 450);
 		} else {
 			hit.k.poke = clock; sound.animal('camel-grunt', 0.42); track('camel', {pass: 'no'});
-			if (hit.riding) setTimeout(function() { sound.animal('voice-' + hit.king + '-calm', 0.8); }, 550);
+			if (hit.riding) speak('voice-' + hit.king + '-calm', 0.8, 550);
 		}
 		return true;
 	}
@@ -2484,6 +2496,8 @@
 	function nearPip(evt, reach) { if (!pip.box) return false; var p = sceneXY(evt); return Math.hypot(p.x - pip.box.x, p.y - pip.box.y) < reach; }
 	var pipCard = document.getElementById('pip-card');
 	function findPip() {
+		if (pip.card) return;   // (already found: a double click or a tap's echo)
+		sound.squeak();
 		track('pip_found'); setTimeout(journalGlint, 400);
 		pip.hop = 0; pip.hopT = 0;
 		if (HOMEMODE) {   // at home: a card for each week of the year, and how many days Pip has been found at home
@@ -2501,8 +2515,9 @@
 		pip.wasPlaying = playing; playing = false; pip.card = true; updateControls();   // the scene waits while the card is open
 		pipCard.hidden = false; verseEl.style.visibility = 'hidden'; pipCard.querySelector('button').focus();
 	}
-	canvas.addEventListener('click', function(evt) { if (nearPip(evt, evt.pointerType === 'touch' ? 40 : 26)) findPip(); else if (pickUp(sceneXY(evt)) || talkToKing(sceneXY(evt)) || pokeCamel(sceneXY(evt)) || traceAt(sceneXY(evt))) return; else if (evt.pointerType !== 'touch') pipCall(evt); });
-	canvas.addEventListener('pointerdown', function(evt) { if (evt.pointerType === 'touch') { if (nearPip(evt, 40)) { evt.preventDefault(); findPip(); } else if (!pickUp(sceneXY(evt)) && !talkToKing(sceneXY(evt)) && !pokeCamel(sceneXY(evt)) && !traceAt(sceneXY(evt))) pipCall(evt); } });
+	var lastTap = 0;
+	canvas.addEventListener('click', function(evt) { if (performance.now() - lastTap < 800) return; if (nearPip(evt, evt.pointerType === 'touch' ? 40 : 26)) findPip(); else if (pickUp(sceneXY(evt)) || talkToKing(sceneXY(evt)) || pokeCamel(sceneXY(evt)) || traceAt(sceneXY(evt))) return; else if (evt.pointerType !== 'touch') pipCall(evt); });
+	canvas.addEventListener('pointerdown', function(evt) { if (evt.pointerType === 'touch') { lastTap = performance.now(); if (nearPip(evt, 40)) { evt.preventDefault(); findPip(); } else if (!pickUp(sceneXY(evt)) && !talkToKing(sceneXY(evt)) && !pokeCamel(sceneXY(evt)) && !traceAt(sceneXY(evt))) pipCall(evt); } });
 	canvas.addEventListener('mousemove', function(evt) { pip.near = nearPip(evt, 70); pip.lookX = sceneXY(evt).x; var k = constellation(), sp = sceneXY(evt); canvas.style.cursor = nearPip(evt, 26) || kingBoxes.some(function(b) { return sp.x > b.x0 && sp.x < b.x1 && sp.y > b.y0 && sp.y < b.y1; }) || camelBoxes.some(function(b) { return sp.x > b.x0 && sp.x < b.x1 && sp.y > b.y0 && sp.y < b.y1; }) || (k && daylight() < 0.2 && k.pts.some(function(q) { return Math.hypot(q[0] - sp.x, q[1] - sp.y) < 40; })) ? 'pointer' : ''; });
 	canvas.addEventListener('mouseleave', function() { pip.near = false; });
 	document.getElementById('pip-close').addEventListener('click', function() {

@@ -94,7 +94,19 @@ var JourneySound = (function() {
 		musicGain.gain.setTargetAtTime(MUSIC_LEVEL, ac.currentTime + 2.5, 1);
 	}
 	function hoot() { once('owl', 0.4, 0.6); }
-	function animal(kind, volume) { once(kind, volume || 0.35, 0.3); }
+	function animal(kind, volume) { var src = once(kind, volume || 0.35, 0.3); return src ? src.buffer.duration + 0.3 : 0; }   // (how long it lasts: 0 if not loaded yet)
+	// Pip's squeak when he's found: made here rather than recorded, two quick chirps sliding up, like a squeaky toy
+	function squeak() {
+		if (!on || !ac) return;
+		var t = ac.currentTime;
+		[[0, 1150], [0.1, 1450]].forEach(function(c) {
+			var o = ac.createOscillator(), g = ac.createGain(), t0 = t + c[0], f = c[1];
+			o.type = 'triangle';
+			o.frequency.setValueAtTime(f, t0); o.frequency.exponentialRampToValueAtTime(f * 1.6, t0 + 0.05); o.frequency.exponentialRampToValueAtTime(f * 1.3, t0 + 0.09);
+			g.gain.setValueAtTime(0.0001, t0); g.gain.exponentialRampToValueAtTime(0.2, t0 + 0.012); g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.09);
+			o.connect(g); g.connect(master); o.start(t0); o.stop(t0 + 0.1);
+		});
+	}
 	// fetch tonight's animal sounds ahead of time, so the first bleat isn't lost while it downloads
 	function preload(prefixes) { if (!ac) return; prefixes.forEach(function(p) { variants(p).forEach(load); }); }
 
@@ -133,6 +145,6 @@ var JourneySound = (function() {
 	}
 	function wanted() { try { return localStorage.getItem(KEY) === '1'; } catch (e) { return false; } }
 
-	return {preload: preload, toggle: toggle, isOn: function() { return on; }, wanted: wanted, update: update, thunder: thunder, hoot: hoot, animal: animal,
+	return {preload: preload, toggle: toggle, isOn: function() { return on; }, wanted: wanted, update: update, thunder: thunder, hoot: hoot, animal: animal, squeak: squeak,
 		music: setMusic, step: function() {}, bell: function() {}, hasAny: function() { return READY.length > 0; }};
 })();
