@@ -13,7 +13,6 @@ header > .buttons {display:flex; align-items:center;}
 header > .buttons a, header > .buttons button {border:1px solid #FFDB59; border-radius: 5px; color:#FFDB59; background:none; padding:10px 25px; display:inline-block; font:400 18px Inter,Arial,sans-serif; text-decoration: none; text-transform: uppercase; cursor:pointer; text-align:center;}
 header > .buttons a {margin-right:20px;}
 header > .buttons a.lang {border-color:rgba(255,219,89,0.45); text-transform:none; margin-right:0;}   /* the other language: quieter than the buttons */
-header > .buttons a.lang .lang-short {display:none;}
 
 @media screen and (max-width:500px) {
 	header > a > img {width:55px; height:40px; margin-top:15px}
@@ -21,7 +20,7 @@ header > .buttons a.lang .lang-short {display:none;}
 	header > .buttons a, header > .buttons button {padding:8px 12px;}
 	header > .buttons a {margin-right:8px; white-space:nowrap;}
 	header > .buttons .wide {display:none;}   /* "The Journey" becomes "Journey" */
-	header > .buttons a.lang .lang-long {display:none;} header > .buttons a.lang .lang-short {display:inline;}   /* "Español" becomes "ES" */
+	header > .buttons a.lang .lang-long {display:none;} header > .buttons a.lang::after {content:attr(data-short);}   /* "Español" becomes "ES" */
 }
 
 @media screen and (max-width:400px) {
