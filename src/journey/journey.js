@@ -12,6 +12,29 @@
 (function() {
 	'use strict';
 
+	// ----- language -----
+	// The words are written in English throughout this file. On another language's page (made by docs/journey-lang.py,
+	// e.g. /es/journey/) that language's files in lang/xx/ load first and fill window.JOURNEY_LANG: its strings, keyed by
+	// the English words; the readings, Pip's cards and the kings' sayings in that language; and its locale for dates.
+	// Anything not translated stays in English. {name} in a string is filled in from vars.
+	var LANG = window.JOURNEY_LANG || {}, LOCALE = LANG.locale || 'en-US', LANG_STRINGS = LANG.strings || {};
+	function fill(s, vars) { return vars ? s.replace(/\{(\w+)\}/g, function(m, k) { return k in vars ? vars[k] : m; }) : s; }
+	function T(en, vars) { var tr = LANG_STRINGS[en]; return fill(typeof tr === 'string' ? tr : en, vars); }
+	// a phrase that changes with a number ("1 night", "5 nights"): the translation of the plural form is either one
+	// string or one per plural category ({one: …, few: …, many: …, other: …}, as Russian needs)
+	function TN(n, one, other, vars) {
+		var tr = LANG_STRINGS[other], form = n === 1 ? one : other;
+		if (tr && typeof tr === 'object') form = tr[new Intl.PluralRules(LOCALE).select(n)] || tr.other;
+		else if (typeof tr === 'string') form = n === 1 && typeof LANG_STRINGS[one] === 'string' ? LANG_STRINGS[one] : tr;
+		vars = Object.assign({n: n}, vars || {});
+		return fill(form, vars);
+	}
+	var VERSION = LANG.version || 'KJV';
+	var READINGS = LANG.readings || window.JOURNEY_READINGS;
+	var PIP_NIGHT_CARDS = LANG.pipCards || window.PIP_CARDS || {}, PIP_WEEK_CARDS = LANG.pipHomeCards || window.PIP_HOME_CARDS || [];
+	var SAYINGS = LANG.sayings || window.KING_SAYINGS;
+	function voiceFile(name) { return LANG.code ? name.replace(/^voice-/, 'voice-' + LANG.code + '-') : name; }   // (voice-es-1-say-fire-1)
+
 	var ART_READY = (window.JOURNEY_ART_READY || []).slice();   // art-ready.js, written by docs/firefly/process-art.py
 	var params = new URLSearchParams(location.search);
 	if (params.get('art')) ART_READY = ART_READY.concat(params.get('art').split(','));   // ?art=name,name to try art before it's listed
@@ -40,7 +63,7 @@
 	function dateOfDay(k) { return new Date(START.getFullYear(), START.getMonth(), START.getDate() + Math.floor(k)); }
 	function dayOf(md) { var p = md.split('-'), y = START.getFullYear() + (p[0] - 1 < START.getMonth() ? 1 : 0); return Math.round((new Date(y, p[0] - 1, +p[1]) - START) / DAY); }
 	function ymd(d) { return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
-	function longDate(d) { return d.toLocaleDateString('en-US', {weekday: 'long', month: 'long', day: 'numeric'}); }
+	function longDate(d) { return d.toLocaleDateString(LOCALE, {weekday: 'long', month: 'long', day: 'numeric'}); }
 	function now() { return forced || new Date(); }
 
 	var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -66,25 +89,25 @@
 	function planFor(k) { return PLAN[k] || {sky: 'night', weather: 'clear'}; }
 
 	var SKIES = {
-		'night':     {art: 'jr-sky-night',     top: '#05081c', mid: '#151a45', low: '#352658', glow: '#5c3656', words: 'a clear, deep night'},
-		'night-2':   {art: 'jr-sky-night-2',   top: '#03061a', mid: '#0f1b4a', low: '#24306a', glow: '#3d3f7a', words: 'a cold, clear night'},
-		'deep':      {art: 'jr-sky-deep',      top: '#02030f', mid: '#0a0d2c', low: '#1d1a45', glow: '#352a55', words: 'a dark, starry night'},
-		'dusk':      {art: 'jr-sky-dusk',      top: '#0b0d2e', mid: '#2a1f5a', low: '#6b3a6e', glow: '#c06a5a', words: 'the last glow of evening'},
-		'dusk-2':    {art: 'jr-sky-dusk-2',    top: '#0a0f30', mid: '#24285e', low: '#5a3f78', glow: '#b07a68', words: 'a soft violet evening'},
+		'night':     {art: 'jr-sky-night',     top: '#05081c', mid: '#151a45', low: '#352658', glow: '#5c3656', words: T('a clear, deep night')},
+		'night-2':   {art: 'jr-sky-night-2',   top: '#03061a', mid: '#0f1b4a', low: '#24306a', glow: '#3d3f7a', words: T('a cold, clear night')},
+		'deep':      {art: 'jr-sky-deep',      top: '#02030f', mid: '#0a0d2c', low: '#1d1a45', glow: '#352a55', words: T('a dark, starry night')},
+		'dusk':      {art: 'jr-sky-dusk',      top: '#0b0d2e', mid: '#2a1f5a', low: '#6b3a6e', glow: '#c06a5a', words: T('the last glow of evening')},
+		'dusk-2':    {art: 'jr-sky-dusk-2',    top: '#0a0f30', mid: '#24285e', low: '#5a3f78', glow: '#b07a68', words: T('a soft violet evening')},
 		'clouds':    {art: 'jr-sky-clouds',    top: '#060a22', mid: '#1a1d4c', low: '#3a2c60', glow: '#5a3d64', words: ''},
 		'storm':     {art: 'jr-sky-storm',     top: '#05060f', mid: '#12142a', low: '#262540', glow: '#3a3550', words: ''},
 		'sandstorm': {art: 'jr-sky-sandstorm', top: '#120d1e', mid: '#3a2a32', low: '#7a5238', glow: '#a8703c', words: ''},
-		'predawn':   {art: 'jr-sky-predawn',   top: '#0b1236', mid: '#2a3270', low: '#7a6a9a', glow: '#f2c487', words: 'the first light of Christmas morning'}
+		'predawn':   {art: 'jr-sky-predawn',   top: '#0b1236', mid: '#2a3270', low: '#7a6a9a', glow: '#f2c487', words: T('the first light of Christmas morning')}
 	};
 	var WEATHER = {   // words for the night's description, a caption as it arrives, and one as it clears
 		clear: {words: ''},
-		haze: {words: 'haze along the hills'},
-		clouds: {words: 'clouds drifting over'},
-		wind: {words: 'a warm wind lifting the sand', caption: 'A warm wind lifts the sand'},
-		fog: {words: 'mist lying in the valleys', caption: 'Mist in the valleys'},
-		rain: {words: 'rain on the road', caption: 'Rain on the road'},
-		storm: {words: 'a storm with thunder and lightning that clears late in the night', caption: 'A storm rolls in over the hills', clears: 'The storm passes, and the Star shines again'},
-		sandstorm: {words: 'a sandstorm that settles late in the night', caption: 'A sandstorm sweeps across the desert', clears: 'The dust settles, and the Star is still there'}
+		haze: {words: T('haze along the hills')},
+		clouds: {words: T('clouds drifting over')},
+		wind: {words: T('a warm wind lifting the sand'), caption: T('A warm wind lifts the sand')},
+		fog: {words: T('mist lying in the valleys'), caption: T('Mist in the valleys')},
+		rain: {words: T('rain on the road'), caption: T('Rain on the road')},
+		storm: {words: T('a storm with thunder and lightning that clears late in the night'), caption: T('A storm rolls in over the hills'), clears: T('The storm passes, and the Star shines again')},
+		sandstorm: {words: T('a sandstorm that settles late in the night'), caption: T('A sandstorm sweeps across the desert'), clears: T('The dust settles, and the Star is still there')}
 	};
 	var WEATHER_KINDS = Object.keys(WEATHER);
 
@@ -95,11 +118,11 @@
 	}
 	function moonWords(p) {
 		if (p < 0.03 || p > 0.97) return null;
-		if (p < 0.22 || p > 0.78) return 'a thin crescent moon';
-		if (p < 0.28 || p > 0.72) return 'a half moon';
-		if (p < 0.47) return 'a growing moon';
-		if (p < 0.53) return 'a full moon';
-		return 'a waning moon';
+		if (p < 0.22 || p > 0.78) return T('a thin crescent moon');
+		if (p < 0.28 || p > 0.72) return T('a half moon');
+		if (p < 0.47) return T('a growing moon');
+		if (p < 0.53) return T('a full moon');
+		return T('a waning moon');
 	}
 
 	var weatherOverride = null;   // test mode
@@ -117,12 +140,12 @@
 		var cloudy = /storm|rain|clouds/.test(n.weather);
 		var m = moonWords(n.phase); if (m && n.day !== TOTAL && !cloudy) bits.push(m);
 		if (WEATHER[n.weather].words) bits.push(WEATHER[n.weather].words);
-		if (n.plan.note && !weatherOverride) bits.push(n.plan.note);
-		if (cometNight(n.day)) bits.push('a comet with a long tail');
-		if (n.phase > 0.44 && n.phase < 0.56 && n.day !== TOTAL && !/storm|rain|clouds/.test(n.weather)) bits.push('a big orange moon rising');
-		if (snowSeason(n.day) && n.day <= TOTAL + 2) bits.push('snow on the far mountains');
-		if (n.day <= 4) bits.push('a mountain smoking far to the north');
-		var s = bits.join(', ') || 'a quiet night';
+		if (n.plan.note && !weatherOverride) bits.push(T(n.plan.note));
+		if (cometNight(n.day)) bits.push(T('a comet with a long tail'));
+		if (n.phase > 0.44 && n.phase < 0.56 && n.day !== TOTAL && !/storm|rain|clouds/.test(n.weather)) bits.push(T('a big orange moon rising'));
+		if (snowSeason(n.day) && n.day <= TOTAL + 2) bits.push(T('snow on the far mountains'));
+		if (n.day <= 4) bits.push(T('a mountain smoking far to the north'));
+		var s = bits.join(', ') || T('a quiet night');
 		return s.charAt(0).toUpperCase() + s.slice(1) + '.';
 	}
 
@@ -132,20 +155,20 @@
 	var PROLOGUE = 0.45;        // the first night starts at the palace gate
 	var SPEED = {sky: 0.02, far: 0.12, mid: 0.4, road: 1, fg: 1.7};
 	var STAGES = [
-		{from: -99, key: 'east', label: 'The lands of the East', far: '#22294f', mid: '#2b3460', hill: 'plains',
+		{from: -99, key: 'east', label: T('The lands of the East'), far: '#22294f', mid: '#2b3460', hill: 'plains',
 			art: {far: ['jr-far-plains', 'jr-far-plains-2'], mid: ['jr-mid-fields'],   // jr-mid-plains-palms' black palms look wrong this far back
 			 road: ['jr-near-riverbank', 'jr-near-sand-3']}},   // jr-near-riverbank-2's reeds look like cactuses at this size
-		{from: dayOf('10-09'), key: 'desert', label: 'The great desert', far: '#2a2150', mid: '#3a2a5e', hill: 'dunes',
+		{from: dayOf('10-09'), key: 'desert', label: T('The great desert'), far: '#2a2150', mid: '#3a2a5e', hill: 'dunes',
 			art: {far: ['jr-far-mountains', 'jr-far-mountains-2', 'jr-far-mesas'], mid: ['jr-mid-dunes-2', 'jr-mid-dunes-3'], road: ['jr-near-sand-3', 'jr-near-sand-4']}},   // jr-near-sand-2 is one steep dune
-		{from: dayOf('11-23'), key: 'rocky', label: 'Rocky country', far: '#2b2245', mid: '#40305a', hill: 'rocky',
+		{from: dayOf('11-23'), key: 'rocky', label: T('Rocky country'), far: '#2b2245', mid: '#40305a', hill: 'rocky',
 			art: {far: ['jr-far-rocky-peaks', 'jr-far-mesas-2'], mid: ['jr-mid-rocky', 'jr-mid-rocky-2'], road: ['jr-near-rocky-road']}},   // jr-near-rocky-road-2's round stepping stones look odd under the camels
-		{from: dayOf('12-11'), key: 'judea', label: 'The hills of Judea', far: '#232643', mid: '#2e3552', hill: 'terraces',
+		{from: dayOf('12-11'), key: 'judea', label: T('The hills of Judea'), far: '#232643', mid: '#2e3552', hill: 'terraces',
 			art: {far: ['jr-far-judean-hills', 'jr-far-judean-hills-2'], mid: ['jr-mid-olive-terraces', 'jr-mid-olive-terraces-2'], road: ['jr-near-sand-4', 'jr-near-sand-3']}}   // a clean road; the walls and olive trees in front give Judea its look (the path strips' tufts and walls read badly under the camels)
 	];
 	STAGES.push(
-		{from: dayOf('12-29'), key: 'desert', label: 'The desert road home', far: '#2a2150', mid: '#3a2a5e', hill: 'dunes',
+		{from: dayOf('12-29'), key: 'desert', label: T('The desert road home'), far: '#2a2150', mid: '#3a2a5e', hill: 'dunes',
 			art: {far: ['jr-far-mesas', 'jr-far-mountains-2'], mid: ['jr-mid-dunes-3', 'jr-mid-dunes-2'], road: ['jr-near-sand-4', 'jr-near-sand-3']}},
-		{from: dayOf('01-04'), key: 'east', label: 'Home in the East', far: '#22294f', mid: '#2b3460', hill: 'plains',
+		{from: dayOf('01-04'), key: 'east', label: T('Home in the East'), far: '#22294f', mid: '#2b3460', hill: 'plains',
 			art: {far: ['jr-far-plains-2', 'jr-far-plains'], mid: ['jr-mid-fields'], road: ['jr-near-riverbank', 'jr-near-sand-3']}});
 	function stageAt(day) { var s = STAGES[0]; STAGES.forEach(function(t) { if (day >= t.from) s = t; }); return s; }
 	// layer art is drawn this wide (the scene is 720 units tall) with its skyline at about y
@@ -161,45 +184,45 @@
 	}
 	// pieces: at = how far through the night (0..1) they pass the lead camel; off = where on screen, from the lead camel
 	var LANDMARKS = {
-		palace:    {kind: 'palace', art: 'jr-lm-east-palace', caption: 'Setting out from the East', h: 290, at: 0, off: -260},
-		river:     {kind: 'river', art: 'jr-lm-river', caption: 'Crossing the great river', h: 150},
-		oasis:     {kind: 'oasis', art: 'jr-lm-oasis', caption: 'Water at an oasis', h: 180},
-		'oasis-2': {kind: 'oasis', art: 'jr-lm-oasis-2', caption: 'Another oasis', h: 175},
-		ruins:     {kind: 'ruins', art: 'jr-lm-ruins', caption: 'Past ancient ruins', h: 165},
-		inn:       {kind: 'inn', art: 'jr-lm-caravanserai', caption: 'An inn for travelers', h: 165},
-		'inn-2':   {kind: 'inn', art: 'jr-lm-caravanserai-2', caption: 'Rest at a roadside inn', h: 140},
-		pass:      {kind: 'pass', art: 'jr-far-pass', alt: 'jr-lm-mountain-pass', caption: 'Through the mountain pass', h: 290, layer: 'far', at: 0.4, off: 120},
-		well:      {kind: 'well', art: 'jr-lm-well', caption: 'A well by the road', h: 110, layer: 'road', off: 420},
-		olives:    {kind: 'olives', art: 'jr-lm-olive-grove', caption: 'Olive groves of Judea', h: 170},
-		'jerusalem-far':  {kind: 'jerusalem', art: 'jr-lm-jerusalem', caption: 'Jerusalem on the hills ahead', h: 120, layer: 'far', at: 0.55},
-		'jerusalem-gate': {kind: 'jerusalem', art: 'jr-lm-jerusalem-gate', alt: 'jr-lm-jerusalem', caption: 'At the gates of Jerusalem: “Where is he that is born King of the Jews?”', h: 260, at: 1, off: 330},
-		herod:            {kind: 'palace', art: 'jr-lm-herod-palace', alt: 'jr-lm-jerusalem', caption: 'King Herod: “Go and search diligently for the young child”', h: 270, at: 1, off: 320},
-		jerusalem:        {kind: 'jerusalem', art: 'jr-lm-jerusalem', caption: 'Leaving Jerusalem, the Star goes before them', h: 300, at: 0.3},
-		angel:            {kind: 'angel', art: 'jr-en-angel', caption: 'Warned in a dream, they go home another way', h: 150, at: 0.92, off: 260},
-		home:             {kind: 'palace', art: 'jr-lm-east-palace', caption: 'Home again', h: 400, at: 1, off: 330, layer: 'road'},   // close and large, lit to welcome them home
-		shepherds: {kind: 'shepherds', art: 'jr-lm-shepherds', caption: 'Shepherds keeping watch', h: 140},
-		bethlehem: {kind: 'bethlehem', art: 'jr-lm-bethlehem', caption: 'Bethlehem', h: 210, at: 0.5},
-		stable:    {kind: 'stable', art: 'jr-lm-stable', caption: 'They have found him', h: 165, layer: 'road', at: 1, off: 390}
+		palace:    {kind: 'palace', art: 'jr-lm-east-palace', caption: T('Setting out from the East'), h: 290, at: 0, off: -260},
+		river:     {kind: 'river', art: 'jr-lm-river', caption: T('Crossing the great river'), h: 150},
+		oasis:     {kind: 'oasis', art: 'jr-lm-oasis', caption: T('Water at an oasis'), h: 180},
+		'oasis-2': {kind: 'oasis', art: 'jr-lm-oasis-2', caption: T('Another oasis'), h: 175},
+		ruins:     {kind: 'ruins', art: 'jr-lm-ruins', caption: T('Past ancient ruins'), h: 165},
+		inn:       {kind: 'inn', art: 'jr-lm-caravanserai', caption: T('An inn for travelers'), h: 165},
+		'inn-2':   {kind: 'inn', art: 'jr-lm-caravanserai-2', caption: T('Rest at a roadside inn'), h: 140},
+		pass:      {kind: 'pass', art: 'jr-far-pass', alt: 'jr-lm-mountain-pass', caption: T('Through the mountain pass'), h: 290, layer: 'far', at: 0.4, off: 120},
+		well:      {kind: 'well', art: 'jr-lm-well', caption: T('A well by the road'), h: 110, layer: 'road', off: 420},
+		olives:    {kind: 'olives', art: 'jr-lm-olive-grove', caption: T('Olive groves of Judea'), h: 170},
+		'jerusalem-far':  {kind: 'jerusalem', art: 'jr-lm-jerusalem', caption: T('Jerusalem on the hills ahead'), h: 120, layer: 'far', at: 0.55},
+		'jerusalem-gate': {kind: 'jerusalem', art: 'jr-lm-jerusalem-gate', alt: 'jr-lm-jerusalem', caption: T('At the gates of Jerusalem: “Where is he that is born King of the Jews?”'), h: 260, at: 1, off: 330},
+		herod:            {kind: 'palace', art: 'jr-lm-herod-palace', alt: 'jr-lm-jerusalem', caption: T('King Herod: “Go and search diligently for the young child”'), h: 270, at: 1, off: 320},
+		jerusalem:        {kind: 'jerusalem', art: 'jr-lm-jerusalem', caption: T('Leaving Jerusalem, the Star goes before them'), h: 300, at: 0.3},
+		angel:            {kind: 'angel', art: 'jr-en-angel', caption: T('Warned in a dream, they go home another way'), h: 150, at: 0.92, off: 260},
+		home:             {kind: 'palace', art: 'jr-lm-east-palace', caption: T('Home again'), h: 400, at: 1, off: 330, layer: 'road'},   // close and large, lit to welcome them home
+		shepherds: {kind: 'shepherds', art: 'jr-lm-shepherds', caption: T('Shepherds keeping watch'), h: 140},
+		bethlehem: {kind: 'bethlehem', art: 'jr-lm-bethlehem', caption: T('Bethlehem'), h: 210, at: 0.5},
+		stable:    {kind: 'stable', art: 'jr-lm-stable', caption: T('They have found him'), h: 165, layer: 'road', at: 1, off: 390}
 	};
 	var ENCOUNTERS = {
-		gazelles:  {art: 'jr-en-gazelles', caption: 'Gazelles in the starlight', dayCaption: 'Gazelles in the heat of the day', h: 95, flip: true},
-		herder:    {art: 'jr-en-goat-herder', caption: 'A herder and his goats', h: 110, flip: true},
-		heron:     {art: 'jr-en-herons', caption: 'Herons by the water', h: 105},
-		farm:      {art: 'jr-en-farmhouse', caption: 'A farmhouse with a lamp still lit', h: 115},
-		owl:       {art: 'jr-en-owl', caption: 'An owl in a palm tree', h: 300},
-		tents:     {art: 'jr-en-bedouin-tents', caption: 'The tents of desert herders', h: 105},
-		fox:       {art: 'jr-en-fox', caption: 'A desert fox watching them pass', h: 70, flip: true},
-		merchants: {art: 'jr-en-merchants', caption: 'Merchants heading the other way', h: 85, kind: 'caravan'},
-		hare:      {art: 'jr-en-hare', caption: 'A hare in the moonlight', dayCaption: 'A hare in the sunshine', h: 60, flip: true},
-		stones:    {art: 'jr-en-standing-stones', caption: 'Standing stones', h: 120},
-		ibex:      {art: 'jr-en-ibex', caption: 'Wild ibex on the rocks', h: 110, flip: true},
-		lanterns:  {art: 'jr-en-lantern-travelers', caption: 'Other travelers with lanterns', h: 105, flip: true},
-		sheep:     {art: 'jr-en-sheep', caption: 'A shepherd and his sheep', h: 110, flip: true},
-		donkey:    {art: 'jr-en-donkey', caption: 'A traveler with a donkey', h: 110, flip: true},
-		kite:      {art: 'jr-en-kite-boy', caption: 'A boy flying his kite in the wind', h: 150},
-		potter:    {art: 'jr-en-potter', caption: 'A potter at her wheel', h: 115},
-		'well-women': {art: 'jr-en-well-women', caption: 'Women drawing water at the well', h: 135},
-		shepherdess: {art: 'jr-en-shepherdess', caption: 'A shepherdess with her lambs', h: 135}
+		gazelles:  {art: 'jr-en-gazelles', caption: T('Gazelles in the starlight'), dayCaption: T('Gazelles in the heat of the day'), h: 95, flip: true},
+		herder:    {art: 'jr-en-goat-herder', caption: T('A herder and his goats'), h: 110, flip: true},
+		heron:     {art: 'jr-en-herons', caption: T('Herons by the water'), h: 105},
+		farm:      {art: 'jr-en-farmhouse', caption: T('A farmhouse with a lamp still lit'), h: 115},
+		owl:       {art: 'jr-en-owl', caption: T('An owl in a palm tree'), h: 300},
+		tents:     {art: 'jr-en-bedouin-tents', caption: T('The tents of desert herders'), h: 105},
+		fox:       {art: 'jr-en-fox', caption: T('A desert fox watching them pass'), h: 70, flip: true},
+		merchants: {art: 'jr-en-merchants', caption: T('Merchants heading the other way'), h: 85, kind: 'caravan'},
+		hare:      {art: 'jr-en-hare', caption: T('A hare in the moonlight'), dayCaption: T('A hare in the sunshine'), h: 60, flip: true},
+		stones:    {art: 'jr-en-standing-stones', caption: T('Standing stones'), h: 120},
+		ibex:      {art: 'jr-en-ibex', caption: T('Wild ibex on the rocks'), h: 110, flip: true},
+		lanterns:  {art: 'jr-en-lantern-travelers', caption: T('Other travelers with lanterns'), h: 105, flip: true},
+		sheep:     {art: 'jr-en-sheep', caption: T('A shepherd and his sheep'), h: 110, flip: true},
+		donkey:    {art: 'jr-en-donkey', caption: T('A traveler with a donkey'), h: 110, flip: true},
+		kite:      {art: 'jr-en-kite-boy', caption: T('A boy flying his kite in the wind'), h: 150},
+		potter:    {art: 'jr-en-potter', caption: T('A potter at her wheel'), h: 115},
+		'well-women': {art: 'jr-en-well-women', caption: T('Women drawing water at the well'), h: 135},
+		shepherdess: {art: 'jr-en-shepherdess', caption: T('A shepherdess with her lambs'), h: 135}
 	};
 	var CAMPS = ['jr-lm-camp', 'jr-lm-camp-2', 'jr-lm-camp-3'];
 
@@ -221,7 +244,7 @@
 	(window.JOURNEY_PLAN || []).forEach(function(p) {
 		if (!p.howl || /rain|storm|sandstorm/.test(p.weather)) return;   // not out howling in the rain
 		var k = dayOf(p.d), st = stretch(k);
-		PIECES.push({night: k, key: 'howl', kind: 'howl', who: p.howl, art: 'jr-howl-' + p.howl, caption: p.howl === 'wolf' ? (hash(k * 7 + 31) < 1 / 3 ? 'A wolf howls far away' : 'Wolves howling in the hills') : 'Jackals calling in the night',
+		PIECES.push({night: k, key: 'howl', kind: 'howl', who: p.howl, art: 'jr-howl-' + p.howl, caption: p.howl === 'wolf' ? (hash(k * 7 + 31) < 1 / 3 ? T('A wolf howls far away') : T('Wolves howling in the hills')) : T('Jackals calling in the night'),
 			h: p.howl === 'wolf' ? 92 : 78, layer: 'mid', pass: st[0] + 0.45 * (st[1] - st[0]), off: 380, small: true,
 			count: p.howl === 'wolf' ? 1 + Math.floor(hash(k * 7 + 31) * 3) : 2 + Math.floor(hash(k * 7 + 31) * 3)});   // a wolf alone or a small pack (1-3); jackals in a family group (2-4)
 	});
@@ -230,7 +253,7 @@
 		var pj = planFor(kj);
 		if (pj.howl || pj.encounter === 'fox' || !/clear|haze|wind/.test(pj.weather) || hash(kj * 5 + 900) > 0.2) continue;
 		var stj = stretch(kj);
-		PIECES.push({night: kj, key: 'trotter', kind: 'trotter', who: 'jackal', art: 'jr-jackal-trot', caption: 'A jackal running over the hills', h: 78,
+		PIECES.push({night: kj, key: 'trotter', kind: 'trotter', who: 'jackal', art: 'jr-jackal-trot', caption: T('A jackal running over the hills'), h: 78,
 			layer: 'mid', pass: stj[0] + 0.62 * (stj[1] - stj[0]), off: 380, small: true, count: hash(kj * 3 + 77) < 0.35 ? 2 : 1});
 	}
 	// far off in the first week: a great snow-capped mountain in the lands of the East, smoking gently
@@ -1481,19 +1504,19 @@
 		var hit = kingBoxes.filter(function(b) { return pt.x > b.x0 - pad && pt.x < b.x1 + pad && pt.y > b.y0 - pad && pt.y < b.y1 + pad; }).pop();
 		if (hit && talking()) return true;   // (someone is already speaking: the click is swallowed)
 		if (hit && hit.n === 0) {   // the armillary sphere
-			var ARM = ['An armillary sphere: the wise men’s model of the heavens.', 'Its rings show the paths of the sun and the stars.', '“The heavens declare the glory of God” (Psalm 19:1).'];
+			var ARM = [T('An armillary sphere: the wise men’s model of the heavens.'), T('Its rings show the paths of the sun and the stars.'), T('“The heavens declare the glory of God” (Psalm 19:1).')];
 			lastSaid.arm = ((lastSaid.arm == null ? -1 : lastSaid.arm) + 1) % ARM.length;
 			said = {n: 0, text: ARM[lastSaid.arm], at: clock, dur: 4}; track('armillary'); return true;
 		}
-		if (!hit || !window.KING_SAYINGS) return false;
-		var place = sayPlace(), lines = (KING_SAYINGS[hit.n] || {})[place] || [];
+		if (!hit || !SAYINGS) return false;
+		var place = sayPlace(), lines = (SAYINGS[hit.n] || {})[place] || [];
 		if (!lines.length) return false;
 		var key = hit.n + place, i = Math.floor(Math.random() * lines.length);
 		if (lines.length > 1 && i === lastSaid[key]) i = (i + 1) % lines.length;   // never the same line twice running
 		lastSaid[key] = i;
 		said = {n: hit.n, text: lines[i], at: clock, dur: 2.2 + lines[i].length * 0.06};
 		track('king_talk', {king: ['', 'gold', 'frankincense', 'myrrh'][hit.n], place: place});
-		speak('voice-' + hit.n + '-say-' + place + '-' + (i + 1), 0.9);
+		speak(voiceFile('voice-' + hit.n + '-say-' + place + '-' + (i + 1)), 0.9);
 		return true;
 	}
 	function paintSaid() {   // the words over his head, fading in and out
@@ -1549,13 +1572,13 @@
 		// its king calls to it straight away: urging it on ("Hut-hut-hut!", "Yalla!"), and a moment later it surges forward
 		// to pass; otherwise he soothes it ("Easy, easy") after its grumble
 		if (urging) {
-			if (hit.riding) speak('voice-' + hit.king + '-urge', 0.95);
+			if (hit.riding) speak(voiceFile('voice-' + hit.king + '-urge'), 0.95);
 			hit.k.surge = clock + 0.55;
 			track('camel', {pass: 'yes'});
 			setTimeout(function() { hit.k.poke = clock; sound.animal('camel-grunt', 0.42); }, 450);
 		} else {
 			hit.k.poke = clock; sound.animal('camel-grunt', 0.42); track('camel', {pass: 'no'});
-			if (hit.riding) speak('voice-' + hit.king + '-calm', 0.8, 550);
+			if (hit.riding) speak(voiceFile('voice-' + hit.king + '-calm'), 0.8, 550);
 		}
 		return true;
 	}
@@ -2033,16 +2056,16 @@
 	// A constellation for each week, on clear nights after dark: its stars shine a little brighter, and clicking one of
 	// them traces the figure and names it. The wise men studied the stars; several of these are named in the Bible.
 	var CONSTELLATIONS = [
-		{name: 'Orion, the hunter', ref: 'Job 9:9', stars: [[0.2, 0.1], [0.75, 0.18], [0.38, 0.5], [0.5, 0.47], [0.62, 0.44], [0.3, 0.92], [0.82, 0.86], [0.48, 0]],
+		{name: T('Orion, the hunter'), ref: T('Job 9:9'), stars: [[0.2, 0.1], [0.75, 0.18], [0.38, 0.5], [0.5, 0.47], [0.62, 0.44], [0.3, 0.92], [0.82, 0.86], [0.48, 0]],
 		 lines: [[0, 2], [1, 4], [2, 3], [3, 4], [2, 5], [4, 6], [0, 7], [1, 7]]},
-		{name: 'The Pleiades, the seven sisters', ref: 'Amos 5:8', stars: [[0.3, 0.4], [0.45, 0.3], [0.52, 0.45], [0.62, 0.38], [0.58, 0.58], [0.72, 0.52], [0.4, 0.6]], lines: [[0, 1], [1, 3], [3, 5], [5, 4], [4, 6], [6, 0], [2, 1], [2, 4]]},
-		{name: 'The Great Bear', ref: 'Job 38:32', stars: [[0, 0.3], [0.17, 0.25], [0.32, 0.32], [0.46, 0.42], [0.5, 0.68], [0.8, 0.72], [0.82, 0.44]],
+		{name: T('The Pleiades, the seven sisters'), ref: T('Amos 5:8'), stars: [[0.3, 0.4], [0.45, 0.3], [0.52, 0.45], [0.62, 0.38], [0.58, 0.58], [0.72, 0.52], [0.4, 0.6]], lines: [[0, 1], [1, 3], [3, 5], [5, 4], [4, 6], [6, 0], [2, 1], [2, 4]]},
+		{name: T('The Great Bear'), ref: T('Job 38:32'), stars: [[0, 0.3], [0.17, 0.25], [0.32, 0.32], [0.46, 0.42], [0.5, 0.68], [0.8, 0.72], [0.82, 0.44]],
 		 lines: [[0, 1], [1, 2], [2, 3], [3, 4], [4, 5], [5, 6], [6, 3]]},
-		{name: 'Cassiopeia, the queen', ref: '', stars: [[0, 0.3], [0.24, 0.68], [0.46, 0.4], [0.7, 0.72], [0.95, 0.22]], lines: [[0, 1], [1, 2], [2, 3], [3, 4]]},
-		{name: 'Leo, the lion', ref: 'Revelation 5:5', stars: [[0.18, 0.82], [0.16, 0.56], [0.26, 0.36], [0.4, 0.3], [0.46, 0.46], [0.66, 0.58], [0.95, 0.72], [0.62, 0.84]],
+		{name: T('Cassiopeia, the queen'), ref: '', stars: [[0, 0.3], [0.24, 0.68], [0.46, 0.4], [0.7, 0.72], [0.95, 0.22]], lines: [[0, 1], [1, 2], [2, 3], [3, 4]]},
+		{name: T('Leo, the lion'), ref: T('Revelation 5:5'), stars: [[0.18, 0.82], [0.16, 0.56], [0.26, 0.36], [0.4, 0.3], [0.46, 0.46], [0.66, 0.58], [0.95, 0.72], [0.62, 0.84]],
 		 lines: [[0, 1], [1, 2], [2, 3], [3, 4], [4, 1], [4, 5], [5, 6], [6, 7], [7, 0]]},
-		{name: 'Cygnus, the swan', ref: '', stars: [[0.5, 0], [0.5, 0.42], [0.5, 1], [0.08, 0.34], [0.92, 0.5]], lines: [[0, 1], [1, 2], [3, 1], [1, 4]]},
-		{name: 'Taurus, the bull', ref: '', stars: [[0.42, 0.56], [0.5, 0.62], [0.58, 0.52], [0.5, 0.44], [0.12, 0.08], [0.9, 0.1], [0.3, 0.5]],
+		{name: T('Cygnus, the swan'), ref: '', stars: [[0.5, 0], [0.5, 0.42], [0.5, 1], [0.08, 0.34], [0.92, 0.5]], lines: [[0, 1], [1, 2], [3, 1], [1, 4]]},
+		{name: T('Taurus, the bull'), ref: '', stars: [[0.42, 0.56], [0.5, 0.62], [0.58, 0.52], [0.5, 0.44], [0.12, 0.08], [0.9, 0.1], [0.3, 0.5]],
 		 lines: [[6, 0], [0, 1], [1, 2], [2, 3], [3, 0], [6, 4], [2, 5]]}
 	];
 	var traced = {t: -99};
@@ -2356,8 +2379,8 @@
 	var PIP_HOME_KEY = 'journey-pip-home';
 	// Something small to find in the sand at camp each evening (besides Pip): click it to pick it up
 	var FIND_KEY = 'journey-finds';
-	var FINDS = [['feather', 'A desert lark’s feather'], ['sandal', 'Someone’s lost sandal'], ['shell', 'A little shell, far from the sea'],
-		['coin', 'An old copper coin'], ['ring', 'An old signet ring'], ['shard', 'A piece of painted pottery'], ['date', 'A fallen date']];
+	var FINDS = [['feather', T('A desert lark’s feather')], ['sandal', T('Someone’s lost sandal')], ['shell', T('A little shell, far from the sea')],
+		['coin', T('An old copper coin')], ['ring', T('An old signet ring')], ['shard', T('A piece of painted pottery')], ['date', T('A fallen date')]];
 	var find = {got: -1};
 	function findDay() { return HOMEMODE ? 1000 + YEARDAY : night.day; }
 	function findKey() { return HOMEMODE ? 'home-' + ymd(now()) : String(night.day); }   // (one find a day at home)
@@ -2379,7 +2402,7 @@
 			ctx.translate(clamp(f.x, half, VW - half), f.y - 52); if (homeward(night.day)) ctx.scale(-1, 1);
 			ctx.textAlign = 'center'; ctx.fillStyle = '#fff';
 			ctx.fillText(f.kind[1] + '!', 0, 0);
-			ctx.font = '11px Inter, Arial, sans-serif'; ctx.fillStyle = '#FFDB59'; var nf = findsMade().length; ctx.fillText(nf + (nf === 1 ? ' thing' : ' things') + ' found along the way', 0, 16);
+			ctx.font = '11px Inter, Arial, sans-serif'; ctx.fillStyle = '#FFDB59'; var nf = findsMade().length; ctx.fillText(TN(nf, '{n} thing found along the way', '{n} things found along the way'), 0, 16);
 			ctx.restore(); return;
 		}
 		if (have) return;
@@ -2549,14 +2572,14 @@
 		if (HOMEMODE) {   // at home: a card for each week of the year, and how many days Pip has been found at home
 			var hk = ymd(now()), home = []; try { home = JSON.parse(localStorage.getItem(PIP_HOME_KEY) || '[]'); } catch (e) {}
 			if (home.indexOf(hk) < 0) { home.push(hk); try { localStorage.setItem(PIP_HOME_KEY, JSON.stringify(home)); } catch (e) {} }
-			var cards = window.PIP_HOME_CARDS || [''];
-			pipCard.querySelector('p').textContent = EASTER() ? 'Happy Easter! Early on the first day of the week, the women found the stone rolled away. “He is not here: for he is risen” (Matthew 28:6).' : cards[Math.floor(YEARDAY / 7) % cards.length];
-			pipCard.querySelector('.pip-count').textContent = 'You’ve found Pip on ' + home.length + (home.length === 1 ? ' day' : ' days') + ' at home. A new card every week!';
+			var cards = PIP_WEEK_CARDS.length ? PIP_WEEK_CARDS : [''];
+			pipCard.querySelector('p').textContent = EASTER() ? T('Happy Easter! Early on the first day of the week, the women found the stone rolled away. “He is not here: for he is risen” (Matthew 28:6).') : cards[Math.floor(YEARDAY / 7) % cards.length];
+			pipCard.querySelector('.pip-count').textContent = TN(home.length, 'You’ve found Pip on {n} day at home. A new card every week!', 'You’ve found Pip on {n} days at home. A new card every week!');
 		} else {
 		var key = String(dateOfDay(viewIdx).getMonth() + 1).padStart(2, '0') + '-' + String(dateOfDay(viewIdx).getDate()).padStart(2, '0');
 		var found = pipFound(); if (found.indexOf(key) < 0) { found.push(key); try { localStorage.setItem(PIP_KEY, JSON.stringify(found)); } catch (e) {} mapPaws(); }
-		pipCard.querySelector('p').textContent = (window.PIP_CARDS || {})[key] || '';
-		pipCard.querySelector('.pip-count').textContent = 'You’ve found Pip on ' + found.length + (found.length === 1 ? ' night' : ' nights') + ' of ' + (END + 1) + '.';
+		pipCard.querySelector('p').textContent = PIP_NIGHT_CARDS[key] || '';
+		pipCard.querySelector('.pip-count').textContent = TN(found.length, 'You’ve found Pip on {n} night of {total}.', 'You’ve found Pip on {n} nights of {total}.', {total: END + 1});
 		}
 		pip.wasPlaying = playing; playing = false; pip.card = true; updateControls();   // the scene waits while the card is open
 		pipCard.hidden = false; verseEl.style.visibility = 'hidden'; pipCard.querySelector('button').focus();
@@ -2577,8 +2600,8 @@
 	var SVGNS = 'http://www.w3.org/2000/svg';
 	var mapRoad = document.getElementById('map-road'), mapDone = document.getElementById('map-done'), mapCamel = document.getElementById('map-camel'), mapText = document.getElementById('map-text');
 	var MILES = [   // [day, icon, name]
-		[-PROLOGUE, 'palace', 'Home'], [dayOf('10-04'), 'river', 'The river'], [dayOf('11-01'), 'palm', 'The oasis'],
-		[dayOf('11-27'), 'hills', 'The pass'], [dayOf('12-21'), 'walls', 'Jerusalem'], [TOTAL, 'star', 'Bethlehem']];
+		[-PROLOGUE, 'palace', T('Home')], [dayOf('10-04'), 'river', T('The river')], [dayOf('11-01'), 'palm', T('The oasis')],
+		[dayOf('11-27'), 'hills', T('The pass')], [dayOf('12-21'), 'walls', T('Jerusalem')], [TOTAL, 'star', T('Bethlehem')]];
 	var ICONS = {   // little line drawings, about 14 units tall, sitting on (0, 0)
 		palace: 'M-7 0 V-6 H7 V0 M-4 -6 V-9 A4 4 0 0 1 4 -9 V-6 M0 -13 V-15',
 		river: 'M-8 -3 Q-4 -6 0 -3 T8 -3 M-8 -8 Q-4 -11 0 -8 T8 -8',
@@ -2638,12 +2661,12 @@
 	}
 	if (mapRoad) {
 		var mapEl2 = document.getElementById('map'), mapTip = document.getElementById('map-tip'), mapTouch = null, mapTouchEnd = 0;
-		var shortDate = function(k) { return dateOfDay(k).toLocaleDateString('en-US', {month: 'short', day: 'numeric'}); };
-		var notYet = function(k) { mapTip.textContent = 'Not yet · come back on ' + dateOfDay(k).toLocaleDateString('en-US', {month: 'long', day: 'numeric'}); mapTip.hidden = false; };
+		var shortDate = function(k) { return dateOfDay(k).toLocaleDateString(LOCALE, {month: 'short', day: 'numeric'}); };
+		var notYet = function(k) { mapTip.textContent = T('Not yet · come back on {date}', {date: dateOfDay(k).toLocaleDateString(LOCALE, {month: 'long', day: 'numeric'})}); mapTip.hidden = false; };
 		var tipAt = function(x, k, finger) {   // under a finger the tip sits to one side, toward the middle, so the finger doesn't cover it
 			var r = mapEl2.getBoundingClientRect(), left = x - r.left;
 			if (finger) left += left > r.width / 2 ? -64 : 64;
-			mapTip.textContent = shortDate(k) + (k <= lastOpen ? '' : ' · not yet');
+			mapTip.textContent = shortDate(k) + (k <= lastOpen ? '' : T(' · not yet'));
 			mapTip.style.left = left + 'px'; mapTip.hidden = false;
 		};
 		mapEl2.addEventListener('mousemove', function(e) {
@@ -2698,9 +2721,9 @@
 		var sg = document.getElementById('map-star-glow');   // the Star brightens as Christmas nears
 		if (sg) { var pr = clamp((cam + PROLOGUE) / (TOTAL + PROLOGUE), 0, 1); sg.setAttribute('r', (6 + 8 * pr).toFixed(1)); sg.setAttribute('fill', 'rgba(255,219,89,' + (0.15 + 0.35 * pr).toFixed(2) + ')'); }
 		var k = show && show.mode === 'sofar' ? clamp(Math.floor(cam + 0.15), 0, realToday) : viewIdx, left = TOTAL - k, d = dateOfDay(k);
-		var where = left > 1 ? '<b>' + left + ' nights</b> to Bethlehem' : left === 1 ? '<b>1 night</b> to Bethlehem' : left === 0 ? '<b>Bethlehem</b>' : (END - k > 0 ? '<b>' + (END - k) + (END - k === 1 ? ' night' : ' nights') + '</b> to home' : '<b>Home again</b>');
-		if (HOMEMODE) { var tg = Math.ceil((new Date(SEASON + 1, 9, 1) - startOfDay(now())) / DAY); mapText.innerHTML = longDate(now()) + ' · Home in the East · <b>' + tg + ' days</b> until the Star rises'; }
-		else mapText.innerHTML = d.toLocaleDateString('en-US', {weekday: 'long', month: 'long', day: 'numeric'}) + ' · Day ' + (k + 1) + ' of ' + (END + 1) + ' · ' + where;
+		var where = left > 0 ? TN(left, '<b>{n} night</b> to Bethlehem', '<b>{n} nights</b> to Bethlehem') : left === 0 ? '<b>' + T('Bethlehem') + '</b>' : (END - k > 0 ? TN(END - k, '<b>{n} night</b> to home', '<b>{n} nights</b> to home') : '<b>' + T('Home again') + '</b>');
+		if (HOMEMODE) { var tg = Math.ceil((new Date(SEASON + 1, 9, 1) - startOfDay(now())) / DAY); mapText.innerHTML = longDate(now()) + ' · ' + TN(tg, 'Home in the East · <b>{n} day</b> until the Star rises', 'Home in the East · <b>{n} days</b> until the Star rises'); }
+		else mapText.innerHTML = d.toLocaleDateString(LOCALE, {weekday: 'long', month: 'long', day: 'numeric'}) + ' · ' + T('Day {n} of {total}', {n: k + 1, total: END + 1}) + ' · ' + where;
 	}
 
 	// ----- weather scenery -----
@@ -2941,8 +2964,8 @@
 		PIECES.forEach(function(p) { p.heard = false; p.seen = null; p.nextCall = 0; });
 		setNightSounds = function() {
 		var kinds = PIECES.filter(function(p) { return p.night === k; }).map(function(p) { return p.kind + ' ' + p.key; }).join(' ');
-		sound.preload(['voice-1-say', 'voice-2-say', 'voice-3-say']);   // (the kings' sayings, for a click in the evening)
-		sound.preload(['camel-grunt', 'voice-1-urge', 'voice-1-calm', 'voice-2-urge', 'voice-2-calm', 'voice-3-urge', 'voice-3-calm']);   // (ready for a click on a camel)
+		sound.preload(['voice-1-say', 'voice-2-say', 'voice-3-say'].map(voiceFile));   // (the kings' sayings, for a click in the evening)
+		sound.preload(['camel-grunt'].concat(['voice-1-urge', 'voice-1-calm', 'voice-2-urge', 'voice-2-calm', 'voice-3-urge', 'voice-3-calm'].map(voiceFile)));   // (ready for a click on a camel)
 		sound.preload([/howl/.test(kinds) ? 'jackal' : '', /howl/.test(kinds) ? 'wolf' : '', /fox/.test(kinds) ? 'fox' : '', /sheep|shepherd/.test(kinds) ? 'sheep' : '', /sheep|shepherd/.test(kinds) ? 'lamb' : '', /herder/.test(kinds) ? 'goat' : '', /donkey|caravan/.test(kinds) ? 'donkey' : '', /jerusalem-gate|herod/.test(kinds) ? 'shofar' : ''].filter(Boolean));
 		};
 		setNightSounds();
@@ -3010,10 +3033,10 @@
 	// ----- words over the scene -----
 	var whenEl = document.getElementById('when'), captionEl = document.getElementById('caption'), titleEl = document.getElementById('title');
 	var lastWhen = '', lastCaption = '', firstShow = true, lastVerse = false, verseEl = document.getElementById('verse-end');
-	function readingFor(d) { var from = START; return JOURNEY_READINGS[clamp(Math.round((startOfDay(d) - from) / DAY), 0, JOURNEY_READINGS.length - 1)]; }
+	function readingFor(d) { var from = START; return READINGS[clamp(Math.round((startOfDay(d) - from) / DAY), 0, READINGS.length - 1)]; }
 	function updateOverlay() {
 		var k = show && show.mode === 'sofar' ? clamp(Math.floor(cam + 0.15), 0, realToday) : viewIdx;
-		var when = 'Day ' + (k + 1) + ' of ' + (END + 1) + '<b>' + longDate(dateOfDay(k)) + '</b>';
+		var when = T('Day {n} of {total}', {n: k + 1, total: END + 1}) + '<b>' + longDate(dateOfDay(k)) + '</b>';
 		if (when !== lastWhen) { whenEl.innerHTML = when; lastWhen = when; }
 		var t = show ? show.elapsed / show.seconds : 1, wd = WEATHER[night.weather], cap = '';
 		var near = null;
@@ -3027,7 +3050,7 @@
 		var after = show ? show.elapsed - show.seconds : -1, tail = showTail();
 		var verseOn = show && (show.mode === 'night' || show.mode === 'sofar') && (tail ? after >= 8 : showDone() && after >= 0);
 		if (!verseOn && show && after >= (tail ? 2.5 : 0) && after < (tail ? 7 : 99) && viewIdx !== TOTAL && viewIdx !== END)
-			cap = show.mode === 'sofar' ? 'Tonight they rest here' : night.plan.camp ? 'They make camp for the night' : tail ? 'They rest by the fire' : 'They rest for the night';
+			cap = show.mode === 'sofar' ? T('Tonight they rest here') : night.plan.camp ? T('They make camp for the night') : tail ? T('They rest by the fire') : T('They rest for the night');
 		if (verseOn) cap = '';
 		if (cap !== lastCaption) { lastCaption = cap; if (cap) captionEl.firstChild.textContent = cap; captionEl.classList.toggle('on', !!cap); }
 		if (verseOn !== lastVerse) {
@@ -3035,8 +3058,8 @@
 			if (verseOn && show) trackOnce('night_finished', {mode: show.mode});   // watched to the end
 			if (verseOn) {
 				var rd = readingFor(dateOfDay(viewIdx));
-				verseEl.querySelector('blockquote').textContent = '\u201c' + rd.text + '\u201d';
-				verseEl.querySelector('cite').textContent = rd.ref + ' (KJV)';
+				verseEl.querySelector('blockquote').textContent = T('“{text}”', {text: rd.text});
+				verseEl.querySelector('cite').textContent = rd.ref + ' (' + VERSION + ')';
 			}
 			verseEl.classList.toggle('on', !!verseOn);
 		}
@@ -3064,7 +3087,7 @@
 	function onFull() {
 		var on = !!fsEl();
 		document.body.classList.toggle('is-full', on);
-		fullBtn.textContent = on ? '✕' : '⛶'; fullBtn.setAttribute('aria-label', on ? 'Leave full screen' : 'Full screen');
+		fullBtn.textContent = on ? '✕' : '⛶'; fullBtn.setAttribute('aria-label', on ? T('Leave full screen') : T('Full screen'));
 		if (mapEl) (on ? stageEl : document.querySelector('header')).appendChild(mapEl);   // the map comes along into full screen
 		setTimeout(resize, 50);
 	}
@@ -3105,9 +3128,9 @@
 		prevBtn.disabled = viewIdx <= 0;
 		nextBtn.disabled = viewIdx >= lastOpen;
 		var d = dateOfDay(viewIdx);
-		dayEl.innerHTML = (viewIdx === realToday ? (viewIdx === TOTAL ? 'Christmas Day' : viewIdx === END ? 'Home again' : 'Tonight') : 'Night ' + (viewIdx + 1)) + '<small>' + d.toLocaleDateString('en-US', {weekday: 'short', month: 'short', day: 'numeric'}) + '</small>';
+		dayEl.innerHTML = (viewIdx === realToday ? (viewIdx === TOTAL ? T('Christmas Day') : viewIdx === END ? T('Home again') : T('Tonight')) : T('Night {n}', {n: viewIdx + 1})) + '<small>' + d.toLocaleDateString(LOCALE, {weekday: 'short', month: 'short', day: 'numeric'}) + '</small>';
 		var done = showDone();
-		playBtn.textContent = playing ? 'Pause' : done ? 'Watch again' : 'Play';
+		playBtn.textContent = playing ? T('Pause') : done ? T('Watch again') : T('Play');
 		playBtn.hidden = reduceMotion;
 		soFarBtn.hidden = reduceMotion || realToday < 2 || homeward(viewIdx);   // the journey so far is the way there
 		tonightBtn.classList.toggle('away', viewIdx === realToday);   // keeps its place, so the other buttons don't shift
@@ -3127,8 +3150,8 @@
 	function askSoFar() {
 		if (!askEl || !askEl.showModal) { playSoFar(); return; }
 		var n = realToday + 1, s = Math.min(90, 12 + (stretch(realToday)[1] + PROLOGUE) * 1.4) + EVENING;
-		var long = s < 50 ? 'under a minute' : s < 80 ? 'about a minute' : s < 110 ? 'about a minute and a half' : 'about two minutes';
-		document.getElementById('sofar-ask-p').textContent = (n === 1 ? 'Watch the wise men set out, from the very start up to tonight' : 'Watch all ' + n + ' nights of the journey, from the very start up to tonight') + ', in ' + long + '.';
+		var long = s < 50 ? T('under a minute') : s < 80 ? T('about a minute') : s < 110 ? T('about a minute and a half') : T('about two minutes');
+		document.getElementById('sofar-ask-p').textContent = n === 1 ? T('Watch the wise men set out, from the very start up to tonight, in {time}.', {time: long}) : T('Watch all {n} nights of the journey, from the very start up to tonight, in {time}.', {n: n, time: long});
 		askWasPlaying = playing; playing = false; updateControls();
 		askEl.showModal(); document.getElementById('sofar-go').focus();
 	}
@@ -3144,7 +3167,7 @@
 		askEl.addEventListener('click', function(e) { if (e.target === askEl) closeAsk(false); });   // (a click outside it)
 	}
 	var soundBtn = document.getElementById('sound');
-	function soundLabel(on) { soundBtn.textContent = on ? 'Sound on' : 'Sound off'; soundBtn.setAttribute('aria-pressed', on ? 'true' : 'false'); }
+	function soundLabel(on) { soundBtn.textContent = on ? T('Sound on') : T('Sound off'); soundBtn.setAttribute('aria-pressed', on ? 'true' : 'false'); }
 	soundBtn.addEventListener('click', function() { var son = sound.toggle(); track('sound', {on: son ? 'yes' : 'no'}); soundLabel(son); sound.music(viewIdx, viewIdx === TOTAL, TOTAL - viewIdx); setNightSounds(); });
 	soundLabel(false);
 	soundBtn.hidden = !sound.hasAny();   // no button until there are recordings to play
@@ -3184,14 +3207,14 @@
 		return {found: found, picked: picked, kinds: kinds, treasures: made.length, home: home, weeks: weeks, best: best, easter: readList(JEASTER).length > 0};
 	}
 	var BADGES = [
-		['pip', 'First find', 'Find Pip for the first time', function(d) { return d.found.length + d.home.length > 0; }],
-		['run', 'Seven in a row', 'Find Pip seven nights running', function(d) { return d.best >= 7; }],
-		['finds', 'A treasure hunter', 'Pick up five things in the sand', function(d) { return d.treasures >= 5; }],
-		['stable', 'Christmas Day', 'Find Pip on Christmas Day', function(d) { return d.found.indexOf(TOTAL) >= 0; }],
-		['star', 'All of Advent', 'Find Pip every night of December until Christmas', function(d) { for (var k = dayOf('12-01'); k < TOTAL; k++) if (d.found.indexOf(k) < 0) return false; return true; }],
-		['seven', 'All seven treasures', 'Find one of each treasure', function(d) { return Object.keys(d.kinds).length >= FINDS.length; }],
-		['sunrise', 'Easter morning', 'Visit the wise men on Easter Sunday', function(d) { return d.easter; }],
-		['friend', 'Pip’s best friend', 'Find Pip on all 98 nights', function(d) { return d.found.length >= END + 1; }]
+		['pip', T('First find'), T('Find Pip for the first time'), function(d) { return d.found.length + d.home.length > 0; }],
+		['run', T('Seven in a row'), T('Find Pip seven nights running'), function(d) { return d.best >= 7; }],
+		['finds', T('A treasure hunter'), T('Pick up five things in the sand'), function(d) { return d.treasures >= 5; }],
+		['stable', T('Christmas Day'), T('Find Pip on Christmas Day'), function(d) { return d.found.indexOf(TOTAL) >= 0; }],
+		['star', T('All of Advent'), T('Find Pip every night of December until Christmas'), function(d) { for (var k = dayOf('12-01'); k < TOTAL; k++) if (d.found.indexOf(k) < 0) return false; return true; }],
+		['seven', T('All seven treasures'), T('Find one of each treasure'), function(d) { return Object.keys(d.kinds).length >= FINDS.length; }],
+		['sunrise', T('Easter morning'), T('Visit the wise men on Easter Sunday'), function(d) { return d.easter; }],
+		['friend', T('Pip’s best friend'), T('Find Pip on all 98 nights'), function(d) { return d.found.length >= END + 1; }]
 	];
 	function badgeIcon(kind) {   // little pictures in the Journey's style, for the medals
 		return smallCanvas(80, 80, function(g) {
@@ -3212,8 +3235,8 @@
 		var nowSeen = d.found.map(function(k) { return 'p' + k; }).concat(d.picked.map(function(k) { return 'f' + k; }));
 		document.getElementById('jring').setAttribute('stroke-dasharray', '0 ' + C.toFixed(1));
 		setTimeout(function() { document.getElementById('jring').setAttribute('stroke-dasharray', (C * d.found.length / (END + 1)).toFixed(1) + ' ' + C.toFixed(1)); }, 120);
-		document.getElementById('jsub').innerHTML = d.found.length ? 'You’ve found Pip on <b>' + d.found.length + '</b> of ' + (END + 1) + ' nights · <b>' + (END + 1 - d.found.length) + '</b> to go'
-			: 'Pip hides somewhere in every night. <b>Tap him</b> when you spot him!';
+		document.getElementById('jsub').innerHTML = d.found.length ? T('You’ve found Pip on <b>{n}</b> of {total} nights · <b>{left}</b> to go', {n: d.found.length, total: END + 1, left: END + 1 - d.found.length})
+			: T('Pip hides somewhere in every night. <b>Tap him</b> when you spot him!');
 		document.getElementById('jsPip').textContent = d.found.length;
 		document.getElementById('jsTreasure').textContent = d.treasures;
 		document.getElementById('jsRun').textContent = d.best;
@@ -3226,7 +3249,7 @@
 			if (dt.getMonth() !== month) {
 				month = dt.getMonth();
 				var sec = document.createElement('div'); sec.className = 'month';
-				sec.innerHTML = '<h4>' + dt.toLocaleDateString('en-US', {month: 'long'}) + '</h4>';
+				sec.innerHTML = '<h4>' + dt.toLocaleDateString(LOCALE, {month: 'long'}) + '</h4>';
 				grid = document.createElement('div'); grid.className = 'jgrid'; sec.appendChild(grid); pj.appendChild(sec);
 			}
 			var sk = SKIES[planFor(k).sky] || SKIES.night, f = d.found.indexOf(k) >= 0, p = d.picked.indexOf(k) >= 0, future = k > lastOpen;
@@ -3236,7 +3259,7 @@
 			b.innerHTML = '<span class="dune"></span><span class="d">' + dt.getDate() + '</span>' + (SPECIAL[k] ? '<span class="mark">' + SPECIAL[k] + '</span>' : '') +
 				(future ? '<span class="lock">✦</span>' : f ? '<span class="stamp"></span><img class="pip" src="/journey/art/jr-cr-sand-mouse.webp" alt="">' : '<span class="q">?</span>');
 			if (p && !future) { var c = findIcon(FINDS[k % FINDS.length][0], 30, 24, 1.6); c.className = 'item'; b.appendChild(c); }
-			b.setAttribute('aria-label', dt.toLocaleDateString('en-US', {month: 'long', day: 'numeric'}) + (future ? ', still to come' : f ? ', Pip found' : ', Pip not found yet') + (p && !future ? ', ' + FINDS[k % FINDS.length][1] : ''));
+			b.setAttribute('aria-label', dt.toLocaleDateString(LOCALE, {month: 'long', day: 'numeric'}) + (future ? T(', still to come') : f ? T(', Pip found') : T(', Pip not found yet')) + (p && !future ? ', ' + FINDS[k % FINDS.length][1] : ''));
 			if (future) b.disabled = true; else b.addEventListener('click', function() { journalCard(k, d); });
 			grid.appendChild(b);
 		})(k);
@@ -3245,17 +3268,17 @@
 		FINDS.forEach(function(f) {
 			var n = d.kinds[f[0]] || 0, c = document.createElement('div');
 			c.className = 'case' + (n ? '' : ' none'); c.appendChild(findIcon(f[0], 110, 80, 6));
-			c.insertAdjacentHTML('beforeend', '<div class="name">' + (n ? f[1] : 'Not found yet') + '</div><div class="count">' + (n ? '× ' + n : '') + '</div><div class="glass"></div>');
+			c.insertAdjacentHTML('beforeend', '<div class="name">' + (n ? f[1] : T('Not found yet')) + '</div><div class="count">' + (n ? '× ' + n : '') + '</div><div class="glass"></div>');
 			shelf.appendChild(c);
 		});
 		// postcards from home
-		var cards = document.getElementById('jcards'), HC = window.PIP_HOME_CARDS || [], nweeks = Object.keys(d.weeks).length; cards.innerHTML = '';
-		document.getElementById('jhome-lead').textContent = nweeks ? 'Found Pip at home on ' + d.home.length + (d.home.length === 1 ? ' day' : ' days') + ': ' + nweeks + ' of ' + HC.length + ' postcards turned over.'
-			: 'From January to September, find Pip at the wise men’s home for a new postcard each week.';
+		var cards = document.getElementById('jcards'), HC = PIP_WEEK_CARDS, nweeks = Object.keys(d.weeks).length; cards.innerHTML = '';
+		document.getElementById('jhome-lead').textContent = nweeks ? TN(d.home.length, 'Found Pip at home on {n} day: {weeks} of {total} postcards turned over.', 'Found Pip at home on {n} days: {weeks} of {total} postcards turned over.', {weeks: nweeks, total: HC.length})
+			: T('From January to September, find Pip at the wise men’s home for a new postcard each week.');
 		HC.forEach(function(text, w) {
 			var got = d.weeks[w], pc = document.createElement('div');
 			pc.className = 'pc' + (got ? '' : ' back'); pc.style.setProperty('--r', (((w * 37) % 7) - 3) * 0.6 + 'deg');
-			if (got) { pc.innerHTML = '<b>Week ' + (w + 1) + '</b>'; pc.appendChild(document.createTextNode(text)); } else pc.innerHTML = '<span>✦<br>Week ' + (w + 1) + '</span>';
+			if (got) { pc.innerHTML = '<b>' + T('Week {n}', {n: w + 1}) + '</b>'; pc.appendChild(document.createTextNode(text)); } else pc.innerHTML = '<span>✦<br>' + T('Week {n}', {n: w + 1}) + '</span>';
 			cards.appendChild(pc);
 		});
 		// badges
@@ -3263,8 +3286,8 @@
 		BADGES.forEach(function(bg) {
 			var got = bg[3](d), el = document.createElement('div'), medal = document.createElement('div');
 			el.className = 'badge' + (got ? '' : ' locked'); medal.className = 'medal'; medal.appendChild(badgeIcon(bg[0])); el.appendChild(medal);
-			el.insertAdjacentHTML('beforeend', '<h5>' + bg[1] + '</h5><p>' + (got ? 'Earned!' : bg[2]) + '</p>');
-			el.setAttribute('aria-label', bg[1] + (got ? ', earned' : ', not yet: ' + bg[2]));
+			el.insertAdjacentHTML('beforeend', '<h5>' + bg[1] + '</h5><p>' + (got ? T('Earned!') : bg[2]) + '</p>');
+			el.setAttribute('aria-label', bg[1] + (got ? T(', earned') : T(', not yet: {what}', {what: bg[2]})));
 			bd.appendChild(el);
 		});
 		try { localStorage.setItem(JSEEN, JSON.stringify(nowSeen)); } catch (e) {}
@@ -3275,10 +3298,10 @@
 	function journalCard(k, d) {
 		var dt = dateOfDay(k), f = d.found.indexOf(k) >= 0, p = d.picked.indexOf(k) >= 0, it = FINDS[k % FINDS.length];
 		var key = String(dt.getMonth() + 1).padStart(2, '0') + '-' + String(dt.getDate()).padStart(2, '0');
-		jcard.innerHTML = '<h4 id="jcardT">Night ' + (k + 1) + '</h4><div class="when">' + longDate(dt) + '</div><div class="found"><div id="jcPip"></div><div id="jcItem"></div></div><p id="jcText"></p>' +
-			'<button type="button" id="jcWatch">Watch this night</button><button type="button" id="jcClose">Close</button>';
-		document.getElementById('jcText').textContent = f ? ((window.PIP_CARDS || {})[key] || '') : 'Pip was hiding somewhere this night. Watch it again to find him!';
-		if (f) { var im = new Image(); im.src = '/journey/art/jr-cr-sand-mouse.webp'; im.alt = ''; im.style.cssText = 'width:64px;filter:' + PIP_LOOK; var cp = document.getElementById('jcPip'); cp.appendChild(im); cp.appendChild(document.createTextNode('Pip found')); }
+		jcard.innerHTML = '<h4 id="jcardT">' + T('Night {n}', {n: k + 1}) + '</h4><div class="when">' + longDate(dt) + '</div><div class="found"><div id="jcPip"></div><div id="jcItem"></div></div><p id="jcText"></p>' +
+			'<button type="button" id="jcWatch">' + T('Watch this night') + '</button><button type="button" id="jcClose">' + T('Close') + '</button>';
+		document.getElementById('jcText').textContent = f ? (PIP_NIGHT_CARDS[key] || '') : T('Pip was hiding somewhere this night. Watch it again to find him!');
+		if (f) { var im = new Image(); im.src = '/journey/art/jr-cr-sand-mouse.webp'; im.alt = ''; im.style.cssText = 'width:64px;filter:' + PIP_LOOK; var cp = document.getElementById('jcPip'); cp.appendChild(im); cp.appendChild(document.createTextNode(T('Pip found'))); }
 		if (p) { var ci = document.getElementById('jcItem'); ci.appendChild(findIcon(it[0], 72, 54, 4)); ci.appendChild(document.createTextNode(it[1])); }
 		jcard.hidden = false;
 		document.getElementById('jcClose').onclick = function() { jcard.hidden = true; };
@@ -3362,7 +3385,7 @@
 		var from = START;
 		for (var k = 0; k <= END; k++) {
 			var p = planFor(k), d = dateOfDay(k), r = JOURNEY_READINGS[clamp(Math.round((d - from) / DAY), 0, JOURNEY_READINGS.length - 1)];
-			rows += '<tr data-k="' + k + '" class="w-' + p.weather + '"><td>' + (k + 1) + '</td><td>' + d.toLocaleDateString('en-US', {weekday: 'short', month: 'short', day: 'numeric'}) + '</td><td>' + stageAt(k).label + '</td><td>' + p.sky + '</td><td>' + p.weather +
+			rows += '<tr data-k="' + k + '" class="w-' + p.weather + '"><td>' + (k + 1) + '</td><td>' + d.toLocaleDateString(LOCALE, {weekday: 'short', month: 'short', day: 'numeric'}) + '</td><td>' + stageAt(k).label + '</td><td>' + p.sky + '</td><td>' + p.weather +
 				'</td><td>' + (p.landmark || '') + '</td><td>' + (p.encounter || '') + (p.howl ? (p.encounter ? ', ' : '') + p.howl + ' howling' : '') + '</td><td>' + (p.critters || []).join(', ') + '</td><td>' + (p.camp ? 'yes' : '') + '</td><td>' + extras(k).join(', ') + '</td><td>' + r.ref + '</td><td>' + (p.note || '') + '</td></tr>';
 		}
 		table.querySelector('table').innerHTML = rows + '</tbody>';
@@ -3460,36 +3483,61 @@
 	function drawText() {
 		var d = now(), day = startOfDay(d), days = Math.round((CHRISTMAS - day) / DAY);
 		var shown = dateOfDay(viewIdx), past = viewIdx < realToday, future = viewIdx > realToday;
-		document.getElementById('day-label').textContent = 'Day ' + (viewIdx + 1) + ' of the journey · ' + longDate(shown);
-		if (days > 1) { document.getElementById('days-left').textContent = days + ' days'; document.getElementById('days-label').textContent = 'until we celebrate the birth of Jesus'; }
-		else if (days === 1) { document.getElementById('days-left').textContent = 'Tomorrow'; document.getElementById('days-label').textContent = 'we celebrate the birth of Jesus'; }
-		else if (days === 0) { document.getElementById('days-left').textContent = 'Merry Christmas'; document.getElementById('days-label').textContent = 'Unto us a Saviour is born'; }
+		document.getElementById('day-label').textContent = T('Day {n} of the journey · {date}', {n: viewIdx + 1, date: longDate(shown)});
+		if (days > 1) { document.getElementById('days-left').textContent = TN(days, '{n} day', '{n} days'); document.getElementById('days-label').textContent = T('until we celebrate the birth of Jesus'); }
+		else if (days === 1) { document.getElementById('days-left').textContent = T('Tomorrow'); document.getElementById('days-label').textContent = T('we celebrate the birth of Jesus'); }
+		else if (days === 0) { document.getElementById('days-left').textContent = T('Merry Christmas'); document.getElementById('days-label').textContent = T('Unto us a Saviour is born'); }
 		else {
 			var toHome = Math.round((HOME - day) / DAY);
-			document.getElementById('days-left').textContent = toHome > 0 ? 'On their way home' : 'Home again';
-			document.getElementById('days-label').textContent = toHome > 0 ? 'The wise men are going home another way' : 'The wise men are home';
+			document.getElementById('days-left').textContent = toHome > 0 ? T('On their way home') : T('Home again');
+			document.getElementById('days-label').textContent = toHome > 0 ? T('The wise men are going home another way') : T('The wise men are home');
 		}
 		var tick = document.getElementById('ticking');
-		if (!forced && days > 0) { var ms = CHRISTMAS - d; tick.textContent = Math.floor(ms / DAY) + ' days, ' + Math.floor(ms / 36e5) % 24 + ' hours, ' + Math.floor(ms / 6e4) % 60 + ' minutes'; }
+		if (!forced && days > 0) { var ms = CHRISTMAS - d; tick.textContent = T('{d} days, {h} hours, {m} minutes', {d: Math.floor(ms / DAY), h: Math.floor(ms / 36e5) % 24, m: Math.floor(ms / 6e4) % 60}); }
 		else tick.textContent = '';
 		var words = nightWords(night);
-		document.getElementById('tonight').textContent = (past ? 'That night on the road: ' : future ? 'That night (preview): ' : 'Tonight on the road: ') + words.charAt(0).toLowerCase() + words.slice(1);
-		document.getElementById('verse-label').textContent = viewIdx === realToday ? 'Today’s reading' : 'The reading for ' + shown.toLocaleDateString('en-US', {month: 'long', day: 'numeric'});
+		document.getElementById('tonight').textContent = (past ? T('That night on the road: ') : future ? T('That night (preview): ') : T('Tonight on the road: ')) + words.charAt(0).toLowerCase() + words.slice(1);
+		document.getElementById('verse-label').textContent = viewIdx === realToday ? T('Today’s reading') : T('The reading for {date}', {date: shown.toLocaleDateString(LOCALE, {month: 'long', day: 'numeric'})});
 		var from = new Date(JOURNEY_READINGS_FROM + 'T00:00:00');
-		var r = JOURNEY_READINGS[clamp(Math.round((startOfDay(shown) - from) / DAY), 0, JOURNEY_READINGS.length - 1)];
+		var r = READINGS[clamp(Math.round((startOfDay(shown) - from) / DAY), 0, READINGS.length - 1)];
 		document.getElementById('verse-text').textContent = r.text;
-		document.getElementById('verse-ref').textContent = r.ref + ' (KJV)';
+		document.getElementById('verse-ref').textContent = r.ref + ' (' + VERSION + ')';
+		if (LANG.versionNotice && !document.getElementById('verse-notice')) {   // the publisher's notice for that Bible version
+			var vn = document.createElement('small'); vn.id = 'verse-notice'; vn.className = 'verse-notice'; vn.textContent = LANG.versionNotice;
+			document.getElementById('verse-ref').insertAdjacentElement('afterend', vn);
+		}
 		var ev = document.getElementById('event-countdown'), key = ymd(day), html;
 		var tonight = NIGHTS.filter(function(n) { return n[0] === key; })[0];
 		var next = NIGHTS.filter(function(n) { return n[0] > key; })[0];
 		var toFirst = NIGHTS.length ? Math.round((new Date(NIGHTS[0][0] + 'T00:00:00') - day) / DAY) : -1;
-		var buy = d >= SALE_OPENS ? '<br><a class="btn" href="/tickets/">Buy tickets</a>' : '<br>Tickets go on sale <b>Sunday, November 8 at 9 am</b>.';
-		if (tonight) html = '<b>Follow the Star is on tonight</b>, ' + tonight[2] + '.' + buy;
-		else if (toFirst > 0) html = 'Walk the journey yourself: <b>Follow the Star begins in ' + toFirst + (toFirst === 1 ? ' day' : ' days') + '</b>, December 4–13.' + buy;
-		else if (next) html = 'Next performance: <b>' + next[1] + '</b>, ' + next[2] + '.' + buy;
-		else html = 'Thank you for following the star with us this year.';
+		var buy = d >= SALE_OPENS ? '<br><a class="btn" href="/tickets/">' + T('Buy tickets') + '</a>' : '<br>' + T('Tickets go on sale <b>Sunday, November 8 at 9 am</b>.');
+		var nightName = function(n) { return new Date(n[0] + 'T12:00:00').toLocaleDateString(LOCALE, {weekday: 'long', month: 'long', day: 'numeric'}); };
+		if (tonight) html = T('<b>Follow the Star is on tonight</b>, {hours}.', {hours: T(tonight[2])}) + buy;
+		else if (toFirst > 0) html = TN(toFirst, 'Walk the journey yourself: <b>Follow the Star begins in {n} day</b>, December 4–13.', 'Walk the journey yourself: <b>Follow the Star begins in {n} days</b>, December 4–13.') + buy;
+		else if (next) html = T('Next performance: <b>{night}</b>, {hours}.', {night: nightName(next), hours: T(next[2])}) + buy;
+		else html = T('Thank you for following the star with us this year.');
 		ev.innerHTML = html;
 	}
+
+	// the other languages: links below the scene, and once, to someone whose browser is set to one of them, a suggestion
+	(function() {
+		var langs = (window.JOURNEY_LANGUAGES || []).filter(function(l) { return l.code !== (LANG.code || 'en') && (l.ready || TEST); });
+		var nav = document.getElementById('langs');
+		if (nav && langs.length) {
+			langs.forEach(function(l) { var a = document.createElement('a'); a.href = l.href + location.search; a.hreflang = a.lang = l.code; a.textContent = l.name; nav.appendChild(a); });
+			nav.hidden = false;
+		}
+		var want = (navigator.languages || [navigator.language || '']).map(function(c) { return String(c).slice(0, 2).toLowerCase(); });
+		var here = LANG.code || 'en', best = want[0];
+		var sug = langs.filter(function(l) { return l.code === best && l.ready; })[0], ask = document.getElementById('lang-ask');
+		if (!sug || best === here || !ask || localStorage.getItem('journey-lang-asked')) return;
+		var done = function() { try { localStorage.setItem('journey-lang-asked', '1'); } catch (e) {} ask.hidden = true; };
+		ask.lang = sug.code; ask.querySelector('span').textContent = sug.ask; var go = ask.querySelector('a');
+		go.textContent = sug.yes; go.href = sug.href + location.search; go.hreflang = sug.code; go.addEventListener('click', done);
+		ask.querySelector('button').addEventListener('click', done);
+		setTimeout(function() { ask.hidden = false; }, 1500);
+		setTimeout(function() { ask.hidden = true; }, 16000);   // (it goes away on its own, and comes back next visit until answered)
+	})();
 
 	if (TEST && params.get('night')) viewIdx = clamp(+params.get('night') - 1, 0, END);   // ?test&night=15
 	mapSetup();
@@ -3500,16 +3548,16 @@
 		// phase, the meteor showers on their nights, a constellation each week). A countdown to October 1, and last
 		// year's journey to watch again, night by night.
 		var doneEl = document.getElementById('done'), toGo = Math.ceil((new Date(SEASON + 1, 9, 1) - startOfDay(now())) / DAY);
-		doneEl.querySelector('p').innerHTML = 'The Star rises again on <b>October 1</b>: ' + toGo + (toGo === 1 ? ' day' : ' days') + ' to go.' +
-			'<br><span class="hint">Tap the wise men, the camels, Pip and the stars.</span>';
-		var again = document.createElement('button'); again.type = 'button'; again.className = 'btn again'; again.textContent = 'Watch last year’s journey';
+		doneEl.querySelector('p').innerHTML = TN(toGo, 'The Star rises again on <b>October 1</b>: {n} day to go.', 'The Star rises again on <b>October 1</b>: {n} days to go.') +
+			'<br><span class="hint">' + T('Tap the wise men, the camels, Pip and the stars.') + '</span>';
+		var again = document.createElement('button'); again.type = 'button'; again.className = 'btn again'; again.textContent = T('Watch last year’s journey');
 		doneEl.appendChild(again); doneEl.hidden = false;
 		['when', 'title', 'caption', 'verse-end'].forEach(function(id) { document.getElementById(id).style.display = 'none'; });
 		var nightCtl = [TEST ? null : '.player .nights', '#play', '#tonight-btn', '#sofar'].map(function(q) { return q && document.querySelector(q); }).filter(Boolean);
 		nightCtl.forEach(function(el) { el.style.display = 'none'; });   // (sound and full screen stay)
 		if (TEST) {   // test mode: ◀ ▶ step a day back or forward, to check the weather, moon, Pip's cards and finds day by day
 			var stepDay = function(n) { var d = new Date(now()); d.setDate(d.getDate() + n); params.set('date', ymd(d)); params.delete('weather'); location.search = params.toString(); };
-			var homeLabel = function() { dayEl.innerHTML = 'Home · ' + homeWeather() + '<small>' + now().toLocaleDateString('en-US', {weekday: 'short', month: 'short', day: 'numeric', year: 'numeric'}) + '</small>'; };
+			var homeLabel = function() { dayEl.innerHTML = 'Home · ' + homeWeather() + '<small>' + now().toLocaleDateString(LOCALE, {weekday: 'short', month: 'short', day: 'numeric', year: 'numeric'}) + '</small>'; };
 			prevBtn.disabled = false; nextBtn.disabled = false;
 			prevBtn.addEventListener('click', function(e) { if (HOMEMODE) { e.stopImmediatePropagation(); stepDay(-1); } }, true);
 			nextBtn.addEventListener('click', function(e) { if (HOMEMODE) { e.stopImmediatePropagation(); stepDay(1); } }, true);
@@ -3529,8 +3577,8 @@
 		};
 		stayHome();
 		if (EASTER()) {
-			doneEl.querySelector('h2').textContent = 'He is risen!';
-			doneEl.querySelector('p').innerHTML = '“He is not here: for he is risen, as he said.” <span class="hint">(Matthew 28:6)</span><br>' + doneEl.querySelector('p').innerHTML;
+			doneEl.querySelector('h2').textContent = T('He is risen!');
+			doneEl.querySelector('p').innerHTML = T('“He is not here: for he is risen, as he said.” <span class="hint">(Matthew 28:6)</span>') + '<br>' + doneEl.querySelector('p').innerHTML;
 		} setRunning(true); track('home_visit', {days_to_go: toGo});
 		homeWatch = function(k) { again.click(); playNight(k, 0.8); };
 		if (EASTER()) { var ey = readList(JEASTER); if (ey.indexOf(now().getFullYear()) < 0) { ey.push(now().getFullYear()); try { localStorage.setItem(JEASTER, JSON.stringify(ey)); } catch (e) {} } }
