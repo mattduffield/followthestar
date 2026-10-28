@@ -13,6 +13,11 @@
 	<link rel="apple-touch-icon" sizes="180x180" href="/assets/images/global/apple-touch-icon.png">
 	<link rel="icon" type="image/png" sizes="32x32" href="/assets/images/global/favicon-32x32.png">
 	<link rel="icon" type="image/png" sizes="16x16" href="/assets/images/global/favicon-16x16.png">
+	<!-- languages (docs/journey-lang.py) -->
+	<link rel="alternate" hreflang="en" href="https://followthestar.church/journey/">
+	<link rel="alternate" hreflang="es" href="https://followthestar.church/es/journey/">
+	<link rel="alternate" hreflang="x-default" href="https://followthestar.church/journey/">
+	<!-- /languages -->
 	<link rel="manifest" href="/journey/manifest.json">
 	<meta name="apple-mobile-web-app-capable" content="yes">
 	<meta name="mobile-web-app-capable" content="yes">
@@ -108,8 +113,9 @@ body:not(.tucked):not(.is-full) .when {display:none;}
 .langs {display:flex; justify-content:flex-end; gap:10px; max-width:1100px; margin:-20px auto 14px;}
 .langs a {color:#FFDB59; font:400 13px Inter,Arial,sans-serif; text-decoration:none; border:1px solid rgba(255,219,89,0.5); border-radius:14px; padding:4px 12px;}
 .langs a:hover, .langs a:focus-visible {background:rgba(255,219,89,0.12);}
-.lang-ask {position:absolute; top:max(70px, calc(env(safe-area-inset-top) + 64px)); left:50%; transform:translateX(-50%); z-index:5; display:flex; align-items:center; gap:10px; background:rgba(7,11,34,0.88); border:1px solid rgba(255,219,89,0.5); border-radius:20px; padding:6px 8px 6px 16px; color:#e8e3ff; font:400 14px Inter,Arial,sans-serif; white-space:nowrap; box-shadow:0 8px 24px rgba(0,0,0,0.4);}
+.lang-ask {position:absolute; top:max(106px, calc(env(safe-area-inset-top) + 100px)); left:50%; transform:translateX(-50%); z-index:5; display:flex; align-items:center; gap:10px; background:rgba(7,11,34,0.88); border:1px solid rgba(255,219,89,0.5); border-radius:20px; padding:6px 8px 6px 16px; color:#e8e3ff; font:400 14px Inter,Arial,sans-serif; white-space:nowrap; box-shadow:0 8px 24px rgba(0,0,0,0.4);}
 .lang-ask[hidden] {display:none;}
+@media screen and (max-height:500px) {.lang-ask {top:max(68px, calc(env(safe-area-inset-top) + 62px));}}   /* (below the slimmer header on a sideways phone) */
 .lang-ask a {background:#FFDB59; color:#1a1240; border-radius:14px; padding:4px 14px; font-weight:600; text-decoration:none;}
 .lang-ask button {background:none; border:0; color:#c9c3e6; font-size:14px; cursor:pointer; padding:4px 6px;}
 /* the controls along the bottom of the scene */
@@ -540,17 +546,17 @@ dialog.journal[open] {animation:j-rise .55s cubic-bezier(.2,.9,.3,1.2);}
 	</footer>
 
 	<script src="/assets/js/site.js" defer></script>
-	<script src="/journey/camels.js?v=202610271751" defer></script>
-	<script src="/journey/camel-rig.js?v=202610271751" defer></script>
-	<script src="/journey/canine-rig.js?v=202610271751" defer></script>
-	<script src="/journey/art-ready.js?v=202610271751" defer></script>
-	<script src="/journey/readings.js?v=202610271751" defer></script>
-	<script src="/journey/pip.js?v=202610271751" defer></script>
-	<script src="/journey/sayings.js?v=202610271751" defer></script>
-	<script src="/journey/plan.js?v=202610271751" defer></script>
-	<script src="/journey/audio-ready.js?v=202610271751" defer></script>
-	<script src="/journey/sound.js?v=202610271751" defer></script>
-	<script src="/journey/lang/languages.js?v=202610271751" defer></script>
-	<script src="/journey/journey.js?v=202610271751" defer></script>
+	<script src="/journey/camels.js?v=202610271806" defer></script>
+	<script src="/journey/camel-rig.js?v=202610271806" defer></script>
+	<script src="/journey/canine-rig.js?v=202610271806" defer></script>
+	<script src="/journey/art-ready.js?v=202610271806" defer></script>
+	<script src="/journey/readings.js?v=202610271806" defer></script>
+	<script src="/journey/pip.js?v=202610271806" defer></script>
+	<script src="/journey/sayings.js?v=202610271806" defer></script>
+	<script src="/journey/plan.js?v=202610271806" defer></script>
+	<script src="/journey/audio-ready.js?v=202610271806" defer></script>
+	<script src="/journey/sound.js?v=202610271806" defer></script>
+	<script src="/journey/lang/languages.js?v=202610271806" defer></script>
+	<script src="/journey/journey.js?v=202610271806" defer></script>
 </body>
 </html>
