@@ -12,6 +12,8 @@ header > a > img {width:86px; height:69px;}
 header > .buttons {display:flex; align-items:center;}
 header > .buttons a, header > .buttons button {border:1px solid #FFDB59; border-radius: 5px; color:#FFDB59; background:none; padding:10px 25px; display:inline-block; font:400 18px Inter,Arial,sans-serif; text-decoration: none; text-transform: uppercase; cursor:pointer; text-align:center;}
 header > .buttons a {margin-right:20px;}
+header > .buttons a.lang {border-color:rgba(255,219,89,0.45); text-transform:none; margin-right:0;}   /* the other language: quieter than the buttons */
+header > .buttons a.lang .lang-short {display:none;}
 
 @media screen and (max-width:500px) {
 	header > a > img {width:55px; height:40px; margin-top:15px}
@@ -19,6 +21,7 @@ header > .buttons a {margin-right:20px;}
 	header > .buttons a, header > .buttons button {padding:8px 12px;}
 	header > .buttons a {margin-right:8px; white-space:nowrap;}
 	header > .buttons .wide {display:none;}   /* "The Journey" becomes "Journey" */
+	header > .buttons a.lang .lang-long {display:none;} header > .buttons a.lang .lang-short {display:inline;}   /* "Español" becomes "ES" */
 }
 
 @media screen and (max-width:400px) {
@@ -71,3 +74,8 @@ footer .credits a {color:#fff;}
 	footer .contactInfo {flex-direction: column;}
 	footer .contactInfo img {margin-top:10px}
 }
+
+/* the one-time suggestion to see the page in the visitor's own language (site.js) */
+.lang-suggest {position:fixed; left:50%; bottom:max(16px, env(safe-area-inset-bottom)); transform:translateX(-50%); z-index:20; display:flex; align-items:center; gap:10px; background:rgba(7,11,34,0.92); border:1px solid rgba(255,219,89,0.5); border-radius:22px; padding:7px 8px 7px 18px; color:#fff; font:400 15px Inter,Arial,sans-serif; white-space:nowrap; box-shadow:0 8px 24px rgba(0,0,0,0.4);}
+.lang-suggest a {background:#FFDB59; color:#1a1240; border-radius:16px; padding:5px 16px; font-weight:600; text-decoration:none;}
+.lang-suggest button {background:none; border:0; color:#ccc; font-size:15px; cursor:pointer; padding:4px 8px;}

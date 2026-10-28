@@ -69,6 +69,24 @@ document.addEventListener('DOMContentLoaded', function() {
 			el.hidden = false;
 	});
 
+	// someone whose browser is set to another language this page is in: a one-time suggestion to see it in theirs
+	(function() {
+		var WORDS = {es: ['¿Ver esta página en español?', 'Sí'], en: ['See this page in English?', 'Yes']};
+		var here = document.documentElement.lang || 'en';
+		var want = String((navigator.languages || [navigator.language])[0] || '').slice(0, 2).toLowerCase();
+		var alt = document.querySelector('link[rel="alternate"][hreflang="' + want + '"]');
+		if (!alt || want === here || !WORDS[want] || document.getElementById('lang-ask')) return;
+		try { if (localStorage.getItem('lang-asked')) return; } catch (e) { return; }
+		var done = function() { try { localStorage.setItem('lang-asked', '1'); } catch (e) {} box.remove(); };
+		var box = document.createElement('div'); box.className = 'lang-suggest'; box.lang = want;
+		box.innerHTML = '<span></span><a></a><button type="button" aria-label="✕">✕</button>';
+		box.querySelector('span').textContent = WORDS[want][0];
+		var go = box.querySelector('a'); go.textContent = WORDS[want][1]; go.hreflang = want;
+		go.href = new URL(alt.href).pathname + location.search + location.hash;
+		go.addEventListener('click', done); box.querySelector('button').addEventListener('click', done);
+		document.body.appendChild(box);
+	})();
+
 	// footer copyright year
 	document.querySelectorAll('.year').forEach(function(el) {
 		el.textContent = new Date().getFullYear();

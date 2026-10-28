@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- Made by docs/journey-lang.py from src/journey/index.html: edit that, not this. -->
+<!-- Made by docs/site-lang.py from the English page: edit that, not this. -->
 <html lang="es">
 <head>
 	<meta charset="UTF-8">
@@ -14,10 +14,10 @@
 	<link rel="apple-touch-icon" sizes="180x180" href="/assets/images/global/apple-touch-icon.png">
 	<link rel="icon" type="image/png" sizes="32x32" href="/assets/images/global/favicon-32x32.png">
 	<link rel="icon" type="image/png" sizes="16x16" href="/assets/images/global/favicon-16x16.png">
-	<!-- languages (docs/journey-lang.py) -->
-	<link rel="alternate" hreflang="en" href="https://followthestar.church/journey/">
+	<!-- languages (docs/site-lang.py) -->
+	<link rel="alternate" hreflang="en" href="https://followthestar.church/es/journey/">
 	<link rel="alternate" hreflang="es" href="https://followthestar.church/es/journey/">
-	<link rel="alternate" hreflang="x-default" href="https://followthestar.church/journey/">
+	<link rel="alternate" hreflang="x-default" href="https://followthestar.church/es/journey/">
 	<!-- /languages -->
 	<link rel="manifest" href="/journey/manifest.json">
 	<meta name="apple-mobile-web-app-capable" content="yes">
@@ -67,12 +67,12 @@ main {overflow:visible;}
 .when {top:104px; left:24px; right:auto; text-align:left; font:600 13px Inter,Arial,sans-serif; letter-spacing:0.08em; text-transform:uppercase; color:#e8e3ff;}
 .when b {display:block; font:200 26px Inter,Arial,sans-serif; letter-spacing:0; text-transform:none; color:#FFDB59; margin-top:2px;}
 .caption {top:30%; opacity:0; transition:opacity 0.8s;}
-.done {top:26%;}
-.done h2 {font:400 40px/1.2 Merienda,Georgia,serif; color:#fff; margin:0 0 10px;}
-.done p {font:300 19px Inter,Arial,sans-serif; color:#e8e3ff; margin:0;}
-.done {left:50%; right:auto; transform:translateX(-50%); width:max-content; max-width:92%; background:rgba(7,11,34,0.55); padding:16px 26px 18px; border-radius:14px; text-align:center;}
-.done .hint {font-size:15px; color:#c9c3e6;}
-.done .again {margin-top:12px; pointer-events:auto; background:rgba(7,11,34,0.6); border:1px solid #FFDB59; border-radius:20px; color:#FFDB59; padding:9px 18px; font:400 13px Inter,Arial,sans-serif; text-transform:uppercase; letter-spacing:0.04em; cursor:pointer;}
+#done {top:26%;}   /* (by id: the map's road icons also use the class "done") */
+#done h2 {font:400 40px/1.2 Merienda,Georgia,serif; color:#fff; margin:0 0 10px;}
+#done p {font:300 19px Inter,Arial,sans-serif; color:#e8e3ff; margin:0;}
+#done {left:50%; right:auto; transform:translateX(-50%); width:max-content; max-width:92%; background:rgba(7,11,34,0.55); padding:16px 26px 18px; border-radius:14px; text-align:center;}
+#done .hint {font-size:15px; color:#c9c3e6;}
+#done .again {margin-top:12px; pointer-events:auto; background:rgba(7,11,34,0.6); border:1px solid #FFDB59; border-radius:20px; color:#FFDB59; padding:9px 18px; font:400 13px Inter,Arial,sans-serif; text-transform:uppercase; letter-spacing:0.04em; cursor:pointer;}
 .caption.on {opacity:1;}
 .verse-end {top:20%; left:50%; right:auto; transform:translateX(-50%); width:min(780px, 88%); padding:18px 26px; border-radius:10px; background:rgba(7,11,34,0.55); box-shadow:0 0 40px 20px rgba(7,11,34,0.35); opacity:0; transition:opacity 1.6s;}
 .verse-end.on {opacity:1;}
@@ -110,10 +110,7 @@ body:not(.tucked):not(.is-full) .when {display:none;}
 .verse-end cite {font:300 16px Inter,Arial,sans-serif; font-style:normal; color:#FFDB59; letter-spacing:0.04em;}
 .caption span {display:inline-block; font:400 24px Merienda,Georgia,serif; color:#fff; padding:6px 18px; border-top:1px solid rgba(255,219,89,0.6); border-bottom:1px solid rgba(255,219,89,0.6);}
 .verse-notice {display:block; margin-top:10px; font:300 11px/1.4 Inter,Arial,sans-serif; color:rgba(232,227,255,0.6);}
-/* the language switch (below the scene) and the one-time suggestion over the scene */
-.langs {display:flex; justify-content:flex-end; gap:10px; max-width:1100px; margin:-20px auto 14px;}
-.langs a {color:#FFDB59; font:400 13px Inter,Arial,sans-serif; text-decoration:none; border:1px solid rgba(255,219,89,0.5); border-radius:14px; padding:4px 12px;}
-.langs a:hover, .langs a:focus-visible {background:rgba(255,219,89,0.12);}
+/* the one-time suggestion over the scene */
 .lang-ask {position:absolute; top:max(106px, calc(env(safe-area-inset-top) + 100px)); left:50%; transform:translateX(-50%); z-index:5; display:flex; align-items:center; gap:10px; background:rgba(7,11,34,0.88); border:1px solid rgba(255,219,89,0.5); border-radius:20px; padding:6px 8px 6px 16px; color:#e8e3ff; font:400 14px Inter,Arial,sans-serif; white-space:nowrap; box-shadow:0 8px 24px rgba(0,0,0,0.4);}
 .lang-ask[hidden] {display:none;}
 @media screen and (max-height:500px) {.lang-ask {top:max(68px, calc(env(safe-area-inset-top) + 62px));}}   /* (below the slimmer header on a sideways phone) */
@@ -392,8 +389,8 @@ dialog.journal[open] {animation:j-rise .55s cubic-bezier(.2,.9,.3,1.2);}
 
 <body>
 	<header>
-		<a href="/"><img src="/assets/images/global/yellow-logo-partial.png" alt="Follow the Star logo" width="120" height="96" class="logo"></a>
-		<div class="map" id="map" role="img" aria-label="Map of the journey">
+		<a href="/es/"><img src="/assets/images/global/yellow-logo-partial.png" alt="Logotipo de Follow the Star" width="120" height="96" class="logo"></a>
+		<div class="map" id="map" role="img" aria-label="Mapa del recorrido">
 			<svg viewBox="0 0 520 44" aria-hidden="true">
 				<path id="map-road" d="M20 30 C 120 22, 200 34, 290 27 S 420 20, 482 26"/>
 				<path id="map-done" d=""/>
@@ -406,8 +403,8 @@ dialog.journal[open] {animation:j-rise .55s cubic-bezier(.2,.9,.3,1.2);}
 		</div>
 
 		<div class="buttons">
-			<a href="/tickets/" data-show-after="2026-11-08T09:00:00-08:00" hidden>Buy Tickets</a>
-		</div>
+			<a href="/es/tickets/" data-show-after="2026-11-08T09:00:00-08:00" hidden>Comprar boletos</a>
+		<!-- lang --><a class="lang" href="/journey/" hreflang="en" lang="en" title="English"><span class="lang-long">English</span><span class="lang-short">EN</span></a><!-- /lang --></div>
 	</header>
 
 <main>
@@ -432,13 +429,13 @@ dialog.journal[open] {animation:j-rise .55s cubic-bezier(.2,.9,.3,1.2);}
 					<button type="button" class="btn away" id="tonight-btn">Volver a esta noche</button>
 					<button type="button" class="btn" id="sofar">El viaje hasta ahora</button>
 					<button type="button" class="btn journal-btn" id="journal-btn" aria-haspopup="dialog"><img src="/journey/art/jr-cr-sand-mouse.webp" alt=""><span>El diario de Pip</span></button>
-					<button type="button" class="btn full" id="full" aria-label="Pantalla completa" title="Pantalla completa" hidden>⛶</button>
+					<button type="button" class="btn full" id="full" aria-label="Full screen" title="Pantalla completa" hidden>⛶</button>
 				</div>
 				<button type="button" class="btn sound" id="sound" aria-pressed="false">Sin sonido</button>
 				<button type="button" class="btn more" id="more-btn" aria-expanded="false" aria-controls="more-items">Más</button>
-				<button type="button" class="btn hide" id="hide-btn" aria-label="Ocultar los botones" title="Ocultar los botones">⌄</button>
+				<button type="button" class="btn hide" id="hide-btn" aria-label="Hide the buttons" title="Ocultar los botones">⌄</button>
 			</div>
-			<button type="button" class="handle" id="handle" aria-label="Mostrar los botones" title="Mostrar los botones">☰</button>
+			<button type="button" class="handle" id="handle" aria-label="Show the buttons" title="Mostrar los botones">☰</button>
 			<div class="overlay done" id="done" hidden>
 				<h2>Los sabios ya están en casa</h2>
 				<p>Gracias por seguir el viaje con nosotros. Nos vemos el próximo Adviento.</p>
@@ -455,7 +452,7 @@ dialog.journal[open] {animation:j-rise .55s cubic-bezier(.2,.9,.3,1.2);}
 							<div class="stats"><div class="stat"><div class="n" id="jsPip">0</div><div class="l">Noches</div></div><div class="stat"><div class="n" id="jsTreasure">0</div><div class="l">Tesoros</div></div><div class="stat"><div class="n" id="jsRun">0</div><div class="l">Mejor racha</div></div></div>
 						</div>
 						<nav class="tabs" role="tablist">
-							<button type="button" role="tab" aria-selected="true" data-p="journey"><span class="long">El </span>Viaje</button><button type="button" role="tab" aria-selected="false" data-p="treasures">Tesoros</button><button type="button" role="tab" aria-selected="false" data-p="home">Hogar<span class="long"> en Oriente</span></button><button type="button" role="tab" aria-selected="false" data-p="badges">Insignias</button>
+							<button type="button" role="tab" aria-selected="true" data-p="journey"><span class="long">El </span>Viaje</button><button type="button" role="tab" aria-selected="false" data-p="treasures">Tesoros</button><button type="button" role="tab" aria-selected="false" data-p="home">Hogar<span class="long"> in the East</span></button><button type="button" role="tab" aria-selected="false" data-p="badges">Insignias</button>
 						</nav>
 						<section class="jpage" id="jp-journey" role="tabpanel"></section>
 						<section class="jpage" id="jp-treasures" role="tabpanel" hidden><h3>Tesoros del camino</h3><div class="shelf" id="jshelf"></div></section>
@@ -489,7 +486,6 @@ dialog.journal[open] {animation:j-rise .55s cubic-bezier(.2,.9,.3,1.2);}
 	</section>
 
 	<section class="today" id="today" aria-labelledby="days-left">
-		<nav class="langs" id="langs" aria-label="Idioma" hidden></nav>
 		<div class="today-grid">
 			<div class="countdown">
 				<div class="day" id="day-label"></div>
@@ -525,43 +521,37 @@ dialog.journal[open] {animation:j-rise .55s cubic-bezier(.2,.9,.3,1.2);}
 
 	<footer>
 		<div class="contactInfo">
-			<img src="/assets/images/global/yellow-logo-partial.png" width="86" height="69" alt="Follow the Star logo">
+			<img src="/assets/images/global/yellow-logo-partial.png" width="86" height="69" alt="Logotipo de Follow the Star">
 			<div class="location">
-				<h5>Location</h5>
-				<p>Seventh-day Adventist<br>Conference Center<br>
-					19500 Oatfield Rd.<br>
-					Gladstone, Oregon 97027</p>
-				<p class="footer-link"><a href="https://goo.gl/maps/5rdy2zwCDDMBvn4A7" target="_blank" rel="noopener">Get Directions</a></p>
+				<h5>Ubicación</h5>
+				<p>Centro de Conferencias<br>Adventista del Séptimo Día<br> 19500 Oatfield Rd.<br> Gladstone, Oregon 97027</p>
+				<p class="footer-link"><a href="https://goo.gl/maps/5rdy2zwCDDMBvn4A7" target="_blank" rel="noopener">Cómo llegar</a></p>
 			</div>
 			<div class="coordinators">
-				<h5>Event Coordinators</h5>
-				<p>Gladstone Park<br>
-					Seventh-day Adventist<br>
-					503-655-2614</p>
-				<p class="footer-link"><a href="/volunteers/">Volunteers</a></p>
+				<h5>Coordinadores del evento</h5>
+				<p>Iglesia Adventista del Séptimo Día<br> de Gladstone Park<br> 503-655-2614</p>
+				<p class="footer-link"><a href="/es/volunteers/">Voluntarios</a></p>
 			</div>
 		</div>
-		<div class="credits">
-			© <span class="year">2026</span> All rights reserved. · <a href="/privacy/">Privacy</a>
-		</div>
+		<div class="credits">© <span class="year">2026</span> Todos los derechos reservados. · <a href="/es/privacy/">Privacidad</a></div>
 	</footer>
 
 	<script src="/assets/js/site.js" defer></script>
-	<script src="/journey/camels.js?v=202610271806" defer></script>
-	<script src="/journey/camel-rig.js?v=202610271806" defer></script>
-	<script src="/journey/canine-rig.js?v=202610271806" defer></script>
-	<script src="/journey/art-ready.js?v=202610271806" defer></script>
-	<script src="/journey/readings.js?v=202610271806" defer></script>
-	<script src="/journey/pip.js?v=202610271806" defer></script>
-	<script src="/journey/sayings.js?v=202610271806" defer></script>
-	<script src="/journey/plan.js?v=202610271806" defer></script>
-	<script src="/journey/audio-ready.js?v=202610271806" defer></script>
-	<script src="/journey/sound.js?v=202610271806" defer></script>
-	<script src="/journey/lang/languages.js?v=202610271806" defer></script>
-	<script src="/journey/lang/es/strings.js?v=202610271806" defer></script>
-	<script src="/journey/lang/es/readings.js?v=202610271806" defer></script>
-	<script src="/journey/lang/es/pip.js?v=202610271806" defer></script>
-	<script src="/journey/lang/es/sayings.js?v=202610271806" defer></script>
-	<script src="/journey/journey.js?v=202610271806" defer></script>
+	<script src="/journey/camels.js?v=202610271819" defer></script>
+	<script src="/journey/camel-rig.js?v=202610271819" defer></script>
+	<script src="/journey/canine-rig.js?v=202610271819" defer></script>
+	<script src="/journey/art-ready.js?v=202610271819" defer></script>
+	<script src="/journey/readings.js?v=202610271819" defer></script>
+	<script src="/journey/pip.js?v=202610271819" defer></script>
+	<script src="/journey/sayings.js?v=202610271819" defer></script>
+	<script src="/journey/plan.js?v=202610271819" defer></script>
+	<script src="/journey/audio-ready.js?v=202610271819" defer></script>
+	<script src="/journey/sound.js?v=202610271819" defer></script>
+	<script src="/journey/lang/languages.js?v=202610271819" defer></script>
+	<script src="/journey/lang/es/strings.js?v=202610271819" defer></script>
+	<script src="/journey/lang/es/readings.js?v=202610271819" defer></script>
+	<script src="/journey/lang/es/pip.js?v=202610271819" defer></script>
+	<script src="/journey/lang/es/sayings.js?v=202610271819" defer></script>
+	<script src="/journey/journey.js?v=202610271819" defer></script>
 </body>
 </html>

@@ -13,7 +13,7 @@
 	<link rel="apple-touch-icon" sizes="180x180" href="/assets/images/global/apple-touch-icon.png">
 	<link rel="icon" type="image/png" sizes="32x32" href="/assets/images/global/favicon-32x32.png">
 	<link rel="icon" type="image/png" sizes="16x16" href="/assets/images/global/favicon-16x16.png">
-	<!-- languages (docs/journey-lang.py) -->
+	<!-- languages (docs/site-lang.py) -->
 	<link rel="alternate" hreflang="en" href="https://followthestar.church/journey/">
 	<link rel="alternate" hreflang="es" href="https://followthestar.church/es/journey/">
 	<link rel="alternate" hreflang="x-default" href="https://followthestar.church/journey/">
@@ -66,12 +66,12 @@ main {overflow:visible;}
 .when {top:104px; left:24px; right:auto; text-align:left; font:600 13px Inter,Arial,sans-serif; letter-spacing:0.08em; text-transform:uppercase; color:#e8e3ff;}
 .when b {display:block; font:200 26px Inter,Arial,sans-serif; letter-spacing:0; text-transform:none; color:#FFDB59; margin-top:2px;}
 .caption {top:30%; opacity:0; transition:opacity 0.8s;}
-.done {top:26%;}
-.done h2 {font:400 40px/1.2 Merienda,Georgia,serif; color:#fff; margin:0 0 10px;}
-.done p {font:300 19px Inter,Arial,sans-serif; color:#e8e3ff; margin:0;}
-.done {left:50%; right:auto; transform:translateX(-50%); width:max-content; max-width:92%; background:rgba(7,11,34,0.55); padding:16px 26px 18px; border-radius:14px; text-align:center;}
-.done .hint {font-size:15px; color:#c9c3e6;}
-.done .again {margin-top:12px; pointer-events:auto; background:rgba(7,11,34,0.6); border:1px solid #FFDB59; border-radius:20px; color:#FFDB59; padding:9px 18px; font:400 13px Inter,Arial,sans-serif; text-transform:uppercase; letter-spacing:0.04em; cursor:pointer;}
+#done {top:26%;}   /* (by id: the map's road icons also use the class "done") */
+#done h2 {font:400 40px/1.2 Merienda,Georgia,serif; color:#fff; margin:0 0 10px;}
+#done p {font:300 19px Inter,Arial,sans-serif; color:#e8e3ff; margin:0;}
+#done {left:50%; right:auto; transform:translateX(-50%); width:max-content; max-width:92%; background:rgba(7,11,34,0.55); padding:16px 26px 18px; border-radius:14px; text-align:center;}
+#done .hint {font-size:15px; color:#c9c3e6;}
+#done .again {margin-top:12px; pointer-events:auto; background:rgba(7,11,34,0.6); border:1px solid #FFDB59; border-radius:20px; color:#FFDB59; padding:9px 18px; font:400 13px Inter,Arial,sans-serif; text-transform:uppercase; letter-spacing:0.04em; cursor:pointer;}
 .caption.on {opacity:1;}
 .verse-end {top:20%; left:50%; right:auto; transform:translateX(-50%); width:min(780px, 88%); padding:18px 26px; border-radius:10px; background:rgba(7,11,34,0.55); box-shadow:0 0 40px 20px rgba(7,11,34,0.35); opacity:0; transition:opacity 1.6s;}
 .verse-end.on {opacity:1;}
@@ -109,10 +109,7 @@ body:not(.tucked):not(.is-full) .when {display:none;}
 .verse-end cite {font:300 16px Inter,Arial,sans-serif; font-style:normal; color:#FFDB59; letter-spacing:0.04em;}
 .caption span {display:inline-block; font:400 24px Merienda,Georgia,serif; color:#fff; padding:6px 18px; border-top:1px solid rgba(255,219,89,0.6); border-bottom:1px solid rgba(255,219,89,0.6);}
 .verse-notice {display:block; margin-top:10px; font:300 11px/1.4 Inter,Arial,sans-serif; color:rgba(232,227,255,0.6);}
-/* the language switch (below the scene) and the one-time suggestion over the scene */
-.langs {display:flex; justify-content:flex-end; gap:10px; max-width:1100px; margin:-20px auto 14px;}
-.langs a {color:#FFDB59; font:400 13px Inter,Arial,sans-serif; text-decoration:none; border:1px solid rgba(255,219,89,0.5); border-radius:14px; padding:4px 12px;}
-.langs a:hover, .langs a:focus-visible {background:rgba(255,219,89,0.12);}
+/* the one-time suggestion over the scene */
 .lang-ask {position:absolute; top:max(106px, calc(env(safe-area-inset-top) + 100px)); left:50%; transform:translateX(-50%); z-index:5; display:flex; align-items:center; gap:10px; background:rgba(7,11,34,0.88); border:1px solid rgba(255,219,89,0.5); border-radius:20px; padding:6px 8px 6px 16px; color:#e8e3ff; font:400 14px Inter,Arial,sans-serif; white-space:nowrap; box-shadow:0 8px 24px rgba(0,0,0,0.4);}
 .lang-ask[hidden] {display:none;}
 @media screen and (max-height:500px) {.lang-ask {top:max(68px, calc(env(safe-area-inset-top) + 62px));}}   /* (below the slimmer header on a sideways phone) */
@@ -406,7 +403,7 @@ dialog.journal[open] {animation:j-rise .55s cubic-bezier(.2,.9,.3,1.2);}
 
 		<div class="buttons">
 			<a href="/tickets/" data-show-after="2026-11-08T09:00:00-08:00" hidden>Buy Tickets</a>
-		</div>
+		<!-- lang --><a class="lang" href="/es/journey/" hreflang="es" lang="es" title="Español"><span class="lang-long">Español</span><span class="lang-short">ES</span></a><!-- /lang --></div>
 	</header>
 
 <main>
@@ -488,7 +485,6 @@ dialog.journal[open] {animation:j-rise .55s cubic-bezier(.2,.9,.3,1.2);}
 	</section>
 
 	<section class="today" id="today" aria-labelledby="days-left">
-		<nav class="langs" id="langs" aria-label="Language" hidden></nav>
 		<div class="today-grid">
 			<div class="countdown">
 				<div class="day" id="day-label"></div>
@@ -546,17 +542,17 @@ dialog.journal[open] {animation:j-rise .55s cubic-bezier(.2,.9,.3,1.2);}
 	</footer>
 
 	<script src="/assets/js/site.js" defer></script>
-	<script src="/journey/camels.js?v=202610271806" defer></script>
-	<script src="/journey/camel-rig.js?v=202610271806" defer></script>
-	<script src="/journey/canine-rig.js?v=202610271806" defer></script>
-	<script src="/journey/art-ready.js?v=202610271806" defer></script>
-	<script src="/journey/readings.js?v=202610271806" defer></script>
-	<script src="/journey/pip.js?v=202610271806" defer></script>
-	<script src="/journey/sayings.js?v=202610271806" defer></script>
-	<script src="/journey/plan.js?v=202610271806" defer></script>
-	<script src="/journey/audio-ready.js?v=202610271806" defer></script>
-	<script src="/journey/sound.js?v=202610271806" defer></script>
-	<script src="/journey/lang/languages.js?v=202610271806" defer></script>
-	<script src="/journey/journey.js?v=202610271806" defer></script>
+	<script src="/journey/camels.js?v=202610271819" defer></script>
+	<script src="/journey/camel-rig.js?v=202610271819" defer></script>
+	<script src="/journey/canine-rig.js?v=202610271819" defer></script>
+	<script src="/journey/art-ready.js?v=202610271819" defer></script>
+	<script src="/journey/readings.js?v=202610271819" defer></script>
+	<script src="/journey/pip.js?v=202610271819" defer></script>
+	<script src="/journey/sayings.js?v=202610271819" defer></script>
+	<script src="/journey/plan.js?v=202610271819" defer></script>
+	<script src="/journey/audio-ready.js?v=202610271819" defer></script>
+	<script src="/journey/sound.js?v=202610271819" defer></script>
+	<script src="/journey/lang/languages.js?v=202610271819" defer></script>
+	<script src="/journey/journey.js?v=202610271819" defer></script>
 </body>
 </html>

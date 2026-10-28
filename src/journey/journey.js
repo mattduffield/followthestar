@@ -3519,19 +3519,14 @@
 		ev.innerHTML = html;
 	}
 
-	// the other languages: links below the scene, and once, to someone whose browser is set to one of them, a suggestion
+	// once, to someone whose browser is set to another language the Journey is in, a suggestion over the scene
 	(function() {
-		var langs = (window.JOURNEY_LANGUAGES || []).filter(function(l) { return l.code !== (LANG.code || 'en') && (l.ready || TEST); });
-		var nav = document.getElementById('langs');
-		if (nav && langs.length) {
-			langs.forEach(function(l) { var a = document.createElement('a'); a.href = l.href + location.search; a.hreflang = a.lang = l.code; a.textContent = l.name; nav.appendChild(a); });
-			nav.hidden = false;
-		}
+		var langs = (window.JOURNEY_LANGUAGES || []).filter(function(l) { return l.code !== (LANG.code || 'en') && l.ready; });
 		var want = (navigator.languages || [navigator.language || '']).map(function(c) { return String(c).slice(0, 2).toLowerCase(); });
 		var here = LANG.code || 'en', best = want[0];
-		var sug = langs.filter(function(l) { return l.code === best && l.ready; })[0], ask = document.getElementById('lang-ask');
-		if (!sug || best === here || !ask || localStorage.getItem('journey-lang-asked')) return;
-		var done = function() { try { localStorage.setItem('journey-lang-asked', '1'); } catch (e) {} ask.hidden = true; };
+		var sug = langs.filter(function(l) { return l.code === best; })[0], ask = document.getElementById('lang-ask');
+		if (!sug || best === here || !ask || localStorage.getItem('lang-asked')) return;
+		var done = function() { try { localStorage.setItem('lang-asked', '1'); } catch (e) {} ask.hidden = true; };
 		ask.lang = sug.code; ask.querySelector('span').textContent = sug.ask; var go = ask.querySelector('a');
 		go.textContent = sug.yes; go.href = sug.href + location.search; go.hreflang = sug.code; go.addEventListener('click', done);
 		ask.querySelector('button').addEventListener('click', done);
