@@ -490,8 +490,20 @@
 	function groundY(u) { return layerY('road', u, 'ground'); }   // where the camels walk: on the sand, with rocks and tufts behind them
 
 	// draw part of a tile: the screen fraction [f0, f1] of tile n, mirrored on odd tiles
+	var solidHills = false;   // (drawing the hills' solid silhouettes, for the sky behind them: skyBehindHills)
+	function solidOf(im) {   // the picture's silhouette, fully solid wherever there's any land at all
+		if (im.solid) return im.solid;
+		var c = document.createElement('canvas'); c.width = im.width; c.height = im.height;
+		var g = c.getContext('2d'); g.drawImage(im, 0, 0);
+		var d = g.getImageData(0, 0, c.width, c.height), a = d.data;
+		for (var i = 3; i < a.length; i += 4) a[i] = a[i] > 8 ? 255 : 0;
+		g.putImageData(d, 0, 0); c.bottom = im.bottom;
+		return (im.solid = c);
+	}
 	function drawTilePart(im, layer, x, n, f0, f1, exact) {   // (exact: no overlap with the next part, for adding parts together)
-		var b = box(im, layer), dx = x + f0 * b.w, dw = (f1 - f0) * b.w, o = exact ? 0 : 0.5;
+		var b = box(im, layer);
+		if (solidHills) im = solidOf(im);
+		var dx = x + f0 * b.w, dw = (f1 - f0) * b.w, o = exact ? 0 : 0.5;
 		var s0 = (n % 2 ? 1 - f1 : f0) * im.width, sw = (f1 - f0) * im.width;
 		// the outermost columns of a land picture are pale (left from cutting out the background): never use them, or where
 		// two copies meet they line up into a thin pale line that flickers as the land scrolls
@@ -1217,12 +1229,17 @@
 					var SH = CANINE_H[p.who], q = clamp((VW * 1.1 - x) / (VW * 0.3), 0, 1);   // (so it's howling well before it passes behind the caravan)
 					var runF = animFrames('jr-an-' + p.who + '-run-', 4);   // its run cycle (round 14); until then it just sits and howls
 					var pose = p.kind === 'trotter' ? 'trot' : q < 0.5 ? 'trot' : 'stand';   // they run along the ridge, then stop and stand looking at you (and call)
+					// their running along the ridge comes from the land scrolling past as the caravan walks; once the caravan stops,
+					// a lone jackal runs on by itself (and away), and a pack still on its way to howl stops and stands
+					var dtc = clamp(clock - (p.lastClock == null ? clock : p.lastClock), 0, 0.1); p.lastClock = clock;
+					if (p.kind === 'trotter' && walk < 0.5) p.selfRun = (p.selfRun || 0) + dtc * 90 * (1 - walk * 2);
+					if (p.kind === 'howl' && pose === 'trot' && walk < 0.3) pose = 'stand';
 					var off = p.kind === 'trotter' ? -220 + 440 * clamp((VW * 1.1 - x) / (VW * 1.2), 0, 1) : pose === 'trot' ? -120 * (1 - q / 0.5) : 0;
 					p.howling = pose === 'stand';
 					var pim = pose === 'howl' ? im : pose === 'trot' && runF ? runF[Math.floor(clock * 10 + p.night) % 4] : art('jr-' + p.who + '-' + pose) || im;
 					var ph2 = pose === 'howl' ? h : h * SH[pose] / SH.howl, pw = ph2 * pim.width / pim.height;
 					var bob = 0;
-					var px2 = x + off, shr = shiftOf(layer), ry = -1e9;   // the ridge under where it is now, as it trots
+					var px2 = x + off + (p.kind === 'trotter' ? p.selfRun || 0 : 0), shr = shiftOf(layer), ry = -1e9;   // the ridge under where it is now, as it trots
 					for (var rx = -0.35; rx <= 0.35; rx += 0.175) ry = Math.max(ry, layerY(layer, px2 + rx * pw - LEAD_X + shr));
 					var ptop = ry + 3 + ph2 * 0.06 - (pim.base || 1) * ph2 - bob;
 					var one = function(cx, scale, face) {   // face: 1 as drawn (nose to the right), -1 turned round
@@ -2142,6 +2159,23 @@
 		g.fillStyle = limb; g.fillRect(0, 0, N, N);
 		return c;
 	}
+	// The sun goes behind the far hills. Parts of them are painted see-through (hazy distant mesas), so the sun would
+	// show through: before the sun is drawn the sky is copied, and just behind the hills that copy is laid in their
+	// shape, so through them shows sky, not sun.
+	var sunShot = false;
+	function skyShot() {
+		var c = fadeCanvas(3), g = c.getContext('2d');
+		g.setTransform(1, 0, 0, 1, 0, 0); g.globalCompositeOperation = 'copy'; g.drawImage(canvas, 0, 0); g.globalCompositeOperation = 'source-over';
+		sunShot = true;
+	}
+	function skyBehindHills() {
+		if (!sunShot || !hasLayerArt('far')) return;
+		var m = fadeCanvas(2), main = ctx;
+		ctx = m.getContext('2d'); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalAlpha = 1; ctx.clearRect(0, 0, m.width, m.height);
+		ctx.setTransform(main.getTransform()); solidHills = true; paintLayerArt('far'); solidHills = false;   // the hills' solid shape...
+		ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalCompositeOperation = 'source-in'; ctx.drawImage(fadeCanvas(3), 0, 0); ctx.globalCompositeOperation = 'source-over';   // ...filled with the sky
+		ctx = main; ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.drawImage(m, 0, 0); ctx.restore();
+	}
 	function paintSky() {
 		var sk = night.sky, im = art(sk.art);
 		if (im) { var sc = Math.max(VW / im.width, (VH - TOPV) / im.height); ctx.drawImage(im, (VW - im.width * sc) / 2, VH - im.height * sc, im.width * sc, im.height * sc); }
@@ -2157,8 +2191,9 @@
 		// on evening skies the sun is setting ahead of them as the night begins: it sinks behind the far hills, its
 		// glow fades, and the stars come out as it goes
 		var sunset = 0, day = daylight();
+		sunShot = false;
 		if (EASTER()) {   // Easter morning: the sun coming up over the hills in the east, the stars fading
-			sunset = 0.85;
+			sunset = 0.85; skyShot();
 			var ex = VW * 0.6, ey = 455;   // (the scene is drawn turned round at home, so this is to the left of centre: the east)
 			glow(ex, ey, 520, 'rgb(255,190,120)', 0.45); glow(ex, ey, 180, 'rgb(255,230,160)', 0.6);
 			ctx.save(); var eg = ctx.createRadialGradient(ex, ey - 6, 4, ex, ey, 44);
@@ -2178,6 +2213,7 @@
 			sunset = day;
 			var high = night.plan.sun === 'day' ? 1 - (evening() > 0 ? 1 : smooth(nightT())) : 0;   // (by day it starts high, crossing to the west)
 			var hx = VW * (homeward(night.day) ? 0.2 + 0.25 * high : 0.8 - 0.25 * high), hy = 300 + 225 * (1 - day) - 190 * high, hr = 40 + 8 * (1 - day) - 6 * high;   // high and small, sinking, larger and redder as it nears the hills
+			if (hy + hr > 330) skyShot();   // (low enough to reach the hills)
 			glow(hx, hy, 460, 'rgb(255,170,90)', 0.35 * day * clearSky);
 			glow(hx, hy, 160, 'rgb(255,215,140)', 0.5 * day * clearSky);
 			ctx.save(); ctx.globalAlpha = clearSky;
@@ -2191,6 +2227,7 @@
 			sunset = wet ? 1 - smooth((nightT() - 0.72) / 0.28) : 1 - smooth(nightT() / 0.32);   // (on a rainy evening it sets as the rain clears, behind the rainbow)
 			if (sunset > 0.01) {
 				var sx = VW * (homeward(night.day) ? 0.2 : 0.8), sy = 392 + 118 * (1 - sunset), sr = 46;   // always in the west: ahead of them going, behind them coming home (the homeward scene is drawn mirrored)
+				skyShot();
 				glow(sx, sy, 420, 'rgb(255,150,80)', 0.32 * sunset * clearSky);
 				glow(sx, sy, 150, 'rgb(255,190,110)', 0.45 * sunset * clearSky);
 				ctx.save(); ctx.globalAlpha = (0.55 + 0.45 * sunset) * clearSky;
@@ -2904,7 +2941,7 @@
 		paintClouds(wx.level, 'back');
 		ctx.translate(shake, shake * 0.4);
 		paintRainbow();
-		paintLayer('far'); paintSnowCaps(); paintPieces('far');
+		skyBehindHills(); paintLayer('far'); paintSnowCaps(); paintPieces('far');
 		paintDustWall();
 		paintClouds(wx.level, 'front');                                  // the big, near clouds pass in front of the far hills
 		paintCritters(true);                                             // the owl and bats, flying in front of the far hills
