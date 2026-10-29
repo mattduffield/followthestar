@@ -86,7 +86,8 @@ article .schedule em {margin-top:4px;}
 .audio-folder {text-align:center; margin-top:30px;}
 .audio-folder p {font-size:16px; color:#555;}
 
-.script-download {text-align:center; margin-top:30px;}
+.script-download {text-align:center; margin-top:16px;}
+.script-download p {font-size:16px; color:#555;}
 a.button {border:1px solid #fff; border-radius: 5px; color:#fff; background:#751D19; padding:10px 25px; font:400 18px Inter,Arial,sans-serif; text-decoration: none; text-transform: uppercase; cursor:pointer; white-space: nowrap; display:inline-block; position: relative;}
 a.button:hover {background:#8E2620; transform: translateY(-2px); box-shadow: 0 4px 6px rgba(0,0,0,0.2);}
 
@@ -240,11 +241,55 @@ a.button:hover {background:#8E2620; transform: translateY(-2px); box-shadow: 0 4
 		<section class="volunteer-section" id="script">
 			<h2>Script</h2>
 
-			<p class="lead">The full script for every scene, starting with the Assistant Guide's introduction. It opens in Google Docs in a new tab, where you can also print it or download a copy.</p>
+			<p class="lead">Download just the scene you're in, or open the full script, starting with the Assistant Guide's introduction.</p>
 
+			<!-- Each scene's PDF is made from the Google Doc by docs/script-scenes.py: run it again after the script is edited
+			     there (the full script below always shows the latest). -->
+			<h3 class="group">By scene</h3>
+			<ul class="audio-list">
+				<li>
+					<div><span class="track-num">Introduction</span><span class="track-title">Assistant Guide</span></div>
+					<a class="listen" href="/volunteers/script/introduction.pdf" download="Follow the Star script - Introduction - Assistant Guide.pdf" aria-label="Download the script for the introduction: Assistant Guide">Download</a>
+				</li>
+				<li>
+					<div><span class="track-num">Scene 1</span><span class="track-title">A Modern Family</span></div>
+					<a class="listen" href="/volunteers/script/scene-1.pdf" download="Follow the Star script - Scene 1 - A Modern Family.pdf" aria-label="Download the script for Scene 1: A Modern Family">Download</a>
+				</li>
+				<li>
+					<div><span class="track-num">Scene 2</span><span class="track-title">The Temple in Jerusalem</span></div>
+					<a class="listen" href="/volunteers/script/scene-2.pdf" download="Follow the Star script - Scene 2 - The Temple in Jerusalem.pdf" aria-label="Download the script for Scene 2: The Temple in Jerusalem">Download</a>
+				</li>
+				<li>
+					<div><span class="track-num">Scene 3</span><span class="track-title">Herod's Palace</span></div>
+					<a class="listen" href="/volunteers/script/scene-3.pdf" download="Follow the Star script - Scene 3 - Herod’s Palace.pdf" aria-label="Download the script for Scene 3: Herod's Palace">Download</a>
+				</li>
+				<li>
+					<div><span class="track-num">Scene 4</span><span class="track-title">Shepherds</span></div>
+					<a class="listen" href="/volunteers/script/scene-4.pdf" download="Follow the Star script - Scene 4 - Shepherds.pdf" aria-label="Download the script for Scene 4: Shepherds">Download</a>
+				</li>
+				<li>
+					<div><span class="track-num">Scene 5</span><span class="track-title">Mounted Soldiers</span></div>
+					<a class="listen" href="/volunteers/script/scene-5.pdf" download="Follow the Star script - Scene 5 - Mounted Soldiers.pdf" aria-label="Download the script for Scene 5: Mounted Soldiers">Download</a>
+				</li>
+				<li>
+					<div><span class="track-num">Scene 6</span><span class="track-title">Bethlehem</span></div>
+					<a class="listen" href="/volunteers/script/scene-6.pdf" download="Follow the Star script - Scene 6 - Bethlehem.pdf" aria-label="Download the script for Scene 6: Bethlehem">Download</a>
+				</li>
+				<li>
+					<div><span class="track-num">Scene 7</span><span class="track-title">The Manger</span></div>
+					<a class="listen" href="/volunteers/script/scene-7.pdf" download="Follow the Star script - Scene 7 - The Manger.pdf" aria-label="Download the script for Scene 7: The Manger">Download</a>
+				</li>
+				<li>
+					<div><span class="track-num">Scene 8</span><span class="track-title">A Modern Family</span></div>
+					<a class="listen" href="/volunteers/script/scene-8.pdf" download="Follow the Star script - Scene 8 - A Modern Family.pdf" aria-label="Download the script for Scene 8: A Modern Family">Download</a>
+				</li>
+			</ul>
+
+			<h3 class="group">Full script</h3>
 			<!-- The script lives in Google Docs ("Anyone with the link", Viewer). Edits there show up here automatically. -->
 			<div class="script-download">
-				<a class="button" href="https://docs.google.com/document/d/112kx0E3xVy6x3YmJ-eO2zmc91_mYG0UvhFyk5rKnPso/edit?usp=sharing" target="_blank" rel="noopener">Open the script</a>
+				<a class="button" href="https://docs.google.com/document/d/112kx0E3xVy6x3YmJ-eO2zmc91_mYG0UvhFyk5rKnPso/edit?usp=sharing" target="_blank" rel="noopener">Open the full script</a>
+				<p>It opens in Google Docs in a new tab, where you can also print it or download a copy.</p>
 			</div>
 		</section>
 

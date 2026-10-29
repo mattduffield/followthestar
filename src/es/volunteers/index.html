@@ -87,7 +87,8 @@ article .schedule em {margin-top:4px;}
 .audio-folder {text-align:center; margin-top:30px;}
 .audio-folder p {font-size:16px; color:#555;}
 
-.script-download {text-align:center; margin-top:30px;}
+.script-download {text-align:center; margin-top:16px;}
+.script-download p {font-size:16px; color:#555;}
 a.button {border:1px solid #fff; border-radius: 5px; color:#fff; background:#751D19; padding:10px 25px; font:400 18px Inter,Arial,sans-serif; text-decoration: none; text-transform: uppercase; cursor:pointer; white-space: nowrap; display:inline-block; position: relative;}
 a.button:hover {background:#8E2620; transform: translateY(-2px); box-shadow: 0 4px 6px rgba(0,0,0,0.2);}
 
@@ -241,11 +242,55 @@ a.button:hover {background:#8E2620; transform: translateY(-2px); box-shadow: 0 4
 		<section class="volunteer-section" id="script">
 			<h2>Libreto</h2>
 
-			<p class="lead">El libreto completo de cada escena, comenzando con la introducción del Guía asistente. Se abre en Google Docs en una pestaña nueva, donde también puedes imprimirlo o descargar una copia.</p>
+			<p class="lead">Descarga solo la escena en la que participas, o abre el libreto completo, comenzando con la introducción del Guía asistente. (El libreto está en inglés.)</p>
 
+			<!-- Each scene's PDF is made from the Google Doc by docs/script-scenes.py: run it again after the script is edited
+			     there (the full script below always shows the latest). -->
+			<h3 class="group">Por escena</h3>
+			<ul class="audio-list">
+				<li>
+					<div><span class="track-num">Introducción</span><span class="track-title">Guía asistente</span></div>
+					<a class="listen" href="/volunteers/script/introduction.pdf" download="Follow the Star script - Introduction - Assistant Guide.pdf" aria-label="Descargar el libreto de la introducción: Guía asistente">Descargar</a>
+				</li>
+				<li>
+					<div><span class="track-num">Escena 1</span><span class="track-title">Una familia moderna</span></div>
+					<a class="listen" href="/volunteers/script/scene-1.pdf" download="Follow the Star script - Scene 1 - A Modern Family.pdf" aria-label="Descargar el libreto de la escena 1: Una familia moderna">Descargar</a>
+				</li>
+				<li>
+					<div><span class="track-num">Escena 2</span><span class="track-title">El templo de Jerusalén</span></div>
+					<a class="listen" href="/volunteers/script/scene-2.pdf" download="Follow the Star script - Scene 2 - The Temple in Jerusalem.pdf" aria-label="Descargar el libreto de la escena 2: El templo de Jerusalén">Descargar</a>
+				</li>
+				<li>
+					<div><span class="track-num">Escena 3</span><span class="track-title">El palacio de Herodes</span></div>
+					<a class="listen" href="/volunteers/script/scene-3.pdf" download="Follow the Star script - Scene 3 - Herod’s Palace.pdf" aria-label="Descargar el libreto de la escena 3: El palacio de Herodes">Descargar</a>
+				</li>
+				<li>
+					<div><span class="track-num">Escena 4</span><span class="track-title">Los pastores</span></div>
+					<a class="listen" href="/volunteers/script/scene-4.pdf" download="Follow the Star script - Scene 4 - Shepherds.pdf" aria-label="Descargar el libreto de la escena 4: Los pastores">Descargar</a>
+				</li>
+				<li>
+					<div><span class="track-num">Escena 5</span><span class="track-title">Los soldados a caballo</span></div>
+					<a class="listen" href="/volunteers/script/scene-5.pdf" download="Follow the Star script - Scene 5 - Mounted Soldiers.pdf" aria-label="Descargar el libreto de la escena 5: Los soldados a caballo">Descargar</a>
+				</li>
+				<li>
+					<div><span class="track-num">Escena 6</span><span class="track-title">Belén</span></div>
+					<a class="listen" href="/volunteers/script/scene-6.pdf" download="Follow the Star script - Scene 6 - Bethlehem.pdf" aria-label="Descargar el libreto de la escena 6: Belén">Descargar</a>
+				</li>
+				<li>
+					<div><span class="track-num">Escena 7</span><span class="track-title">El pesebre</span></div>
+					<a class="listen" href="/volunteers/script/scene-7.pdf" download="Follow the Star script - Scene 7 - The Manger.pdf" aria-label="Descargar el libreto de la escena 7: El pesebre">Descargar</a>
+				</li>
+				<li>
+					<div><span class="track-num">Escena 8</span><span class="track-title">Una familia moderna</span></div>
+					<a class="listen" href="/volunteers/script/scene-8.pdf" download="Follow the Star script - Scene 8 - A Modern Family.pdf" aria-label="Descargar el libreto de la escena 8: Una familia moderna">Descargar</a>
+				</li>
+			</ul>
+
+			<h3 class="group">Libreto completo</h3>
 			<!-- The script lives in Google Docs ("Anyone with the link", Viewer). Edits there show up here automatically. -->
 			<div class="script-download">
-				<a class="button" href="https://docs.google.com/document/d/112kx0E3xVy6x3YmJ-eO2zmc91_mYG0UvhFyk5rKnPso/edit?usp=sharing" target="_blank" rel="noopener">Abrir el libreto</a>
+				<a class="button" href="https://docs.google.com/document/d/112kx0E3xVy6x3YmJ-eO2zmc91_mYG0UvhFyk5rKnPso/edit?usp=sharing" target="_blank" rel="noopener">Abrir el libreto completo</a>
+				<p>Se abre en Google Docs en una pestaña nueva, donde también puedes imprimirlo o descargar una copia.</p>
 			</div>
 		</section>
 
