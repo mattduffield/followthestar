@@ -2951,7 +2951,7 @@
 		if (night.weather === 'sandstorm') tint('rgba(160,108,58,A)', 0.5 * wx.level, TOPV);
 		paintBolt();
 		paintStarRay();
-		paintLayer('mid'); paintMirage(); paintCrestSand(); paintPieces('mid');
+		paintCrestSand(); paintLayer('mid'); paintMirage(); paintPieces('mid');   // (the sand blowing off the crests goes behind the middle dunes, so anything on them is in front)
 		paintDustDevils();
 		if (night.weather === 'fog') paintMist(560, 0.45, 0.8, 1.1);
 		if (mm > 0.01) paintMist(566, 0.5 * mm, 0.8, 1.2);
