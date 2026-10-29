@@ -21,6 +21,8 @@ src/                    ← the website (deploy this folder)
 ├── browserconfig.xml
 ├── robots.txt
 └── sitemap.xml
+tools/                  ← helper scripts run on your computer (not part of the website)
+└── script-scenes.py    makes the volunteers page's script PDFs, one per scene
 ```
 
 Styles used by only one page are kept in a `<style>` block inside that page. The header and footer are repeated in each HTML file, so if you change them, update every page.
@@ -44,6 +46,29 @@ Each year:
 
 - **Dates and times:** in `src/index.html`, update the "Performances start…" and "Tickets go on sale…" text and the rows in the performance schedule (`<div class="schedule">`).
 - **Year count:** in `src/faq/index.html`, update the "this will be our Nth year" answer.
+
+## The script by scene (volunteers page)
+
+The volunteers page (`src/volunteers/index.html`, under **Script**) has a Download button for each scene: the Assistant Guide's introduction and Scenes 1 to 8, in `src/volunteers/script/` (`introduction.pdf`, `scene-1.pdf` … `scene-8.pdf`). The "Open the full script" button goes to the Google Doc itself.
+
+The scene PDFs are copies, made from the Google Doc: **after the script is edited in Google Docs, make them again**, then commit and push:
+
+```sh
+python3 tools/script-scenes.py
+git add src/volunteers/script
+git commit -m 'Volunteers: the scene scripts updated from the Google Doc'
+git push
+```
+
+It needs only Python 3 and Google Chrome (which turns each scene into a PDF), and reads the Doc through its public link, so the Doc must stay shared as "Anyone with the link: Viewer". The file names never change, so the page's links don't need touching.
+
+How it splits the script:
+
+- Everything before the **SCENE 1** heading is the introduction.
+- Each scene runs from its **SCENE n** heading (a paragraph starting with "SCENE" and the number) to the next one, so the guide's lines walking to the next scene stay with the scene they end. The line after the heading (or after a line break in the same paragraph) is the scene's title.
+- Each PDF keeps the Doc's own formatting and has a small line at the top: the scene and the date it was made.
+
+If a SCENE heading is renamed or removed, it stops with an error ("expected the introduction and scenes 1 to 8") instead of making wrong PDFs. If scenes are added or removed for good, update the check in `tools/script-scenes.py` (`range(9)`: the introduction plus 8 scenes) and the list on the volunteers page, then add the new wording to `src/lang/es/volunteers.json` and `src/lang/ru/volunteers.json` and run `python3 docs/site-lang.py build` so the Spanish and Russian pages match.
 
 ## Adding a page
 
