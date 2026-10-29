@@ -69,6 +69,12 @@ document.addEventListener('DOMContentLoaded', function() {
 			el.hidden = false;
 	});
 
+	// the language picker: closes on a click anywhere else, or Escape
+	document.querySelectorAll('.langpick').forEach(function(pick) {
+		document.addEventListener('click', function(e) { if (pick.open && !pick.contains(e.target)) pick.open = false; });
+		document.addEventListener('keydown', function(e) { if (e.key === 'Escape' && pick.open) { pick.open = false; pick.querySelector('summary').focus(); } });
+	});
+
 	// someone whose browser is set to another language this page is in: a one-time suggestion to see it in theirs
 	(function() {
 		var WORDS = {es: ['¿Ver esta página en español?', 'Sí'], ru: ['Открыть эту страницу на русском?', 'Да'], en: ['See this page in English?', 'Yes']};

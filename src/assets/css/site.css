@@ -12,8 +12,6 @@ header > a > img {width:86px; height:69px;}
 header > .buttons {display:flex; align-items:center;}
 header > .buttons a, header > .buttons button {border:1px solid #FFDB59; border-radius: 5px; color:#FFDB59; background:none; padding:10px 25px; display:inline-block; font:400 18px Inter,Arial,sans-serif; text-decoration: none; text-transform: uppercase; cursor:pointer; text-align:center;}
 header > .buttons a {margin-right:20px;}
-header > .buttons a.lang {border-color:rgba(255,219,89,0.45); text-transform:none; margin-right:0;}
-header > .buttons a.lang + a.lang {margin-left:8px;}   /* the other language: quieter than the buttons */
 
 @media screen and (max-width:500px) {
 	header > a > img {width:55px; height:40px; margin-top:15px}
@@ -21,7 +19,8 @@ header > .buttons a.lang + a.lang {margin-left:8px;}   /* the other language: qu
 	header > .buttons a, header > .buttons button {padding:8px 12px;}
 	header > .buttons a {margin-right:8px; white-space:nowrap;}
 	header > .buttons .wide {display:none;}   /* "The Journey" becomes "Journey" */
-	header > .buttons a.lang .lang-long {display:none;} header > .buttons a.lang::after {content:attr(data-short);}   /* "Español" becomes "ES" */
+	header > .buttons .langpick .lang-long {display:none;} header > .buttons .langpick summary {padding:8px 10px; font-size:14px;}
+	header > .buttons .langpick summary::after {content:attr(data-short); order:1;}   /* "English" becomes "EN" */
 }
 
 @media screen and (max-width:400px) {
@@ -79,3 +78,18 @@ footer .credits a {color:#fff;}
 .lang-suggest {position:fixed; left:50%; bottom:max(16px, env(safe-area-inset-bottom)); transform:translateX(-50%); z-index:20; display:flex; align-items:center; gap:10px; background:rgba(7,11,34,0.92); border:1px solid rgba(255,219,89,0.5); border-radius:22px; padding:7px 8px 7px 18px; color:#fff; font:400 15px Inter,Arial,sans-serif; white-space:nowrap; box-shadow:0 8px 24px rgba(0,0,0,0.4);}
 .lang-suggest a {background:#FFDB59; color:#1a1240; border-radius:16px; padding:5px 16px; font-weight:600; text-decoration:none;}
 .lang-suggest button {background:none; border:0; color:#ccc; font-size:15px; cursor:pointer; padding:4px 8px;}
+
+/* the language picker in the header (docs/site-lang.py writes it): the page's language, opening a menu of the others */
+header > .buttons .langpick {position:relative;}
+header > .buttons .langpick summary {list-style:none; display:flex; align-items:center; gap:7px; border:1px solid rgba(255,219,89,0.55); border-radius:5px; color:#FFDB59; padding:10px 14px; font:400 16px Inter,Arial,sans-serif; cursor:pointer; user-select:none; white-space:nowrap;}
+header > .buttons .langpick summary::-webkit-details-marker {display:none;}
+header > .buttons .langpick summary:hover, header > .buttons .langpick[open] summary {background:rgba(255,219,89,0.12);}
+header > .buttons .langpick summary:focus-visible {outline:2px solid #fff; outline-offset:2px;}
+header > .buttons .langpick .globe {flex:none; opacity:0.9;}
+header > .buttons .langpick .caret {order:2; width:7px; height:7px; border-right:1.6px solid currentColor; border-bottom:1.6px solid currentColor; transform:translateY(-2px) rotate(45deg); transition:transform 0.2s;}
+header > .buttons .langpick[open] .caret {transform:translateY(1px) rotate(-135deg);}
+header > .buttons .langpick ul {position:absolute; right:0; top:calc(100% + 8px); z-index:30; margin:0; padding:6px; list-style:none; min-width:170px; background:rgba(7,11,34,0.96); border:1px solid rgba(255,219,89,0.45); border-radius:10px; box-shadow:0 12px 30px rgba(0,0,0,0.45);}
+header > .buttons .langpick li a {display:flex; justify-content:space-between; align-items:center; gap:12px; border:0; border-radius:6px; margin:0; padding:9px 12px; color:#e8e3ff; font:400 16px Inter,Arial,sans-serif; text-transform:none; text-align:left; text-decoration:none;}
+header > .buttons .langpick li a:hover, header > .buttons .langpick li a:focus-visible {background:rgba(255,219,89,0.14); color:#FFDB59; outline:none;}
+header > .buttons .langpick li a[aria-current] {color:#FFDB59; font-weight:600;}
+header > .buttons .langpick li a[aria-current]::after {content:'✓';}
