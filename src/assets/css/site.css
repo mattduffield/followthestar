@@ -12,7 +12,8 @@ header > a > img {width:86px; height:69px;}
 header > .buttons {display:flex; align-items:center;}
 header > .buttons a, header > .buttons button {border:1px solid #FFDB59; border-radius: 5px; color:#FFDB59; background:none; padding:10px 25px; display:inline-block; font:400 18px Inter,Arial,sans-serif; text-decoration: none; text-transform: uppercase; cursor:pointer; text-align:center;}
 header > .buttons a {margin-right:20px;}
-header > .buttons a.lang {border-color:rgba(255,219,89,0.45); text-transform:none; margin-right:0;}   /* the other language: quieter than the buttons */
+header > .buttons a.lang {border-color:rgba(255,219,89,0.45); text-transform:none; margin-right:0;}
+header > .buttons a.lang + a.lang {margin-left:8px;}   /* the other language: quieter than the buttons */
 
 @media screen and (max-width:500px) {
 	header > a > img {width:55px; height:40px; margin-top:15px}

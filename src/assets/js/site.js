@@ -71,7 +71,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
 	// someone whose browser is set to another language this page is in: a one-time suggestion to see it in theirs
 	(function() {
-		var WORDS = {es: ['¿Ver esta página en español?', 'Sí'], en: ['See this page in English?', 'Yes']};
+		var WORDS = {es: ['¿Ver esta página en español?', 'Sí'], ru: ['Открыть эту страницу на русском?', 'Да'], en: ['See this page in English?', 'Yes']};
 		var here = document.documentElement.lang || 'en';
 		var want = String((navigator.languages || [navigator.language])[0] || '').slice(0, 2).toLowerCase();
 		var alt = document.querySelector('link[rel="alternate"][hreflang="' + want + '"]');

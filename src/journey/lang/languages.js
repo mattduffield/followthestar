@@ -3,5 +3,6 @@
 // "yes": the one-time suggestion to someone whose browser is set to that language. Add a language: docs/journey-lang.py.
 var JOURNEY_LANGUAGES = [
 	{"code": "en", "name": "English", "locale": "en-US", "href": "/journey/", "ready": true, "ask": "See The Journey in English?", "yes": "Yes"},
-	{"code": "es", "name": "Español", "locale": "es-US", "href": "/es/journey/", "ready": true, "ask": "¿Ver El Viaje en español?", "yes": "Sí"}
+	{"code": "es", "name": "Español", "locale": "es-US", "href": "/es/journey/", "ready": true, "ask": "¿Ver El Viaje en español?", "yes": "Sí"},
+	{"code": "ru", "name": "Русский", "locale": "ru-RU", "href": "/ru/journey/", "ready": false, "ask": "Открыть «Путешествие» на русском?", "yes": "Да", "css": "/assets/css/lang-ru.css"}
 ];
