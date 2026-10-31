@@ -39,6 +39,20 @@
 	var params = new URLSearchParams(location.search);
 	if (params.get('art')) ART_READY = ART_READY.concat(params.get('art').split(','));   // ?art=name,name to try art before it's listed
 	var TEST = params.has('test');
+	// Saving the journal across devices (a household code; the gsp tenant's journey endpoints, made in API Studio). On this
+	// computer, or with ?test, the dev endpoints; on the site, the live ones once they're published (SYNC_LIVE).
+	var SYNC_LIVE = false;
+	var SYNC_DEV = /^(localhost|127\.0\.0\.1)$/.test(location.hostname) || TEST;
+	var SYNC_BASE = SYNC_DEV ? 'https://gsp.dev.informaevents.com/api/x/journey/' : SYNC_LIVE ? 'https://gsp.informaevents.com/api/x/journey/' : '';
+	var SYNC_KEY = 'journey-sync' + (SYNC_DEV ? '-dev' : '');
+	var sync = null;   // {code, token, traveler, travelers: [{id, animal}], others: {store: the other devices' part}, visits, shared, reminded}
+	try { sync = SYNC_BASE ? JSON.parse(localStorage.getItem(SYNC_KEY) || 'null') : null; } catch (e) { sync = null; }
+	var mergedVersion = 0;   // (goes up whenever the other devices' part changes)
+	function othersOf(store) { return sync && sync.others && sync.others[store]; }
+	function syncList(store, mine) {   // this device's list with the other devices' added (each thing once)
+		var o = othersOf(store); if (!Array.isArray(o) || !o.length) return mine;
+		var out = mine.slice(); o.forEach(function(x) { if (out.indexOf(x) < 0) out.push(x); }); return out;
+	}
 
 	// ----- dates -----
 	// The journey runs every year from October 1 to January 6. From January 7 to September 30 they're home in the East
@@ -2228,14 +2242,28 @@
 	}
 	var GUIDE_KEY = 'journey-guide', READ_KEY = 'journey-read', DAYNIGHT_KEY = 'journey-daynight';
 	var guideStore = null;   // {id: {n: times found, days: [the nights it was found on]}}
-	function guideData() { if (!guideStore) { try { guideStore = JSON.parse(localStorage.getItem(GUIDE_KEY) || '{}') || {}; } catch (e) { guideStore = {}; } } return guideStore; }
+	function guideMine() { if (!guideStore) { try { guideStore = JSON.parse(localStorage.getItem(GUIDE_KEY) || '{}') || {}; } catch (e) { guideStore = {}; } } return guideStore; }
+	var guideMerged = null, guideMergedAt = -1;
+	function guideData() {   // what's been found: this device's own, with the other devices' added when the journal is saved
+		var mine = guideMine(), o = othersOf('journey-guide');
+		if (!o) return mine;
+		if (guideMerged && guideMergedAt === mergedVersion) return guideMerged;
+		var g = {};
+		Object.keys(mine).concat(Object.keys(o)).forEach(function(id) {
+			if (g[id]) return;
+			var a = mine[id] || {n: 0, days: []}, b = o[id] || {n: 0, days: []}, days = (a.days || []).slice();
+			(b.days || []).forEach(function(d) { if (days.indexOf(d) < 0) days.push(d); });
+			g[id] = {n: (a.n || 0) + (b.n || 0), days: days};
+		});
+		guideMerged = g; guideMergedAt = mergedVersion; return g;
+	}
 	function guideSave() { try { localStorage.setItem(GUIDE_KEY, JSON.stringify(guideStore)); } catch (e) {} }
 	var counted = {}, tapNotes = [], uidSeq = 0;   // what's been counted since tonight began (each thing once a night); the words shown where it was found
 	function noteFind(ids, uid, x, y) {   // something found: counted once for each time it appears, and named where it was
 		ids = [].concat(ids).filter(function(id) { return GUIDE_BY_ID[id]; });
 		if (!ids.length) return false;
 		if (typeof uid === 'object') uid = uid.guideUid || (uid.guideUid = 'o' + (++uidSeq));   // (a creature or piece: its own name, as a key)
-		var g = guideData(), first = false, n = 0;
+		var g = guideMine(), first = false, n = 0;
 		if (!counted[uid]) {
 			counted[uid] = true;
 			ids.forEach(function(id) {
@@ -2243,10 +2271,10 @@
 				if (!r.n) first = true;
 				r.n++; if (!HOMEMODE && r.days.indexOf(night.day) < 0) r.days.push(night.day);
 			});
-			guideSave(); track('guide_find', {id: ids[0], n: g[ids[0]].n});
+			mergedVersion++; guideSave(); track('guide_find', {id: ids[0], n: g[ids[0]].n});
 			if (first) setTimeout(journalGlint, 300);
 		}
-		n = g[ids[0]].n;
+		n = (guideData()[ids[0]] || g[ids[0]]).n;   // (the count shown: every device's)
 		if (x != null) {
 			tapNotes = tapNotes.filter(function(t) { return clock - t.t < 2.4 && Math.hypot(t.x - x, t.y - y) > 30; });
 			tapNotes.push({text: GUIDE_BY_ID[ids[0]].name, n: n, first: first, x: x, y: y, t: clock});
@@ -2668,7 +2696,7 @@
 	var find = {got: -1};
 	function findDay() { return HOMEMODE ? 1000 + YEARDAY : night.day; }
 	function findKey() { return HOMEMODE ? 'home-' + ymd(now()) : String(night.day); }   // (one find a day at home)
-	function findsMade() { try { return JSON.parse(localStorage.getItem(FIND_KEY) || '[]'); } catch (e) { return []; } }
+	function findsMade() { var l; try { l = JSON.parse(localStorage.getItem(FIND_KEY) || '[]'); } catch (e) { l = []; } return syncList('journey-finds', l); }
 	function findSpot() {   // tonight's: a place on the sand, clear of the fire and the caravan
 		var fd = findDay(), r = rng(fd * 131 + 7), x = [VW * 0.08, VW * 0.42, VW * 0.62, VW * 0.95][Math.floor(r() * 4)] + (r() - 0.5) * 60;
 		var base = cam * DAYW - LEAD_X;
@@ -2726,7 +2754,7 @@
 		return true;
 	}
 	var pip = {box: null, near: false, hop: -1, hopT: 0, u: null, state: 'trot', target: 0, until: 0, rng: null, last: 0, dir: 1, card: false};
-	function pipFound() { try { return JSON.parse(localStorage.getItem(PIP_KEY) || '[]'); } catch (e) { return []; } }
+	function pipFound() { var l; try { l = JSON.parse(localStorage.getItem(PIP_KEY) || '[]'); } catch (e) { l = []; } return syncList('journey-pip-found', l); }
 	var PIP_SPOTS = [130, -110, -330, 250, -470, 60];          // around the caravan, from the lead camel (scene units)
 	function pipReset() {
 		pip.rng = rng(night.day * 977 + 31); pip.u = null; pip.sx = null; pip.state = 'trot'; pip.until = 0; pip.hop = -1; pip.last = clock;
@@ -2854,7 +2882,7 @@
 		track('pip_found'); setTimeout(journalGlint, 400);
 		pip.hop = 0; pip.hopT = 0;
 		if (HOMEMODE) {   // at home: a card for each week of the year, and how many days Pip has been found at home
-			var hk = ymd(now()), home = []; try { home = JSON.parse(localStorage.getItem(PIP_HOME_KEY) || '[]'); } catch (e) {}
+			var hk = ymd(now()), home = readList(PIP_HOME_KEY);
 			if (home.indexOf(hk) < 0) { home.push(hk); try { localStorage.setItem(PIP_HOME_KEY, JSON.stringify(home)); } catch (e) {} }
 			var cards = PIP_WEEK_CARDS.length ? PIP_WEEK_CARDS : [''];
 			pipCard.querySelector('p').textContent = EASTER() ? T('Happy Easter! Early on the first day of the week, the women found the stone rolled away. “He is not here: for he is risen” (Matthew 28:6).') : cards[Math.floor(YEARDAY / 7) % cards.length];
@@ -3483,8 +3511,9 @@
 	// every picture in it drawn by the scene's own code (Pip's art, the finds as they lie in the sand, the stable).
 	var journalEl = document.getElementById('journal'), journalBtn = document.getElementById('journal-btn'), homeWatch = null;
 	var JSEEN = 'journey-journal-seen', JEASTER = 'journey-easter';
-	function readList(key) { try { return JSON.parse(localStorage.getItem(key) || '[]'); } catch (e) { return []; } }
+	function readList(key) { var l; try { l = JSON.parse(localStorage.getItem(key) || '[]'); } catch (e) { l = []; } return syncList(key, l); }   // (with the other devices' part, when the journal is saved)
 	var dnCache = null;
+	function dayNightAll() { var a = daynight(), o = othersOf('journey-daynight') || {}; return {day: a.day || (o.day ? 1 : 0), night: a.night || (o.night ? 1 : 0)}; }
 	function daynight() { if (!dnCache) { try { var v = JSON.parse(localStorage.getItem(DAYNIGHT_KEY) || '{}') || {}; dnCache = {day: v.day ? 1 : 0, night: v.night ? 1 : 0}; } catch (e) { dnCache = {day: 0, night: 0}; } } return dnCache; }
 	function withCtx(c, fn) { var main = ctx; ctx = c; try { fn(); } finally { ctx = main; } }
 	function smallCanvas(w, h, draw) {
@@ -3507,7 +3536,7 @@
 		home.forEach(function(ymdStr) { var d = new Date(ymdStr + 'T12:00:00'); weeks[Math.floor(Math.floor((d - new Date(d.getFullYear(), 0, 1)) / DAY) / 7)] = 1; });
 		var best = 0, run = 0; for (var k = 0; k <= END; k++) { run = found.indexOf(k) >= 0 ? run + 1 : 0; best = Math.max(best, run); }
 		return {found: found, picked: picked, kinds: kinds, treasures: made.length, home: home, weeks: weeks, best: best, easter: readList(JEASTER).length > 0,
-			g: guideData(), read: readList(READ_KEY), dn: daynight(), sk: skStats()};
+			g: guideData(), read: readList(READ_KEY), dn: dayNightAll(), sk: skStats(), visits: sync && sync.visits || []};
 	}
 	function gHas(d, id) { return !!(d.g[id] && d.g[id].n > 0); }
 	function gPage(d, page) { return GUIDE.every(function(e) { return e.page !== page || gHas(d, e.id); }); }
@@ -3549,10 +3578,11 @@
 		['sk1', T('First sketch'), T('Make a sketch for your sketchbook'), function(d) { return d.sk.made >= 1; }],
 		['skbeth', T('A sketch of Bethlehem'), T('Make a sketch as they reach Bethlehem'), function(d) { return !!d.sk.beth; }],
 		['skxmas', T('Christmas at the stable'), T('Make a sketch at the stable on Christmas night'), function(d) { return !!d.sk.xmas; }],
-		['skfull', T('A full sketchbook'), T('Fill your sketchbook with 30 sketches'), function(d) { return d.sk.n >= SK_MAX; }]
+		['skfull', T('A full sketchbook'), T('Fill your sketchbook with 30 sketches'), function(d) { return d.sk.n >= SK_MAX; }],
+		['visit', T('I was there!'), T('Come to Follow the Star in Gladstone and scan the sign at the end'), function(d) { return d.visits.length > 0; }]
 	];
 	var BADGE_ICON = {caravan: 'camel-1', gazer: 'c-0', moons: 'moon-full', follow: 'star', xstar: 'star', meteors: 'meteor', comet: 'comet', rainbow: 'rainbow', bolt: 'lightning', storm: 'storm',
-		animals: 'wolf', small: 'beetle', birds: 'owl', road: 'merchants', places: 'jerusalem', weather: 'wind', daynight: 'sunset', explorer: 'fox', guide: 'stable'};
+		visit: 'stable', animals: 'wolf', small: 'beetle', birds: 'owl', road: 'merchants', places: 'jerusalem', weather: 'wind', daynight: 'sunset', explorer: 'fox', guide: 'stable'};
 	function badgeIcon(kind) {   // little pictures in the Journey's style, for the medals
 		return smallCanvas(80, 80, function(g) {
 			var pipIm = art('jr-cr-sand-mouse');
@@ -3787,6 +3817,7 @@
 		});
 		buildGuide(d, seen, first);
 		buildSketchbook();
+		renderSync();
 		// badges
 		var bd = document.getElementById('jbadges'); bd.innerHTML = '';
 		BADGES.forEach(function(bg) {
@@ -3842,6 +3873,8 @@
 		buildJournal(); jcard.hidden = true;
 		jWasPlaying = playing; playing = false; updateControls();
 		journalEl.showModal(); requestAnimationFrame(journalSky);
+		if (sync && Date.now() - (sync.pulled || 0) > 60000) syncPull().then(function() { if (journalEl.open && jcard.hidden) buildJournal(); });   // (what the other devices found)
+		setTimeout(function() { if (journalEl.open) syncNudge(journalData()); }, 700);
 		journalEl.querySelector('.tabs button[aria-selected=true]').focus({preventScroll: true}); journalEl.querySelector('.jbody').scrollTop = 0;
 	}
 	function closeJournal(leaving) {
@@ -4041,6 +4074,295 @@
 	var skAllBtn = document.getElementById('jsketch-all');
 	if (skAllBtn) skAllBtn.addEventListener('click', function() { skAll().then(function(list) { printSketches(list.slice().reverse()); track('sketch_print', {all: 'yes'}); }); });
 
+	// ----- keeping the journal safe: a household code, so it's the same journal on any device -----
+	// Nothing personal: a household gets a code of three words and a number (camel-olive-lantern-27) and each person on it
+	// is an animal. This device keeps its own progress in its usual stores, sends just that (never the added-up journal,
+	// which would count twice) a few seconds after anything changes, and keeps the other devices' part (sync.others) to
+	// show with it. More than one traveler on a device: each one's own stores are put aside while another is watching.
+	var STORES = ['journey-guide', 'journey-finds', 'journey-pip-found', 'journey-pip-home', 'journey-read', 'journey-daynight', 'journey-easter', 'journey-journal-seen'];
+	function storeKey(store) { return store === 'journey-pip-found' ? PIP_KEY : store; }
+	var ANIMALS = {fox: ['🦊', T('Fox')], owl: ['🦉', T('Owl')], camel: ['🐫', T('Camel')], lamb: ['🐑', T('Lamb')], donkey: ['🫏', T('Donkey')], dove: ['🕊️', T('Dove')],
+		sparrow: ['🐦', T('Sparrow')], hedgehog: ['🦔', T('Hedgehog')], rabbit: ['🐇', T('Rabbit')], deer: ['🦌', T('Deer')], goat: ['🐐', T('Goat')], bear: ['🐻', T('Bear')],
+		turtle: ['🐢', T('Turtle')], otter: ['🦦', T('Otter')], robin: ['🐦', T('Robin')], panda: ['🐼', T('Panda')]};
+	function animalOf(id) { var t = sync && (sync.travelers || []).filter(function(x) { return x.id === id; })[0]; return t && ANIMALS[t.animal] ? t.animal : 'fox'; }
+	function animalLabel(a) { var x = ANIMALS[a] || ['✦', a]; return x[0] + ' ' + x[1]; }
+	function saveSync() { try { if (sync) localStorage.setItem(SYNC_KEY, JSON.stringify(sync)); else localStorage.removeItem(SYNC_KEY); } catch (e) {} }
+	function syncApi(method, path, body) {
+		var h = {}; if (body) h['Content-Type'] = 'application/json'; if (sync && sync.token) h.Authorization = 'Bearer ' + sync.token;
+		return fetch(SYNC_BASE + path, {method: method, headers: h, body: body ? JSON.stringify(body) : undefined, mode: 'cors', credentials: 'omit', keepalive: method === 'PUT'})
+			.then(function(r) { return r.json().catch(function() { return {}; }).then(function(j) {
+				if (!r.ok) { var e = new Error(j.error && j.error.code || 'http_' + r.status); e.status = r.status; throw e; }
+				return j;
+			}); });
+	}
+	function syncLost(e) {   // the household was forgotten (on another device), or its token revoked: this device carries on alone
+		if (e && e.status === 401 && sync) { sync = null; saveSync(); mergedVersion++; renderSync(); }
+	}
+	function mineNow() {   // this device's own stores, for sending
+		var data = {};
+		STORES.forEach(function(st) { var raw = localStorage.getItem(storeKey(st)); if (raw != null) try { data[st] = JSON.parse(raw); } catch (e) {} });
+		return data;
+	}
+	function applyJournal(journal, mine) {   // the other devices' part: everything added up, less this device's own (as the server had it)
+		var o = {};
+		STORES.forEach(function(st) {
+			var j = journal && journal[st]; if (j == null) return;
+			if (st === 'journey-guide') {
+				var m = mine && mine[st] || {}, g = {};
+				Object.keys(j).forEach(function(id) { g[id] = {n: Math.max(0, (j[id].n || 0) - (m[id] && m[id].n || 0)), days: j[id].days || []}; });
+				o[st] = g;
+			} else o[st] = j;   // (lists and the day-and-night flags are unions: having this device's part as well is harmless)
+		});
+		sync.others = o; mergedVersion++;
+	}
+	var pushing = false;
+	function syncPush(force) {
+		if (!sync || !sync.token || pushing) return;
+		var data = mineNow(), json = JSON.stringify(data);
+		if (!force && json === sync.pushed) return;
+		pushing = true;
+		syncApi('PUT', 'progress', {traveler: sync.traveler, data: data}).then(function(r) {
+			sync.pushed = json; applyJournal(r.journal, r.mine); saveSync();
+		}).catch(syncLost).then(function() { pushing = false; });
+	}
+	function syncPull() {
+		if (!sync || !sync.token) return Promise.resolve();
+		return syncApi('GET', 'progress').then(function(r) {
+			sync.travelers = (r.travelers || []).map(function(t) { return {id: t.id, animal: t.animal}; });
+			var me = (r.travelers || []).filter(function(t) { return t.id === sync.traveler; })[0] || (r.travelers || [])[0];
+			if (me) { sync.traveler = me.id; applyJournal(me.journal, me.mine); sync.visits = me.visits || []; }
+			sync.pulled = Date.now(); saveSync(); mapPaws(); renderSync();
+		}).catch(syncLost);
+	}
+	if (SYNC_BASE) {
+		setInterval(function() { syncPush(false); }, 8000);   // (a few seconds after anything changes; nothing while there's no household)
+		document.addEventListener('visibilitychange', function() { if (document.visibilityState === 'hidden') syncPush(false); });
+		if (sync) syncPull();
+	}
+	// the household's code, drawn: on the card shown, printed or saved as a picture
+	function codeWords(code) { return String(code).split('-'); }
+	function codeURL(code) { return location.origin + location.pathname + '?join=' + encodeURIComponent(code); }
+	var qrLoading = null;
+	function qrLib() {
+		if (window.qrcode) return Promise.resolve(window.qrcode);
+		return qrLoading || (qrLoading = new Promise(function(ok, no) { var s = document.createElement('script'); s.src = '/journey/qrcode.js'; s.onload = function() { ok(window.qrcode); }; s.onerror = no; document.head.appendChild(s); }));
+	}
+	function drawQR(g, text, x, y, size, dark) {
+		var q = window.qrcode(0, 'M'); q.addData(text); q.make();
+		var n = q.getModuleCount(), cell = size / (n + 2);
+		g.fillStyle = '#fff'; g.fillRect(x, y, size, size); g.fillStyle = dark || '#1a1240';
+		for (var r = 0; r < n; r++) for (var c = 0; c < n; c++) if (q.isDark(r, c)) g.fillRect(x + (c + 1) * cell, y + (r + 1) * cell, cell + 0.5, cell + 0.5);
+	}
+	function codeCard() {   // the card for the fridge: Pip, the code, the QR, and what to do with it
+		var W = 1050, H = 600, c = document.createElement('canvas'); c.width = W; c.height = H;
+		var g = c.getContext('2d');
+		g.fillStyle = '#fbf3e1'; g.fillRect(0, 0, W, H);
+		g.strokeStyle = '#e0b860'; g.lineWidth = 6; g.strokeRect(14, 14, W - 28, H - 28);
+		var pipIm = art('jr-cr-sand-mouse'); if (pipIm) { g.filter = PIP_LOOK; g.drawImage(pipIm, 60, 60, 120, 120 * pipIm.height / pipIm.width); g.filter = 'none'; }
+		g.fillStyle = '#5a3a12'; g.font = 'italic 40px Merienda, Georgia, serif'; g.fillText(T('Pip’s Journal'), 200, 110);
+		g.fillStyle = '#7a5220'; g.font = '22px Georgia, serif'; g.fillText(T('Our household code'), 200, 150);
+		g.fillStyle = '#751D19'; g.font = 'bold 50px Georgia, serif';
+		codeWords(sync.code).forEach(function(w, i) { g.fillText(w, 70, 250 + i * 66); });
+		g.fillStyle = '#5a3a12'; g.font = '21px Georgia, serif';
+		[T('On another phone, tablet or computer:'), T('scan the code, or open followthestar.church/journey'), T('and tap “I have a code”.')].forEach(function(l, i) { g.fillText(l, 70, 500 + i * 30); });
+		drawQR(g, codeURL(sync.code), W - 380, 150, 320);
+		g.fillStyle = '#7a5220'; g.font = '18px Georgia, serif'; g.textAlign = 'center'; g.fillText(T('Scan to open your journal'), W - 220, 500);
+		return c;
+	}
+	function markShared() { if (sync) { sync.shared = 1; saveSync(); } }
+	function showCode() {   // the code, big, with what to do with it
+		if (!sync) return;
+		qrLib().then(function() {
+			jcard.className = 'jcard wide jsync-card';
+			var words = codeWords(sync.code).map(function(w) { return '<span>' + escapeHTML(w) + '</span>'; }).join('<i>·</i>');
+			jcard.innerHTML = '<h4 id="jcardT">' + T('Your journal is safe') + '</h4>' +
+				'<p>' + T('Write down your code or print the card. On another device, scan the QR code, or open the Journey and tap “I have a code”.') + '</p>' +
+				'<div class="jcode-row"><div class="jcode">' + words + '</div><canvas class="jqr" width="220" height="220"></canvas></div>' +
+				'<div class="row"><button type="button" id="jsPrint">' + T('Print my code card') + '</button><button type="button" id="jsSend">' + T('Send it to someone') + '</button><button type="button" id="jsPic">' + T('Save a picture') + '</button></div>' +
+				'<div class="row small"><button type="button" id="jsAdd">' + T('Add a traveler') + '</button><button type="button" id="jsForget">' + T('Forget my journal') + '</button><button type="button" id="jcClose">' + T('Close') + '</button></div>';
+			drawQR(jcard.querySelector('.jqr').getContext('2d'), codeURL(sync.code), 0, 0, 220);
+			var close = function() { jcard.hidden = true; jcard.className = 'jcard'; renderSync(); };
+			document.getElementById('jcClose').onclick = close;
+			document.getElementById('jsPrint').onclick = function() {
+				var w = window.open('', '_blank'); if (!w) return;
+				w.document.write('<!doctype html><title>' + escapeHTML(T('Pip’s Journal')) + '</title><style>@page{size:letter;margin:0.6in}body{margin:0;text-align:center}img{width:5.25in;border:1px dashed #bbb}</style><img alt="" src="' + codeCard().toDataURL('image/png') + '">');
+				w.document.close(); setTimeout(function() { w.focus(); w.print(); }, 300); markShared(); track('sync_card', {how: 'print'});
+			};
+			document.getElementById('jsSend').onclick = function() {
+				var text = T('Our code for Pip’s Journal on followthestar.church: {code}', {code: sync.code}), url = codeURL(sync.code);
+				if (navigator.share) navigator.share({title: T('Pip’s Journal'), text: text, url: url}).then(markShared).catch(function() {});
+				else { location.href = 'mailto:?subject=' + encodeURIComponent(T('Pip’s Journal')) + '&body=' + encodeURIComponent(text + '\n' + url); markShared(); }
+				track('sync_card', {how: 'send'});
+			};
+			document.getElementById('jsPic').onclick = function() {
+				codeCard().toBlob(function(b) { var u = URL.createObjectURL(b), a = document.createElement('a'); a.href = u; a.download = T('Pip’s Journal') + ' - ' + sync.code + '.png'; document.body.appendChild(a); a.click(); a.remove(); setTimeout(function() { URL.revokeObjectURL(u); }, 4000); });
+				markShared(); track('sync_card', {how: 'picture'});
+			};
+			document.getElementById('jsAdd').onclick = function() { pickAnimal(T('Add a traveler'), T('Who’s joining the journey? Pick an animal for them.')).then(function(a) { if (a) addTraveler(a); }); };
+			var sure = false;
+			document.getElementById('jsForget').onclick = function() {
+				if (!sure) { sure = true; this.textContent = T('Sure? Forget it on every device'); return; }
+				forgetJournal();
+			};
+			jcard.hidden = false; document.getElementById('jcClose').focus();
+		}).catch(function() {});
+	}
+	// a small question in the Journey's own style (the same look as "The journey so far?"); answers with the button's value
+	function askBox(title, text, buttons, extra) {
+		return new Promise(function(done) {
+			var d = document.createElement('dialog'); d.className = 'ask sync-ask';
+			d.innerHTML = '<span class="ask-star" aria-hidden="true">✦</span><h2></h2><p></p>' + (extra || '') + '<div class="ask-row"></div>';
+			d.querySelector('h2').textContent = title; d.querySelector('p').textContent = text;
+			if (!text) d.querySelector('p').remove();
+			var row = d.querySelector('.ask-row'), answered = false;
+			var finish = function(v) { if (answered) return; answered = true; d.close(); d.remove(); done(v); };
+			buttons.forEach(function(b) { var el = document.createElement('button'); el.type = 'button'; el.textContent = b[0]; if (b[2]) el.className = 'go'; el.onclick = function() { finish(b[1]); }; row.appendChild(el); });
+			d.querySelectorAll('[data-v]').forEach(function(el) { el.onclick = function() { finish(el.dataset.v); }; });
+			d.addEventListener('cancel', function(e) { e.preventDefault(); finish(null); });
+			d.addEventListener('click', function(e) { if (e.target === d) finish(null); });
+			(journalEl.open ? journalEl : document.body).appendChild(d); d.showModal();
+		});
+	}
+	function animalGrid(list) { return '<div class="animals">' + list.map(function(a) { return '<button type="button" data-v="' + a + '">' + animalLabel(a) + '</button>'; }).join('') + '</div>'; }
+	function pickAnimal(title, text) { return askBox(title, text, [[T('Not now'), null]], animalGrid(Object.keys(ANIMALS))); }
+	function makeHousehold() {   // one tap (an animal) and the journal is saved
+		return pickAnimal(T('Keep your journal safe'), T('So it’s here on any device. Pick your animal: that’s all.')).then(function(a) {
+			if (!a) return false;
+			return syncApi('POST', 'families', {animal: a}).then(function(r) {
+				sync = {code: r.code, token: r.token, traveler: r.traveler.id, travelers: r.travelers || [r.traveler], others: {}, visits: [], shared: 0, reminded: Date.now()};
+				saveSync(); syncPush(true); renderSync(); track('sync_new');
+				return true;
+			}).catch(function(e) { syncTrouble(e); return false; });
+		});
+	}
+	function syncTrouble(e) {
+		var busy = e && e.status === 429;
+		askBox(busy ? T('Lots of people at once') : T('That didn’t work'), busy ? T('Please wait a little and try again.') : T('We couldn’t reach the journal just now. Please try again in a moment.'), [[T('OK'), null, true]]);
+	}
+	function joinCode(raw, quiet) {   // a household's code, typed or scanned: this device joins it (its own progress comes too)
+		var code = String(raw || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+		return syncApi('POST', 'join', {code: code}).then(function(r) {
+			sync = {code: code, token: r.token, traveler: null, travelers: r.travelers || [], others: {}, visits: [], shared: 1, reminded: Date.now()};
+			saveSync(); track('sync_join');
+			var list = sync.travelers;
+			var pick = list.length === 1 ? Promise.resolve(list[0].id) : askBox(T('Who’s watching?'), T('Pick your animal.'), [[T('Someone new'), '+new']], animalGrid(list.map(function(t) { return t.animal; })))
+				.then(function(v) { if (v === '+new') return pickAnimal(T('Add a traveler'), T('Pick an animal for the new traveler.')).then(function(a) { return a ? syncApi('POST', 'travelers', {animal: a}).then(function(x) { sync.travelers = x.travelers; return x.traveler.id; }) : list[0].id; });
+					var t = list.filter(function(x) { return x.animal === v; })[0]; return (t || list[0]).id; });
+			return pick.then(function(id) { sync.traveler = id; saveSync(); try { sessionStorage.setItem('journey-who', '1'); } catch (e) {} syncPush(true); return syncPull(); }).then(function() { return true; });
+		}).catch(function(e) {
+			if (quiet) return false;
+			if (e.status === 404) askBox(T('We couldn’t find that code'), T('Check the words and the number, and try again.'), [[T('OK'), null, true]]);
+			else syncTrouble(e);
+			return false;
+		});
+	}
+	function haveCode() {   // "I have a code": three words, each suggested as it's typed, and the number
+		return syncApi('GET', 'words').then(function(r) {
+			var dl = '<datalist id="jwords">' + (r.words || []).map(function(w) { return '<option value="' + w + '">'; }).join('') + '</datalist>';
+			var fields = '<form class="jcode-form" onsubmit="return false">' + dl + [1, 2, 3].map(function(i) { return '<input list="jwords" autocomplete="off" autocapitalize="none" spellcheck="false" aria-label="' + T('Word {n}', {n: i}) + '" placeholder="' + T('word') + '">'; }).join('') +
+				'<input inputmode="numeric" maxlength="2" aria-label="' + T('Number') + '" placeholder="00"></form>';
+			return askBox(T('I have a code'), T('Type the three words and the number from your code.'), [[T('Not now'), null], [T('Add my journal'), 'go', true]], fields);
+		}).then(function(v) { return v === 'go' ? lastCodeTyped : null; }).then(function(code) { return code ? joinCode(code) : false; }).catch(function(e) { syncTrouble(e); return false; });
+	}
+	var lastCodeTyped = '';
+	document.addEventListener('input', function(e) {   // (the code being typed, kept as it changes: the dialog is gone by the time it's answered)
+		var f = e.target.closest && e.target.closest('form.jcode-form'); if (!f) return;
+		lastCodeTyped = [].map.call(f.querySelectorAll('input'), function(i) { return i.value.trim(); }).join('-');
+	});
+	function addTraveler(a) {
+		syncApi('POST', 'travelers', {animal: a}).then(function(r) { sync.travelers = r.travelers; saveSync(); switchTraveler(r.traveler.id); }).catch(function(e) { syncLost(e); syncTrouble(e); });
+	}
+	function switchTraveler(id) {   // another traveler on this device: this one's stores are put aside, theirs brought back
+		if (!sync || id === sync.traveler) return;
+		var data = mineNow();
+		syncApi('PUT', 'progress', {traveler: sync.traveler, data: data}).catch(function() {}).then(function() {
+			try {
+				localStorage.setItem('journey-stash-' + sync.traveler, JSON.stringify(data));
+				STORES.forEach(function(st) { localStorage.removeItem(storeKey(st)); });
+				var back = JSON.parse(localStorage.getItem('journey-stash-' + id) || '{}');
+				Object.keys(back).forEach(function(st) { localStorage.setItem(storeKey(st), JSON.stringify(back[st])); });
+				localStorage.removeItem('journey-stash-' + id);
+				sessionStorage.setItem('journey-who', '1');
+			} catch (e) {}
+			sync.traveler = id; sync.others = {}; sync.pushed = ''; saveSync();
+			location.reload();
+		});
+	}
+	function forgetJournal() {
+		syncApi('DELETE', 'family').catch(function() {}).then(function() {
+			(sync && sync.travelers || []).forEach(function(t) { try { localStorage.removeItem('journey-stash-' + t.id); } catch (e) {} });
+			sync = null; saveSync(); mergedVersion++; jcard.hidden = true; jcard.className = 'jcard'; renderSync(); track('sync_forget');
+			askBox(T('Your journal is forgotten'), T('It’s no longer saved for other devices. What you found on this device is still here.'), [[T('OK'), null, true]]);
+		});
+	}
+	function whoIsWatching() {   // more than one traveler on this device: who it is, once a visit
+		if (!sync || (sync.travelers || []).length < 2) return;
+		try { if (sessionStorage.getItem('journey-who')) return; sessionStorage.setItem('journey-who', '1'); } catch (e) {}
+		askBox(T('Who’s watching?'), T('Pick your animal.'), [], animalGrid(sync.travelers.map(function(t) { return t.animal; }))).then(function(v) {
+			var t = v && sync.travelers.filter(function(x) { return x.animal === v; })[0];
+			if (t && t.id !== sync.traveler) switchTraveler(t.id);
+		});
+	}
+	// the line at the foot of the journal: the code, or the way to keep it safe
+	function renderSync() {
+		var el = document.getElementById('jsync'); if (!el) return;
+		el.hidden = !SYNC_BASE; if (!SYNC_BASE) return;
+		if (!sync) {
+			el.innerHTML = '<span>☁ ' + T('Keep your journal safe, so it’s here on any device.') + '</span><button type="button" class="go" id="jsKeep">' + T('Keep it safe') + '</button><button type="button" id="jsHave">' + T('I have a code') + '</button>';
+			document.getElementById('jsKeep').onclick = function() { makeHousehold().then(function(ok) { if (ok) showCode(); }); };
+			document.getElementById('jsHave').onclick = function() { haveCode().then(function(ok) { if (ok) { buildJournal(); renderSync(); } }); };
+		} else {
+			var many = (sync.travelers || []).length > 1;
+			el.innerHTML = '<span>☁ ' + T('Saved') + ' · ' + animalLabel(animalOf(sync.traveler)) + ' · <b>' + escapeHTML(sync.code) + '</b></span><button type="button" id="jsShow">' + T('Show my code') + '</button>' +
+				(many ? '<button type="button" id="jsWho">' + T('Who’s watching?') + '</button>' : '');
+			document.getElementById('jsShow').onclick = showCode;
+			if (many) document.getElementById('jsWho').onclick = function() { try { sessionStorage.removeItem('journey-who'); } catch (e) {} whoIsWatching(); };
+		}
+	}
+	function syncNudge(d) {   // once: after the first few finds, the offer to keep it safe; then a weekly reminder while the code isn't kept anywhere
+		if (!SYNC_BASE) return;
+		var finds = gTotal(d) + d.found.length + d.treasures;
+		if (!sync) {
+			if (finds < 3 || localStorage.getItem('journey-sync-offered')) return;
+			try { localStorage.setItem('journey-sync-offered', '1'); } catch (e) {}
+			askBox(T('Keep your journal safe'), T('Save it with a code, so it’s here on any device, even if this one is cleared. Nothing personal is asked.'), [[T('Not now'), null], [T('Keep it safe'), 'go', true]])
+				.then(function(v) { if (v) makeHousehold().then(function(ok) { if (ok) showCode(); }); });
+		} else if (!sync.shared && finds >= 10 && Date.now() - (sync.reminded || 0) > 7 * DAY) {
+			sync.reminded = Date.now(); saveSync();
+			askBox(T('Is your code written down?'), T('Print the card or send it to yourself, so your journal can’t be lost.'), [[T('Later'), null], [T('Show my code'), 'go', true]])
+				.then(function(v) { if (v) showCode(); });
+		}
+	}
+	// "I was there!": the sign at the end of the walkthrough opens the Journey with that night's code
+	function visitNight(code) {
+		var go = function() {
+			return syncApi('POST', 'visit', {traveler: sync.traveler, night_code: code}).then(function(r) {
+				sync.visits = r.visits || []; saveSync(); track('visit', {night: r.night});
+				askBox(T('You were there!'), T('Thank you for coming to Follow the Star. The “I was there!” badge is in Pip’s Journal.'), [[T('See my badge'), 'go', true]])
+					.then(function(v) { if (v) { openJournal(); var b = journalEl.querySelector('.tabs button[data-p=badges]'); if (b) b.click(); } });
+			}).catch(function(e) {
+				syncLost(e);
+				if (e.message === 'not_tonight') askBox(T('Not tonight'), T('This sign’s code works on its own night of Follow the Star.'), [[T('OK'), null, true]]);
+				else syncTrouble(e);
+			});
+		};
+		if (sync) return go();
+		return askBox(T('Welcome from Follow the Star!'), T('Add the “I was there!” badge to Pip’s Journal? It saves your journal with a code, so nothing personal is asked.'), [[T('Not now'), null], [T('Yes, add it'), 'go', true]])
+			.then(function(v) { return v ? makeHousehold().then(function(ok) { if (ok) return go(); }) : null; });
+	}
+	(function() {   // a code or a sign in the address: deal with it once the page is up, and tidy the address
+		var j = params.get('join'), n = /^\d{4}-\d{2}-\d{2}\.[0-9a-f]+$/.test(params.get('night') || '') ? params.get('night') : null;   // (a sign's code; ?test&night=15 is test mode's)
+		if (!SYNC_BASE || (!j && !n)) { if (sync) setTimeout(whoIsWatching, 1500); return; }
+		var p = new URLSearchParams(location.search); p.delete('join'); if (n) p.delete('night');
+		history.replaceState(null, '', location.pathname + (p.toString() ? '?' + p : '') + location.hash);
+		setTimeout(function() {
+			if (n) { visitNight(n); return; }
+			if (sync && sync.code === j) return;
+			askBox(T('Add this journal here?'), T('Everything found on your other devices will be here too, and what you found on this one is kept.'), [[T('Not now'), null], [T('Add it'), 'go', true]])
+				.then(function(v) { if (v) joinCode(j).then(function(ok) { if (ok) { openJournal(); } }); });
+		}, 1200);
+	})();
+
 	// ----- test mode (/journey/?test): every night open, faster playback, weather override, the whole plan -----
 	if (TEST) (function() {
 		var panel = document.getElementById('test-panel'), table = document.getElementById('plan-table');
@@ -4093,6 +4415,8 @@
 			// the Field Guide: what can be tapped now (in the page's pixels, from the canvas's top left), and what's been found
 			spots: function() { var k = canvas.getBoundingClientRect().width / canvas.width; return spots.map(function(s) { return {id: s.id, x: s.x * k, y: s.y * k, r: s.r * k}; }); },
 			guide: function() { return guideData(); },
+			codeCard: function(code) { return qrLib().then(function() { var keep = sync; sync = {code: code}; var c = codeCard(); sync = keep; return c.toDataURL('image/png'); }); },
+			sync: function() { return sync; },
 			toPage: function(x, y) { var rect = canvas.getBoundingClientRect(); return {x: (homeward(night.day) ? VW - x : x) * S, y: y * S + (rect.height - VH * S)}; },
 			stars: function() {   // tonight's constellation, in the page's pixels from the canvas's top left
 				var k = constellation(), rect = canvas.getBoundingClientRect(); if (!k) return null;
@@ -4228,7 +4552,7 @@
 		setTimeout(function() { ask.hidden = true; }, 16000);   // (it goes away on its own, and comes back next visit until answered)
 	})();
 
-	if (TEST && params.get('night')) viewIdx = clamp(+params.get('night') - 1, 0, END);   // ?test&night=15
+	if (TEST && /^\d+$/.test(params.get('night') || '')) viewIdx = clamp(+params.get('night') - 1, 0, END);   // ?test&night=15 (a sign's code, 2026-12-04.…, is the "I was there!" sign)
 	mapSetup();
 	resize();
 	if (HOMEMODE) {

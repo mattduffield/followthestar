@@ -373,6 +373,30 @@ dialog.journal[open] {animation:j-rise .55s cubic-bezier(.2,.9,.3,1.2);}
 .journal .jcard.wide img.big {display:block; width:100%; margin:10px 0 12px; border-radius:3px; box-shadow:0 8px 20px rgba(80,50,20,.35);}
 .journal .jcard.wide .row {display:flex; flex-wrap:wrap; justify-content:center; gap:8px;}
 .journal .jcard.wide .row button {margin:0;}
+/* keeping the journal safe: the line at the journal's foot, the code card, the animals, the code form */
+.journal .jsync {display:flex; flex-wrap:wrap; align-items:center; gap:8px 12px; margin:0 18px 14px; padding:10px 16px; border-radius:14px; background:rgba(7,11,34,.55); color:#e8e3ff; font:400 13px Inter,Arial,sans-serif; box-shadow:inset 0 0 0 1px rgba(255,219,89,.3);}
+.journal .jsync[hidden] {display:none;}
+.journal .jsync span {flex:1; min-width:200px;}
+.journal .jsync b {color:#FFDB59; font-weight:600; letter-spacing:.02em;}
+.journal .jsync button {font:600 12px Inter,Arial,sans-serif; padding:7px 14px; border-radius:16px; border:1px solid #FFDB59; background:transparent; color:#FFDB59; cursor:pointer;}
+.journal .jsync button.go {background:#FFDB59; color:#1a1240;}
+.journal .jcard.jsync-card p {margin:6px 0 12px; font-size:14px;}
+.journal .jcode-row {display:flex; align-items:center; justify-content:center; gap:28px; flex-wrap:wrap; margin:6px 0 14px;}
+.journal .jcode {font:700 34px/1.35 Georgia,serif; color:#751D19; text-align:left;}
+.journal .jcode span {display:block;} .journal .jcode i {display:none;}
+.journal .jqr {width:180px; height:180px; border-radius:8px; box-shadow:0 4px 12px rgba(80,50,20,.25);}
+.journal .jcard .row.small {margin-top:10px;} .journal .jcard .row.small button {background:transparent; color:#5a3a12; border-color:#c9a46a;}
+dialog.sync-ask {width:min(520px,94vw);}
+.sync-ask .animals {display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin:0 0 18px;}
+.sync-ask .animals button {min-width:0; padding:10px 4px; text-transform:none; letter-spacing:0; font-size:13px; border-radius:12px;}
+.sync-ask .jcode-form {display:grid; grid-template-columns:1fr 1fr 1fr 64px; gap:8px; margin:0 0 18px;}
+.sync-ask .jcode-form input {min-width:0; padding:10px 8px; border-radius:10px; border:1px solid rgba(255,219,89,.5); background:rgba(255,255,255,.08); color:#fff; font:400 15px Inter,Arial,sans-serif; text-align:center;}
+@media (max-width:640px), (max-height:560px) {
+	.journal .jsync {margin:0 6px 10px;}
+	.journal .jcode {font-size:24px;} .journal .jqr {width:130px; height:130px;}
+	.sync-ask .animals {grid-template-columns:repeat(4,1fr); gap:6px;} .sync-ask .animals button {padding:7px 2px; font-size:12px;}
+	dialog.sync-ask {padding:16px 16px 14px;} .sync-ask h2 {font-size:19px; margin-bottom:6px;} .sync-ask p {margin-bottom:12px; font-size:13px;}
+}
 .player .btn.journal-btn {display:inline-flex; align-items:center; gap:6px;}
 .player .btn.journal-btn img {height:18px; filter:sepia(.6) saturate(1.6) brightness(1.15);}
 .player .btn.sketch-btn {display:inline-flex; align-items:center; gap:6px;}
@@ -502,6 +526,7 @@ dialog.journal[open] {animation:j-rise .55s cubic-bezier(.2,.9,.3,1.2);}
 						<section class="jpage" id="jp-guide" role="tabpanel" hidden><h3>Guía de campo</h3><p class="lead" id="jguide-lead"></p><div id="jguide"></div></section>
 						<section class="jpage" id="jp-sketches" role="tabpanel" hidden><h3>El cuaderno de dibujos de Pip</h3><p class="lead" id="jsketch-lead"></p><button type="button" class="jsk-all" id="jsketch-all" hidden>Imprimir todo mi cuaderno</button><div class="sketches" id="jsketches"></div></section>
 						<section class="jpage" id="jp-badges" role="tabpanel" hidden><h3>Insignias</h3><div class="badges" id="jbadges"></div></section>
+						<div class="jsync" id="jsync" hidden></div>
 					</div>
 					<div class="jcard" id="jcard" hidden role="dialog" aria-modal="true" aria-labelledby="jcardT"></div>
 				</div>
@@ -581,21 +606,21 @@ dialog.journal[open] {animation:j-rise .55s cubic-bezier(.2,.9,.3,1.2);}
 	</footer>
 
 	<script src="/assets/js/site.js?v=1793240524" defer></script>
-	<script src="/journey/camels.js?v=202610301940" defer></script>
-	<script src="/journey/camel-rig.js?v=202610301940" defer></script>
-	<script src="/journey/canine-rig.js?v=202610301940" defer></script>
-	<script src="/journey/art-ready.js?v=202610301940" defer></script>
-	<script src="/journey/readings.js?v=202610301940" defer></script>
-	<script src="/journey/pip.js?v=202610301940" defer></script>
-	<script src="/journey/sayings.js?v=202610301940" defer></script>
-	<script src="/journey/plan.js?v=202610301940" defer></script>
-	<script src="/journey/audio-ready.js?v=202610301940" defer></script>
-	<script src="/journey/sound.js?v=202610301940" defer></script>
-	<script src="/journey/lang/languages.js?v=202610301940" defer></script>
-	<script src="/journey/lang/es/strings.js?v=202610301940" defer></script>
-	<script src="/journey/lang/es/readings.js?v=202610301940" defer></script>
-	<script src="/journey/lang/es/pip.js?v=202610301940" defer></script>
-	<script src="/journey/lang/es/sayings.js?v=202610301940" defer></script>
-	<script src="/journey/journey.js?v=202610301940" defer></script>
+	<script src="/journey/camels.js?v=202610310759" defer></script>
+	<script src="/journey/camel-rig.js?v=202610310759" defer></script>
+	<script src="/journey/canine-rig.js?v=202610310759" defer></script>
+	<script src="/journey/art-ready.js?v=202610310759" defer></script>
+	<script src="/journey/readings.js?v=202610310759" defer></script>
+	<script src="/journey/pip.js?v=202610310759" defer></script>
+	<script src="/journey/sayings.js?v=202610310759" defer></script>
+	<script src="/journey/plan.js?v=202610310759" defer></script>
+	<script src="/journey/audio-ready.js?v=202610310759" defer></script>
+	<script src="/journey/sound.js?v=202610310759" defer></script>
+	<script src="/journey/lang/languages.js?v=202610310759" defer></script>
+	<script src="/journey/lang/es/strings.js?v=202610310759" defer></script>
+	<script src="/journey/lang/es/readings.js?v=202610310759" defer></script>
+	<script src="/journey/lang/es/pip.js?v=202610310759" defer></script>
+	<script src="/journey/lang/es/sayings.js?v=202610310759" defer></script>
+	<script src="/journey/journey.js?v=202610310759" defer></script>
 </body>
 </html>
