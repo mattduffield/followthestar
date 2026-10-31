@@ -344,6 +344,22 @@ dialog.journal[open] {animation:j-rise .55s cubic-bezier(.2,.9,.3,1.2);}
 .journal .badge h5 {margin:0; font:700 15px Merienda,Georgia,serif; color:#5a3a12;}
 .journal .badge p {margin:3px 0 0; font:400 12px Inter,Arial,sans-serif; color:#7a5220;}
 .journal .badge.locked h5 {color:#7a6a5a;}
+.journal .gsec {margin-bottom:22px;}
+.journal .gsec h4 {font:700 17px Merienda,Georgia,serif; color:#5a3a12; margin:0 0 2px;}
+.journal .gsec h4 .prog {font:600 12px Inter,Arial,sans-serif; color:#a0702a; margin-left:6px;}
+.journal .gsec .lead {margin:0 0 10px; font-size:13px;}
+.journal .gshelf {display:grid; grid-template-columns:repeat(auto-fill,minmax(104px,1fr)); gap:10px;}
+.journal .gcase {position:relative; border:0; padding:8px 6px 7px; border-radius:14px; cursor:pointer; text-align:center; background:linear-gradient(#2a1f5a,#151a45); color:#e8e3ff; box-shadow:inset 0 0 0 2px rgba(255,219,89,.35),0 5px 10px rgba(60,30,10,.3); transition:transform .15s,box-shadow .15s;}
+.journal .gcase:hover, .journal .gcase:focus-visible {transform:translateY(-3px); box-shadow:inset 0 0 0 2px #FFDB59,0 10px 16px rgba(60,30,10,.35); outline:none;}
+.journal .gcase canvas {display:block; margin:0 auto;}
+.journal .gcase .name {font:400 12px/1.25 Merienda,Georgia,serif; color:#fff; margin-top:3px; min-height:15px;}
+.journal .gcase .count {font:600 11px Inter,Arial,sans-serif; color:#FFDB59;}
+.journal .gcase.none canvas {filter:brightness(0) opacity(.45);}
+.journal .gcase.none .name {color:#9890c0; font:700 15px Merienda,Georgia,serif;}
+.journal .gcase.new {animation:j-pop .7s cubic-bezier(.2,1.6,.4,1) both;}
+@keyframes j-pop {from {transform:scale(1.5) rotate(-6deg); opacity:0;} to {transform:scale(1) rotate(0); opacity:1;}}
+.journal .jcard .gbig {margin:6px auto 2px; padding:8px; border-radius:14px; background:linear-gradient(#2a1f5a,#151a45); width:max-content;}
+.journal .jcard .gbig canvas.unfound {filter:brightness(0) opacity(.45);}
 .player .btn.journal-btn {display:inline-flex; align-items:center; gap:6px;}
 .player .btn.journal-btn img {height:18px; filter:sepia(.6) saturate(1.6) brightness(1.15);}
 .player .btn.journal-btn.glint, .player .btn.more.glint {animation:j-glint 1.2s ease-out 2;}
@@ -454,11 +470,12 @@ dialog.journal[open] {animation:j-rise .55s cubic-bezier(.2,.9,.3,1.2);}
 							<div class="stats"><div class="stat"><div class="n" id="jsPip">0</div><div class="l">Ночи</div></div><div class="stat"><div class="n" id="jsTreasure">0</div><div class="l">Сокровища</div></div><div class="stat"><div class="n" id="jsRun">0</div><div class="l">Лучшая серия</div></div></div>
 						</div>
 						<nav class="tabs" role="tablist">
-							<button type="button" role="tab" aria-selected="true" data-p="journey"><span class="long"> </span>Путешествие</button><button type="button" role="tab" aria-selected="false" data-p="treasures">Сокровища</button><button type="button" role="tab" aria-selected="false" data-p="home">Дом<span class="long"> на Востоке</span></button><button type="button" role="tab" aria-selected="false" data-p="badges">Значки</button>
+							<button type="button" role="tab" aria-selected="true" data-p="journey"><span class="long"> </span>Путешествие</button><button type="button" role="tab" aria-selected="false" data-p="treasures">Сокровища</button><button type="button" role="tab" aria-selected="false" data-p="home">Дом<span class="long"> на Востоке</span></button><button type="button" role="tab" aria-selected="false" data-p="guide">Путеводитель</button><button type="button" role="tab" aria-selected="false" data-p="badges">Значки</button>
 						</nav>
 						<section class="jpage" id="jp-journey" role="tabpanel"></section>
 						<section class="jpage" id="jp-treasures" role="tabpanel" hidden><h3>Сокровища с дороги</h3><div class="shelf" id="jshelf"></div></section>
 						<section class="jpage" id="jp-home" role="tabpanel" hidden><h3>Открытки из дома</h3><p class="lead" id="jhome-lead"></p><div class="cards" id="jcards"></div></section>
+						<section class="jpage" id="jp-guide" role="tabpanel" hidden><h3>Путеводитель</h3><p class="lead" id="jguide-lead"></p><div id="jguide"></div></section>
 						<section class="jpage" id="jp-badges" role="tabpanel" hidden><h3>Значки</h3><div class="badges" id="jbadges"></div></section>
 					</div>
 					<div class="jcard" id="jcard" hidden role="dialog" aria-modal="true" aria-labelledby="jcardT"></div>
@@ -539,21 +556,21 @@ dialog.journal[open] {animation:j-rise .55s cubic-bezier(.2,.9,.3,1.2);}
 	</footer>
 
 	<script src="/assets/js/site.js?v=1793240524" defer></script>
-	<script src="/journey/camels.js?v=202610291710" defer></script>
-	<script src="/journey/camel-rig.js?v=202610291710" defer></script>
-	<script src="/journey/canine-rig.js?v=202610291710" defer></script>
-	<script src="/journey/art-ready.js?v=202610291710" defer></script>
-	<script src="/journey/readings.js?v=202610291710" defer></script>
-	<script src="/journey/pip.js?v=202610291710" defer></script>
-	<script src="/journey/sayings.js?v=202610291710" defer></script>
-	<script src="/journey/plan.js?v=202610291710" defer></script>
-	<script src="/journey/audio-ready.js?v=202610291710" defer></script>
-	<script src="/journey/sound.js?v=202610291710" defer></script>
-	<script src="/journey/lang/languages.js?v=202610291710" defer></script>
-	<script src="/journey/lang/ru/strings.js?v=202610291710" defer></script>
-	<script src="/journey/lang/ru/readings.js?v=202610291710" defer></script>
-	<script src="/journey/lang/ru/pip.js?v=202610291710" defer></script>
-	<script src="/journey/lang/ru/sayings.js?v=202610291710" defer></script>
-	<script src="/journey/journey.js?v=202610291710" defer></script>
+	<script src="/journey/camels.js?v=202610301852" defer></script>
+	<script src="/journey/camel-rig.js?v=202610301852" defer></script>
+	<script src="/journey/canine-rig.js?v=202610301852" defer></script>
+	<script src="/journey/art-ready.js?v=202610301852" defer></script>
+	<script src="/journey/readings.js?v=202610301852" defer></script>
+	<script src="/journey/pip.js?v=202610301852" defer></script>
+	<script src="/journey/sayings.js?v=202610301852" defer></script>
+	<script src="/journey/plan.js?v=202610301852" defer></script>
+	<script src="/journey/audio-ready.js?v=202610301852" defer></script>
+	<script src="/journey/sound.js?v=202610301852" defer></script>
+	<script src="/journey/lang/languages.js?v=202610301852" defer></script>
+	<script src="/journey/lang/ru/strings.js?v=202610301852" defer></script>
+	<script src="/journey/lang/ru/readings.js?v=202610301852" defer></script>
+	<script src="/journey/lang/ru/pip.js?v=202610301852" defer></script>
+	<script src="/journey/lang/ru/sayings.js?v=202610301852" defer></script>
+	<script src="/journey/journey.js?v=202610301852" defer></script>
 </body>
 </html>

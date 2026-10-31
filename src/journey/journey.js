@@ -275,7 +275,7 @@
 			var job = queue.shift(); active++;
 			(function(job) {
 				var im = new Image();
-				im.onload = function() { if (job.prep) job.prep(im); images[job.n] = im; active--; pump(); };
+				im.onload = function() { im.n = job.n; if (job.prep) job.prep(im); images[job.n] = im; active--; pump(); };
 				im.onerror = function() { active--; pump(); };
 				im.src = '/journey/art/' + job.n + '.webp';
 			})(job);
@@ -725,10 +725,14 @@
 		wx.shake = Math.max(0, wx.shake - dt * 1.4);
 		if (night.weather === 'storm' && wx.level > 0.55 && !reduceMotion) {
 			wx.nextStrike -= dt;
-			if (wx.nextStrike <= 0) { wx.bolt = makeBolt(); wx.flash = 1; wx.thunderIn = 0.5 + Math.random() * 1.3; wx.near = wx.thunderIn < 0.9; wx.nextStrike = 2.8 + Math.random() * 4.5; wx.flicker = 0.14; }
+			if (wx.nextStrike <= 0) { witness('lightning'); wx.bolt = makeBolt(); wx.flash = 1; wx.thunderIn = 0.5 + Math.random() * 1.3; wx.near = wx.thunderIn < 0.9; wx.nextStrike = 2.8 + Math.random() * 4.5; wx.flicker = 0.14; }
 		}
 		if (wx.flicker > 0) { wx.flicker -= dt; if (wx.flicker <= 0) wx.flash = Math.max(wx.flash, 0.8); }
-		if (wx.thunderIn > 0) { wx.thunderIn -= dt; if (wx.thunderIn <= 0) { wx.shake = 1; sound.thunder(wx.near); } }
+		if (wx.thunderIn > 0) { wx.thunderIn -= dt; if (wx.thunderIn <= 0) { wx.shake = 1; sound.thunder(wx.near); if (sound.isOn && sound.isOn()) witness('thunder'); } }   // (heard, with the sound on)
+		var ww = night.weather;   // the night's weather, in the Field Guide once it has properly arrived
+		if ((ww === 'rain' || ww === 'storm') && wx.level > 0.6) witness('rain');
+		if ((ww === 'storm' || ww === 'sandstorm') && wx.level > 0.6) witness(ww);
+		if ((ww === 'wind' || ww === 'fog' || ww === 'haze') && t > 0.08) witness(ww);
 		if (wx.flash <= 0.05) wx.bolt = null;
 		// rain and dust move in screen space
 		var raining = (night.weather === 'rain' || night.weather === 'storm') ? smooth((wx.level - 0.3) / 0.6) : 0;   // the rain stops while there are still clouds
@@ -757,6 +761,7 @@
 		ctx.strokeStyle = 'rgba(235,235,255,' + wx.flash + ')'; ctx.shadowColor = 'rgba(190,190,255,0.9)'; ctx.shadowBlur = 18; ctx.lineJoin = 'round';
 		wx.bolt.forEach(function(line, i) { ctx.lineWidth = i ? 1.6 : 3; ctx.beginPath(); line.forEach(function(p, j) { if (j) ctx.lineTo(p[0], p[1]); else ctx.moveTo(p[0], p[1]); }); ctx.stroke(); });
 		ctx.restore();
+		if (wx.flash > 0.2) wx.bolt[0].forEach(function(p, j) { if (j % 2) spot('bolt', wx.bolt, p[0], p[1], 44); });   // (catch it while it flashes)
 	}
 	function tint(color, a, y0) { if (a <= 0.005) return; ctx.fillStyle = color.replace('A', a.toFixed(3)); ctx.fillRect(-20, y0 == null ? TOPV : y0, VW + 40, VH - (y0 == null ? TOPV : y0) + 20); }
 
@@ -871,6 +876,7 @@
 			if (c.kind === 'owl') {
 				var y = c.y + Math.sin(c.t * 1.6) * 14, flap = Math.sin(clock * 9 + c.seed);
 				ctx.save(); ctx.translate(c.x, y); ctx.scale(im ? c.dir : -c.dir, 1);   // the art faces right; the stand-in faces left
+				spot('owl', c, 0, 0, 36);
 				var of0 = animFrames('jr-an-owl-', 3);
 				if (of0) {
 					// mostly a glide on spread wings, with two slow wingbeats every few seconds; the two poses are blended
@@ -894,7 +900,7 @@
 				for (var b = 0; b < 4; b++) {
 					var bx = c.x + Math.sin(c.t * (1.3 + b * 0.3) + b * 2) * 140 + Math.sin(c.t * 5 + b) * 20, by = c.y + Math.cos(c.t * (1.7 + b * 0.2) + b) * 50;
 					var f = Math.sin(clock * 22 + b * 1.7), a = Math.min(1, c.t, c.life - c.t);
-					ctx.globalAlpha = a;
+					ctx.globalAlpha = a; spot('bats', c, bx, by, 18);
 					if (im) { ctx.drawImage(im, bx - 9, by - 6, 18, 18 * im.height / im.width); continue; }
 					ctx.fillStyle = '#140e1c'; ctx.beginPath(); ctx.moveTo(bx - 9, by - 4 * f); ctx.quadraticCurveTo(bx - 4, by + 2, bx, by); ctx.quadraticCurveTo(bx + 4, by + 2, bx + 9, by - 4 * f); ctx.quadraticCurveTo(bx, by + 5, bx - 9, by - 4 * f); ctx.fill();
 				}
@@ -904,6 +910,7 @@
 			var x = c.u - cam * DAYW + LEAD_X, gy = roadY(c.u) + c.depth;
 			var hop = c.kind === 'jerboa' && c.moving ? Math.abs(Math.sin(c.t * 9 + c.seed)) * 16 : c.kind === 'mouse' && c.moving ? Math.abs(Math.sin(c.t * 20)) * 2 : 0;
 			ctx.save(); ctx.translate(x, gy - hop); ctx.scale(c.dir, 1);
+			spot(c.kind, c, 0, -8, 20);
 			ctx.fillStyle = 'rgba(60,30,10,0.25)'; ctx.beginPath(); ctx.ellipse(0, hop, 9, 2, 0, 0, 7); ctx.fill();
 			if (drawBug(c)) { ctx.restore(); return; }
 			if (im) { var hh = {jerboa: 26, mouse: 14, gecko: 10, hedgehog: 20}[c.kind]; ctx.drawImage(im, -hh * im.width / im.height / 2, -hh, hh * im.width / im.height, hh); ctx.restore(); return; }
@@ -1098,7 +1105,7 @@
 				ctx.beginPath(); ctx.moveTo(-12, -2); ctx.bezierCurveTo(-20, -1, -24, -3, -26, 1); ctx.bezierCurveTo(-22, 0, -17, 1, -11, 1); ctx.fill();   // tail along the ground
 				ctx.restore();
 				break;
-			case 'volcano': drawVolcano(x, y); break;
+			case 'volcano': drawVolcano(x, y); if (x > VW * 0.05 && x < VW * 0.95) witness('volcano'); break;
 			case 'angel': glow(x, y - 300, 140, 'rgb(255,236,180)', 0.45); person(x, y - 250, 2.4, 'rgba(255,248,225,0.9)'); break;
 			case 'gazelles': case 'ibex': for (var g = 0; g < 4; g++) animal(x + g * 34 - 50, y - (g % 2) * 4, 1.1, col, p.kind, clock * 3 + g); break;
 			case 'fox': case 'hare': animal(x, y, 1.3, col, p.kind, clock * 6); break;
@@ -1201,6 +1208,7 @@
 				ctx.save(); ctx.translate(hx, 0); ctx.scale(-1, 1);
 				ctx.drawImage(fr, -fr.width * sc / 2, hy - fr.height * sc * (fr.base || 1), fr.width * sc, fr.height * sc);
 				ctx.restore();
+				spot('hare', p, hx, hy - fr.height * sc * 0.5, 34);
 				return;
 			}
 			if (im && im.base) {
@@ -1248,6 +1256,7 @@
 						var yb = gy(cx - dw * 0.32), yf = gy(cx + dw * 0.32), slope = clamp(Math.atan2(yf - yb, dw * 0.64), -0.4, 0.4);
 						ctx.save(); ctx.translate(cx, (yb + yf) / 2 + 3); ctx.rotate(slope); ctx.scale(face, 1);
 						var dx = -dw / 2, dy = dh * 0.06 - (pim.base || 1) * dh - bob;
+						spot(p.who, p, 0, dy + dh / 2, Math.max(dw, dh) * 0.6);
 						var rg = pose === 'trot' && !runF && !reduceMotion && canineRig(p.who);
 						if (rg) {
 							// rigged from the trotting picture, like the camels: a trot, diagonal legs together (near hind
@@ -1285,6 +1294,7 @@
 					if (pose === 'howl') {
 						for (var hi = 1; hi < (p.count || 1); hi++) { ctx.save(); ctx.translate(x - w * 1.2 * hi, 0); if (hi % 2) ctx.scale(-1, 1); ctx.drawImage(im, -w * 0.44, top + h * 0.12, w * 0.88, h * 0.88); ctx.restore(); }   // the rest of the pack
 						ctx.drawImage(im, x - w / 2, top, w, h);
+						spot(p.who, p, x - w * 0.6 * ((p.count || 1) - 1), top + h / 2, w * 0.6 * (p.count || 1) + 10);
 					} else {
 						var face = pose === 'stand' ? -1 : 1;   // trotting on its way; standing, it turns to look at the caravan
 						for (var mi = (p.count || 1) - 1; mi >= 1; mi--) {   // the rest of the pack, strung out behind the leader, a little smaller
@@ -1311,6 +1321,12 @@
 					ctx.globalCompositeOperation = 'source-over';
 				} else
 				ctx.drawImage(dark ? (im.dark || (im.dark = tinted(im, 0.45))) : im, x - w / 2, top, w, h);
+				var gid = pieceGuide(p), ge = gid && GUIDE_BY_ID[[].concat(gid)[0]];   // in the Field Guide: a place is seen as they pass it; the rest are tapped
+				if (ge && ge.watch) { if (x > VW * 0.05 && x < VW * 0.95 && !dark) [].concat(gid).forEach(witness); }   // (the stable once it's lit)
+				else if (ge && p.kind !== 'howl' && p.kind !== 'trotter') {
+					if (p.key === 'owl') spot(gid, p, x - w / 2 + 0.63 * w, top + 0.184 * h, h * 0.08 + 16);   // (the owl up in its palm, not the palm)
+					else spot(gid, p, x, top + h * 0.5, Math.max(w, h) * 0.42);
+				}
 				var cf = CAMP_FIRES[p.art];   // the camps' own fires, drawn like the kings' one (the pictures were retouched without theirs)
 				if (cf && im === art(p.art)) paintFire(x - w / 2 + cf[0] * w / im.width, 1, 1, {y: top + cf[1] * h / im.height, s: h * cf[2] / 100, id: p.art});
 				if (p.key === 'owl' && art(p.art)) {   // its eyes catch the light, so it can be seen up in the palm; now and then it blinks
@@ -1519,6 +1535,7 @@
 	function talkToKing(pt, pad) {   // (pad: a finger gets a little room all round)
 		pad = pad || 0;
 		var hit = kingBoxes.filter(function(b) { return pt.x > b.x0 - pad && pt.x < b.x1 + pad && pt.y > b.y0 - pad && pt.y < b.y1 + pad; }).pop();
+		if (hit && hit.n > 0) noteFind('king-' + hit.n, 'king-' + hit.n, hit.x, hit.head + 4);   // (in the Field Guide)
 		if (hit && talking()) return true;   // (someone is already speaking: the click is swallowed)
 		if (hit && hit.n === 0) {   // the armillary sphere
 			var ARM = [T('An armillary sphere: the wise men’s model of the heavens.'), T('Its rings show the paths of the sun and the stars.'), T('“The heavens declare the glory of God” (Psalm 19:1).')];
@@ -1584,6 +1601,7 @@
 		pad = pad || 0;
 		var hit = camelBoxes.filter(function(b) { return pt.x > b.x0 - pad && pt.x < b.x1 + pad && pt.y > b.y0 - pad && pt.y < b.y1 + pad; }).pop();
 		if (!hit) return false;
+		noteFind('camel-' + hit.king, 'camel-' + hit.king, (hit.x0 + hit.x1) / 2, hit.y0 + 24);
 		if (talking() || clock - (hit.k.poke || -9) < 1.2 || clock - (hit.k.surge || -9) < 4.5) return true;   // (still busy from the last click)
 		var urging = hit.i > 0 && walk > 0.5 && evening() === 0 && !(clock - hit.k.surge < 5) && !CARAVAN.some(function(o) { return clock - o.surge < 5; });
 		// its king calls to it straight away: urging it on ("Hut-hut-hut!", "Yalla!"), and a moment later it surges forward
@@ -1688,6 +1706,7 @@
 			var sway = reduceMotion ? 0 : walk * 0.03 * Math.sin(4 * Math.PI * f0 - 1.6) + (1 - walk) * 0.008 * Math.sin(clock * 1.3 + k.seed * 3);
 			ctx.save(); ctx.translate(r.saddle[0], r.saddle[1] + idle + r.h * 0.03); ctx.rotate(sway); ctx.translate(-r.saddle[0], -r.saddle[1] - idle - r.h * 0.03);
 			ctx.drawImage(ri, r.saddle[0] - rw * st[0], r.saddle[1] + idle - rh * st[1] + r.h * 0.03, rw, rh);
+			kingBlink(ri, r.saddle[0] - rw * st[0], r.saddle[1] + idle - rh * st[1] + r.h * 0.03, rw, rh);
 			ctx.restore();
 		}
 		ctx.restore();
@@ -1872,12 +1891,13 @@
 				ctx.drawImage(cv, -w / 2 - pad * w / W, top - pad * h / H, w * cv.width / W, h * cv.height / H);
 				ctx.restore(); return;
 			}
-			ctx.drawImage(im, -w / 2, top, w, h); ctx.restore(); return;
+			ctx.drawImage(im, -w / 2, top, w, h); kingBlink(im, -w / 2, top, w, h); ctx.restore(); return;
 		}
 		var split = 0.84, srcSplit = im.height * base * split, srcBottom = im.height * base;
 		var ySplit = top + h * base * split, hLow = h * base * (1 - split), stepAmt = Math.sin(ph), reach = w * 0.045;
 		// the body, down to the knees
 		ctx.drawImage(im, 0, 0, im.width, srcSplit + 2, -w / 2, top, w, h * base * split + 2 * h / im.height);
+		kingBlink(im, -w / 2, top, w, h);
 		// the hem and feet: back half and front half step in turn, and the hem swings with them
 		[[0, 0.5, -1], [0.5, 1, 1]].forEach(function(part) {
 			var sx0 = im.width * part[0], sw = im.width * (part[1] - part[0]), off = stepAmt * reach * part[2];
@@ -1985,6 +2005,7 @@
 				var seatY = p.seatY + (downY - p.seatY) * p.kneelA;
 				ctx.save(); ctx.globalAlpha = 1 - p.stand;
 				ctx.drawImage(ri, p.seatX - rw * sx[0], seatY - rh * sx[1] + r.h * 0.03 * s, rw, rh);
+				kingBlink(ri, p.seatX - rw * sx[0], seatY - rh * sx[1] + r.h * 0.03 * s, rw, rh);
 				ctx.restore();
 			}
 		});
@@ -2044,6 +2065,7 @@
 		var n = 9 + Math.floor(hash(night.day + 420) * 8), lx = VW + 80 - f * (VW + 400), ly = TOPV + 210 + hash(night.day + 430) * 80 - f * 40;
 		var dl = daylight(), col = dl > 0.3 ? 'rgba(50,40,60,0.75)' : 'rgba(225,225,240,0.55)';
 		ctx.strokeStyle = col; ctx.lineWidth = 1.6; ctx.lineCap = 'round';
+		spot('cranes', 'cranes' + night.day, lx + n * 6.5, ly, n * 9 + 20);
 		for (var i = 0; i < n; i++) {
 			var side = i % 2 ? 1 : -1, rank = Math.ceil(i / 2), x = lx + rank * 26 + Math.sin(i * 1.7) * 2, y = ly + side * rank * 13;   // the V, leader in front
 			var flap = Math.sin(clock * 4 + i * 0.6), wy = -5 * flap, s = 9;
@@ -2060,6 +2082,7 @@
 			var a = clock * (0.22 + i * 0.05) + i * 2.4, rx = 120 + i * 50, ry = 30 + i * 10;
 			var x = cx + Math.cos(a) * rx, y = cy + Math.sin(a) * ry, bank = Math.cos(a) * 0.25, s = 1 - i * 0.15;   // banking as it turns
 			ctx.save(); ctx.translate(x, y); ctx.rotate(bank); ctx.scale(s, s);
+			spot('vultures', 'vultures' + night.day, 0, 0, 30);
 			ctx.globalAlpha = Math.min(1, (dl - 0.35) * 3);
 			ctx.fillStyle = 'rgba(52,40,52,0.8)';
 			ctx.beginPath();   // long broad wings with fingered tips, a short fanned tail
@@ -2086,6 +2109,215 @@
 		 lines: [[6, 0], [0, 1], [1, 2], [2, 3], [3, 0], [6, 4], [2, 5]]}
 	];
 	var traced = {t: -99};
+
+	// ----- the Field Guide: everything there is to find in the scene, and how many times it's been found -----
+	// Most things are found by tapping them (the scene notes where each is drawn: spot()); the weather, and the places
+	// along the road, are found just by being there to see them (witness()). Each entry: id, its page in the journal,
+	// its name, a line about it, and its picture (an art name, or drawn in code by guideDraw).
+	var GUIDE_PAGES = [
+		{id: 'caravan', name: T('The caravan'), lead: T('Tap the kings by the fire to hear what they say, and tap their camels.')},
+		{id: 'sky', name: T('The sky'), lead: T('Tap the Star, the moon, shooting stars, the comet and the week’s constellation.')},
+		{id: 'animals', name: T('Animals of the land'), lead: T('Tap the animals you see along the way.')},
+		{id: 'small', name: T('Small creatures'), lead: T('Tap the little creatures that scurry across the sand.')},
+		{id: 'birds', name: T('Birds and bats'), lead: T('Tap the birds and bats flying over.')},
+		{id: 'road', name: T('People on the road'), lead: T('Tap the people they meet along the way.')},
+		{id: 'places', name: T('Places along the way'), lead: T('These are added as the wise men pass them.')},
+		{id: 'weather', name: T('Weather'), lead: T('These are added as you watch. Turn the sound on to hear the thunder.')}
+	];
+	var GUIDE = [
+		['king-1', 'caravan', T('The king with gold'), T('Gold, a gift fit for a king.'), 'jr-char-king-1-rest'],
+		['king-2', 'caravan', T('The king with frankincense'), T('Frankincense, sweet incense for worship. He is the eldest of the three.'), 'jr-char-king-2-walk-free'],
+		['king-3', 'caravan', T('The king with myrrh'), T('Myrrh, a precious spice.'), 'jr-char-king-3-rest'],
+		['camel-1', 'caravan', T('The crimson camel'), T('A camel can walk for days across the desert with little water.'), 'jr-char-camel-1-kneel'],
+		['camel-2', 'caravan', T('The blue camel'), T('Its wide, soft feet don’t sink into the sand.'), 'jr-char-camel-2-kneel'],
+		['camel-3', 'caravan', T('The green camel'), T('A camel can carry its rider and a heavy load besides.'), 'jr-char-camel-3-kneel'],
+		['c-0', 'sky', CONSTELLATIONS[0].name, T('A hunter with three bright stars in his belt (Job 9:9).'), 'draw'],
+		['c-1', 'sky', CONSTELLATIONS[1].name, T('A little cluster of stars, close together (Amos 5:8).'), 'draw'],
+		['c-2', 'sky', CONSTELLATIONS[2].name, T('Its brightest seven stars make the Big Dipper (Job 38:32).'), 'draw'],
+		['c-3', 'sky', CONSTELLATIONS[3].name, T('Five stars in the shape of a W: the queen on her throne.'), 'draw'],
+		['c-4', 'sky', CONSTELLATIONS[4].name, T('Jesus is called the Lion of the tribe of Judah (Revelation 5:5).'), 'draw'],
+		['c-5', 'sky', CONSTELLATIONS[5].name, T('A swan with its wings spread, flying along the Milky Way.'), 'draw'],
+		['c-6', 'sky', CONSTELLATIONS[6].name, T('The bull, with a bright orange star for its eye.'), 'draw'],
+		['star', 'sky', T('The Star'), T('It went before the wise men all the way to Bethlehem (Matthew 2:9).'), 'draw'],
+		['moon-new', 'sky', T('New moon'), T('No moon at all: the darkest nights, when the stars shine brightest.'), 'draw'],
+		['moon-wax-crescent', 'sky', T('Waxing crescent'), T('A thin slice of moon in the evening, growing night by night.'), 'draw'],
+		['moon-first-quarter', 'sky', T('First quarter'), T('Half the moon is lit, and it’s still growing.'), 'draw'],
+		['moon-wax-gibbous', 'sky', T('Waxing gibbous'), T('More than half lit, and nearly full.'), 'draw'],
+		['moon-full', 'sky', T('Full moon'), T('Round and bright. It rises big and orange as night falls.'), 'draw'],
+		['moon-wane-gibbous', 'sky', T('Waning gibbous'), T('Just past full, shrinking a little each night.'), 'draw'],
+		['moon-last-quarter', 'sky', T('Last quarter'), T('Half lit again, the other half this time.'), 'draw'],
+		['moon-wane-crescent', 'sky', T('Waning crescent'), T('A thin slice of moon, nearly gone.'), 'draw'],
+		['meteor', 'sky', T('Shooting star'), T('A tiny speck of space dust, burning up high in the sky.'), 'draw'],
+		['shower', 'sky', T('Meteor shower'), T('A night of many shooting stars, as the earth passes through a comet’s dust.'), 'draw', 'watch'],
+		['comet', 'sky', T('The comet'), T('A ball of ice and dust with a glowing tail. It stays for one week in November.'), 'draw'],
+		['rainbow', 'sky', T('Rainbow'), T('God’s promise, set in the clouds after the rain (Genesis 9:13).'), 'draw'],
+		['sunset', 'sky', T('Sunset'), T('The sun going down behind the hills.'), 'draw', 'watch'],
+		['wolf', 'animals', T('Wolf'), T('Wolves live in the mountains and call to each other by howling.'), 'jr-howl-wolf'],
+		['jackal', 'animals', T('Jackal'), T('A small wild dog of the desert. Jackals howl together in families.'), 'jr-howl-jackal'],
+		['fox', 'animals', T('Desert fox'), T('Its big ears keep it cool and hear the tiniest sounds.'), 'jr-en-fox'],
+		['hare', 'animals', T('Hare'), T('A hare can run very fast and bound away in a moment.'), 'jr-en-hare'],
+		['gazelles', 'animals', T('Gazelles'), T('Graceful and quick, they live in herds in the open desert.'), 'jr-en-gazelles'],
+		['ibex', 'animals', T('Ibex'), T('Wild goats that climb the steepest rocks (Psalm 104:18).'), 'jr-en-ibex'],
+		['goats', 'animals', T('Goats'), T('Goats climb, and nibble almost anything they find.'), 'jr-en-goat-herder'],
+		['sheep', 'animals', T('Sheep'), T('The shepherd calls his own sheep by name (John 10:3).'), 'jr-en-sheep'],
+		['lambs', 'animals', T('Lambs'), T('Jesus is called the Lamb of God (John 1:29).'), 'jr-en-shepherdess'],
+		['donkey', 'animals', T('Donkey'), T('A strong, patient helper that carries heavy loads.'), 'jr-en-donkey'],
+		['mouse', 'small', T('Sand mouse'), T('One of Pip’s cousins! Sand mice hide in burrows by day.'), 'jr-cr-sand-mouse'],
+		['jerboa', 'small', T('Jerboa'), T('A tiny desert mouse with long back legs that hops like a kangaroo.'), 'jr-cr-jerboa'],
+		['gecko', 'small', T('Gecko'), T('A little lizard with sticky toes that can climb walls.'), 'jr-cr-gecko'],
+		['hedgehog', 'small', T('Hedgehog'), T('When it’s scared it rolls up into a prickly ball.'), 'jr-cr-hedgehog'],
+		['scorpion', 'small', T('Scorpion'), T('It hunts at night with its tail curled over its back.'), 'draw'],
+		['centipede', 'small', T('Centipede'), T('So many legs! It hurries along on dozens of them.'), 'draw'],
+		['spider', 'small', T('Spider'), T('Many desert spiders hunt on the sand at night.'), 'draw'],
+		['beetle', 'small', T('Dung beetle'), T('It rolls a ball bigger than itself, and finds its way by the stars.'), 'draw'],
+		['snake', 'small', T('Snake'), T('It slides across the sand in S-shaped curves.'), 'draw'],
+		['owl', 'birds', T('Owl'), T('It flies without a sound and sees well in the dark.'), 'jr-an-owl-1'],
+		['heron', 'birds', T('Herons'), T('Tall birds that stand still in the water, waiting for fish.'), 'jr-en-herons'],
+		['cranes', 'birds', T('Cranes'), T('They fly south in a long V every autumn, and know their time (Jeremiah 8:7).'), 'draw'],
+		['vultures', 'birds', T('Vultures'), T('They circle on the warm air, hardly moving their wings.'), 'draw'],
+		['bats', 'birds', T('Bats'), T('They come out at dusk to catch insects in the air.'), 'jr-cr-bat'],
+		['herder', 'road', T('Goat herder'), T('He leads his goats across the desert to find grass.'), 'jr-en-goat-herder'],
+		['shepherdess', 'road', T('Shepherdess'), T('She keeps her lambs close and safe.'), 'jr-en-shepherdess'],
+		['merchants', 'road', T('Merchants'), T('Traders with their camels, carrying goods to sell.'), 'jr-en-merchants'],
+		['lanterns', 'road', T('Lantern travelers'), T('Other travelers, lighting their way through the night.'), 'jr-en-lantern-travelers'],
+		['kite', 'road', T('Boy with a kite'), T('He flies his kite high in the wind.'), 'jr-en-kite-boy'],
+		['potter', 'road', T('Potter'), T('She shapes the clay on her wheel (Jeremiah 18:6).'), 'jr-en-potter'],
+		['well-women', 'road', T('Women at the well'), T('Drawing water for their families, as people did every day.'), 'jr-en-well-women'],
+		['east-palace', 'places', T('The palace in the East'), T('Where the wise men set out from, and come home to.'), 'jr-lm-east-palace', 'watch'],
+		['volcano', 'places', T('The smoking mountain'), T('A great snowy mountain, smoking far to the north.'), 'jr-far-volcano', 'watch'],
+		['river', 'places', T('The great river'), T('They cross it on their way west.'), 'jr-lm-river', 'watch'],
+		['oasis', 'places', T('Oasis'), T('Water and palm trees in the middle of the desert.'), 'jr-lm-oasis', 'watch'],
+		['tents', 'places', T('Desert tents'), T('Herders live in tents woven from goat hair.'), 'jr-en-bedouin-tents', 'watch'],
+		['ruins', 'places', T('Ancient ruins'), T('The stones of a city from long ago.'), 'jr-lm-ruins', 'watch'],
+		['stones', 'places', T('Standing stones'), T('Huge stones set up long, long ago.'), 'jr-en-standing-stones', 'watch'],
+		['inn', 'places', T('A caravan inn'), T('A safe place for travelers and their camels to rest.'), 'jr-lm-caravanserai', 'watch'],
+		['farm', 'places', T('Farmhouse'), T('A lamp still lit in the window.'), 'jr-en-farmhouse', 'watch'],
+		['pass', 'places', T('The mountain pass'), T('The road winds through the mountains.'), 'jr-lm-mountain-pass', 'watch'],
+		['well', 'places', T('A well'), T('Cool water for thirsty travelers, from deep under the ground.'), 'jr-lm-well', 'watch'],
+		['olives', 'places', T('Olive groves'), T('Olive trees grow on the hills of Judea.'), 'jr-lm-olive-grove', 'watch'],
+		['jerusalem', 'places', T('Jerusalem'), T('The great city, where they asked, “Where is he that is born King of the Jews?” (Matthew 2:2).'), 'jr-lm-jerusalem', 'watch'],
+		['herod', 'places', T('Herod’s palace'), T('King Herod sent them on to Bethlehem.'), 'jr-lm-herod-palace', 'watch'],
+		['shepherds', 'places', T('The shepherds’ fields'), T('Where the angel brought the shepherds good tidings of great joy (Luke 2:10).'), 'jr-lm-shepherds', 'watch'],
+		['bethlehem', 'places', T('Bethlehem'), T('The little town where Jesus was born (Micah 5:2).'), 'jr-lm-bethlehem', 'watch'],
+		['stable', 'places', T('The stable'), T('They saw the young child with Mary his mother (Matthew 2:11).'), 'jr-lm-stable', 'watch'],
+		['angel', 'places', T('The angel’s warning'), T('Warned in a dream, they went home another way (Matthew 2:12).'), 'jr-en-angel', 'watch'],
+		['rain', 'weather', T('Rain'), T('After rain, flowers bloom in the desert (Isaiah 35:1).'), 'draw', 'watch'],
+		['storm', 'weather', T('Thunderstorm'), T('Dark clouds roll in and hide the Star for a while.'), 'draw', 'watch'],
+		['lightning', 'weather', T('Lightning'), T('A giant spark between the clouds and the ground.'), 'draw', 'watch'],
+		['thunder', 'weather', T('Thunder'), T('The rumble lightning makes. Count from the flash to the boom to tell how far away it is.'), 'draw', 'watch'],
+		['wind', 'weather', T('Wind'), T('A warm wind lifts the sand off the tops of the dunes.'), 'draw', 'watch'],
+		['sandstorm', 'weather', T('Sandstorm'), T('A wall of dust sweeps across the desert.'), 'draw', 'watch'],
+		['devil', 'weather', T('Dust devil'), T('A little whirlwind of spinning sand.'), 'draw', 'watch'],
+		['fog', 'weather', T('Mist'), T('Cool, damp air lying low in the valleys.'), 'draw', 'watch'],
+		['haze', 'weather', T('Haze'), T('Dust in the air makes the far hills soft and pale.'), 'draw', 'watch'],
+		['mirage', 'weather', T('Mirage'), T('In the midday heat, the hot air makes the sky look like a pool of water.'), 'draw', 'watch'],
+		['snow', 'weather', T('Snow on the mountains'), T('Winter snow on the tops of the far peaks.'), 'draw', 'watch']
+	].map(function(e) { return {id: e[0], page: e[1], name: e[2], line: e[3], art: e[4], watch: e[5] === 'watch'}; });
+	var GUIDE_BY_ID = {}; GUIDE.forEach(function(e) { GUIDE_BY_ID[e.id] = e; });
+	GUIDE_BY_ID.bolt = {id: 'bolt', name: T('Lightning')};   // (a flash of lightning tapped: a badge, not a page of its own)
+	// what each thing on the road is in the guide (a few count for two: a herder and his goats)
+	var PIECE_GUIDE = {gazelles: 'gazelles', herder: ['herder', 'goats'], heron: 'heron', farm: 'farm', owl: 'owl', tents: 'tents', fox: 'fox', merchants: 'merchants',
+		hare: 'hare', stones: 'stones', ibex: 'ibex', lanterns: 'lanterns', sheep: 'sheep', donkey: 'donkey', kite: 'kite', potter: 'potter', 'well-women': 'well-women',
+		shepherdess: ['shepherdess', 'lambs'], palace: 'east-palace', home: 'east-palace', river: 'river', oasis: 'oasis', 'oasis-2': 'oasis', ruins: 'ruins', inn: 'inn',
+		'inn-2': 'inn', pass: 'pass', well: 'well', olives: 'olives', 'jerusalem-far': 'jerusalem', 'jerusalem-gate': 'jerusalem', jerusalem: 'jerusalem', herod: 'herod',
+		shepherds: 'shepherds', bethlehem: 'bethlehem', 'bethlehem-far': 'bethlehem', stable: 'stable', angel: 'angel', volcano: 'volcano'};
+	function pieceGuide(p) { return p.kind === 'howl' ? p.who : p.kind === 'trotter' ? 'jackal' : PIECE_GUIDE[p.key]; }
+	function moonKind(p) {   // the moon's eight phases (the same edges as moonWords)
+		return p < 0.03 || p > 0.97 ? 'moon-new' : p < 0.22 ? 'moon-wax-crescent' : p < 0.28 ? 'moon-first-quarter' : p < 0.47 ? 'moon-wax-gibbous'
+			: p < 0.53 ? 'moon-full' : p < 0.72 ? 'moon-wane-gibbous' : p < 0.78 ? 'moon-last-quarter' : 'moon-wane-crescent';
+	}
+	var GUIDE_KEY = 'journey-guide', READ_KEY = 'journey-read', DAYNIGHT_KEY = 'journey-daynight';
+	var guideStore = null;   // {id: {n: times found, days: [the nights it was found on]}}
+	function guideData() { if (!guideStore) { try { guideStore = JSON.parse(localStorage.getItem(GUIDE_KEY) || '{}') || {}; } catch (e) { guideStore = {}; } } return guideStore; }
+	function guideSave() { try { localStorage.setItem(GUIDE_KEY, JSON.stringify(guideStore)); } catch (e) {} }
+	var counted = {}, tapNotes = [], uidSeq = 0;   // what's been counted since tonight began (each thing once a night); the words shown where it was found
+	function noteFind(ids, uid, x, y) {   // something found: counted once for each time it appears, and named where it was
+		ids = [].concat(ids).filter(function(id) { return GUIDE_BY_ID[id]; });
+		if (!ids.length) return false;
+		if (typeof uid === 'object') uid = uid.guideUid || (uid.guideUid = 'o' + (++uidSeq));   // (a creature or piece: its own name, as a key)
+		var g = guideData(), first = false, n = 0;
+		if (!counted[uid]) {
+			counted[uid] = true;
+			ids.forEach(function(id) {
+				var r = g[id] || (g[id] = {n: 0, days: []});
+				if (!r.n) first = true;
+				r.n++; if (!HOMEMODE && r.days.indexOf(night.day) < 0) r.days.push(night.day);
+			});
+			guideSave(); track('guide_find', {id: ids[0], n: g[ids[0]].n});
+			if (first) setTimeout(journalGlint, 300);
+		}
+		n = g[ids[0]].n;
+		if (x != null) {
+			tapNotes = tapNotes.filter(function(t) { return clock - t.t < 2.4 && Math.hypot(t.x - x, t.y - y) > 30; });
+			tapNotes.push({text: GUIDE_BY_ID[ids[0]].name, n: n, first: first, x: x, y: y, t: clock});
+		}
+		return true;
+	}
+	function witness(id) {   // seen just by being there: once a night, and named at the top of the sky the first time
+		if (counted['w:' + id] || !show || pip.card) return;
+		var firstEver = !(guideData()[id] && guideData()[id].n);
+		noteFind(id, 'w:' + id, firstEver ? VW / 2 : null, TOPV + 150);
+	}
+	function paintNotes() {   // the name, rising a little and fading, where something was found ("New!" the first time)
+		tapNotes = tapNotes.filter(function(t) { return clock - t.t < 2.4; });
+		tapNotes.forEach(function(t) {
+			var q = (clock - t.t) / 2.4, a = Math.min(1, q * 6) * (1 - smooth((q - 0.6) / 0.4));
+			ctx.save(); ctx.globalAlpha = a; ctx.translate(t.x, t.y - 22 - 16 * q); if (homeward(night.day)) ctx.scale(-1, 1);   // (the words the right way round on the way home)
+			ctx.textAlign = 'center'; ctx.shadowColor = 'rgba(0,0,0,0.75)'; ctx.shadowBlur = 6;
+			if (t.first) { ctx.fillStyle = '#FFDB59'; ctx.font = '600 11px Inter, Arial, sans-serif'; ctx.fillText(T('New in your Field Guide!'), 0, -18); }
+			ctx.fillStyle = '#fffbe8'; ctx.font = 'italic 16px Merienda, Georgia, serif'; ctx.fillText(t.n > 1 ? t.text + '  ×' + t.n : t.text, 0, 0);
+			ctx.restore();
+			if (t.first) sparkle(t.x, t.y - 4, 10, a * (1 - q));
+		});
+	}
+	// where each thing that can be tapped is drawn this frame: kept in the canvas's own pixels (the scene's current
+	// transform applied), so the camera, the mirrored way home and any turn or flip all just work
+	var spots = [], spotsNext = [];
+	function spot(id, uid, x, y, r) {
+		var m = ctx.getTransform();
+		spotsNext.push({id: id, uid: uid, x: m.a * x + m.c * y + m.e, y: m.b * x + m.d * y + m.f, r: r * Math.hypot(m.a, m.b)});
+	}
+	function spotAt(evt, pad, small) {   // (small: only the little things, the size of a creature on the sand)
+		var rect = canvas.getBoundingClientRect(), k = canvas.width / rect.width, px = (evt.clientX - rect.left) * k, py = (evt.clientY - rect.top) * k, best = null, bd = 1e9;
+		spots.forEach(function(s) { if (small && s.r > 30 * dpr * S) return; var d = Math.hypot(s.x - px, s.y - py) - s.r - (pad || 0) * dpr * S; if (d < 0 && d < bd) { bd = d; best = s; } });
+		return best;
+	}
+	var starFlare = -9;
+	function tapSpot(evt, pad, small) {   // a tap on something in the Field Guide
+		var s = spotAt(evt, pad, small); if (!s) return false;
+		var p = sceneXY(evt);
+		if (s.id === 'star') starFlare = clock;   // it flares up
+		if (s.id === 'meteor') s.uid.caught = clock;   // (and a caught shooting star glints)
+		noteFind(s.id, s.uid, p.x, p.y);
+		return true;
+	}
+	// the wise men blink now and then, like their camels: a lid the colour of the skin beside the eye, drawn over it.
+	// Where each eye is in each of their pictures, in the picture's pixels: x, y, and its half width and height.
+	var KING_EYES = {
+		'jr-char-king-1-walk-free': [211.7, 72.9, 1.8, 2.7], 'jr-char-king-1-rest': [154.6, 70.8, 1.8, 2.7], 'jr-char-king-1-kneel': [169.2, 76.4, 1.8, 2.7],
+		'jr-char-king-1-ride': [231, 77.2, 1.8, 2.7], 'jr-char-king-1-ride-home': [164.7, 75.7, 1.8, 2.7],
+		'jr-char-king-2-walk-free': [201.4, 71.9, 1.8, 2.6], 'jr-char-king-2-kneel': [195, 74, 1.6, 1.8],
+		'jr-char-king-2-ride': [237.1, 72.2, 1.8, 2.6], 'jr-char-king-2-ride-home': [237.8, 73.3, 1.9, 2.6],
+		'jr-char-king-3-walk-free': [128.3, 119.2, 3, 3.9], 'jr-char-king-3-rest': [128.1, 118.5, 3, 3.9], 'jr-char-king-3-kneel': [147.5, 120, 3, 3.9],
+		'jr-char-king-3-ride': [136, 118, 2.6, 3.6], 'jr-char-king-3-ride-home': [137.5, 116, 2.6, 3.6]
+	};
+	function kingBlink(im, dx, dy, dw, dh) {   // over a king's picture just drawn at (dx, dy, dw, dh)
+		var e = im && KING_EYES[im.n]; if (!e) return;
+		var seed = +im.n.charAt(13), t = clock + seed * 2.9, n = Math.floor(t / 4.2), at = 0.3 + hash(n * 5 + seed * 11) * 3.3, q = (t - n * 4.2 - at) / 0.22;
+		var shut = holdBlink != null ? holdBlink : q > 0 && q < 1 ? Math.sin(Math.PI * q) : 0;   // (test mode can hold it, as for the camels)
+		if (shut <= 0) return;
+		if (!im.lid) {   // the skin colour just behind the eye
+			try {
+				var c = document.createElement('canvas'); c.width = c.height = 1; var g = c.getContext('2d');
+				g.drawImage(im, Math.round(e[0] - e[2] - 3), Math.round(e[1]), 1, 1, 0, 0, 1, 1);
+				var px = g.getImageData(0, 0, 1, 1).data; im.lid = 'rgb(' + px[0] + ',' + px[1] + ',' + px[2] + ')';
+			} catch (err) { im.lid = '#c08060'; }
+		}
+		ctx.save(); ctx.translate(dx, dy); ctx.scale(dw / im.width, dh / im.height);
+		ctx.beginPath(); ctx.ellipse(e[0], e[1], e[2] + 0.8, e[3] + 0.8, 0, 0, Math.PI * 2); ctx.clip();
+		ctx.fillStyle = im.lid; ctx.fillRect(e[0] - e[2] - 1, e[1] - e[3] - 1, e[2] * 2 + 2, (e[3] * 2 + 2) * shut);   // the lid comes down from the top
+		ctx.restore();
+	}
 	function constellation() {   // tonight's, and where it is (or null)
 		if (!night || /storm|rain|sandstorm|fog/.test(night.weather) || night.day === TOTAL) return null;
 		var c = CONSTELLATIONS[Math.floor((HOMEMODE ? YEARDAY : night.day) / 7) % CONSTELLATIONS.length];
@@ -2120,7 +2352,9 @@
 		var k = constellation(); if (!k || daylight() > 0.2) return false;
 		var xs = k.pts.map(function(q) { return q[0]; }), ys = k.pts.map(function(q) { return q[1]; });   // anywhere in the figure (easy with a finger)
 		if (p.x < Math.min.apply(null, xs) - 30 || p.x > Math.max.apply(null, xs) + 30 || p.y < Math.min.apply(null, ys) - 30 || p.y > Math.max.apply(null, ys) + 30) return false;
-		traced = {t: clock, day: night.day}; track('constellation', {name: constellation().c.name}); return true;
+		traced = {t: clock, day: night.day}; track('constellation', {name: constellation().c.name});
+		noteFind('c-' + CONSTELLATIONS.indexOf(k.c), 'c' + night.day, p.x, p.y);
+		return true;
 	}
 	// The moon's face: its dark seas where they really are (as seen from the northern hemisphere), the bright craters
 	// Tycho and Copernicus with their rays, a scatter of small craters and a little darkening towards the edge. Made once
@@ -2214,6 +2448,7 @@
 			var high = night.plan.sun === 'day' ? 1 - (evening() > 0 ? 1 : smooth(nightT())) : 0;   // (by day it starts high, crossing to the west)
 			var hx = VW * (homeward(night.day) ? 0.2 + 0.25 * high : 0.8 - 0.25 * high), hy = 300 + 225 * (1 - day) - 190 * high, hr = 40 + 8 * (1 - day) - 6 * high;   // high and small, sinking, larger and redder as it nears the hills
 			if (hy + hr > 330) skyShot();   // (low enough to reach the hills)
+			if (hy > 420 && clearSky > 0.5) witness('sunset');   // (going down behind the hills)
 			glow(hx, hy, 460, 'rgb(255,170,90)', 0.35 * day * clearSky);
 			glow(hx, hy, 160, 'rgb(255,215,140)', 0.5 * day * clearSky);
 			ctx.save(); ctx.globalAlpha = clearSky;
@@ -2226,6 +2461,7 @@
 			var wet = night.weather === 'rain' || night.weather === 'storm';
 			sunset = wet ? 1 - smooth((nightT() - 0.72) / 0.28) : 1 - smooth(nightT() / 0.32);   // (on a rainy evening it sets as the rain clears, behind the rainbow)
 			if (sunset > 0.01) {
+				if (sunset < 0.7 && clearSky > 0.5) witness('sunset');
 				var sx = VW * (homeward(night.day) ? 0.2 : 0.8), sy = 392 + 118 * (1 - sunset), sr = 46;   // always in the west: ahead of them going, behind them coming home (the homeward scene is drawn mirrored)
 				skyShot();
 				glow(sx, sy, 420, 'rgb(255,150,80)', 0.32 * sunset * clearSky);
@@ -2283,7 +2519,9 @@
 			}
 			ctx.drawImage(mc, mx - mr, my - mr, mr * 2, mr * 2);
 			ctx.globalAlpha = 1;
+			if (clearSky * (1 - 0.6 * sunUp) > 0.3) spot(moonKind(night.phase), 'moon' + night.day, mx, my, mr + 12);
 		}
+		else if (!mw && night.day !== TOTAL && clearSky > 0.6 && day < 0.1 && sunset < 0.15) witness('moon-new');   // a night with no moon
 		// a comet for a week in November: a soft head with a long tail streaming away
 		if (cometNight(night.day) && clearSky > 0.1) {
 			var cx = VW * 0.3 - skyDrift() * 0.4, cy = TOPV + skyH * 0.28 + 40;
@@ -2294,6 +2532,7 @@
 			ctx.restore(); ctx.globalAlpha = clearSky;
 			glow(cx, cy, 14, 'rgb(235,240,255)', 0.8); ctx.fillStyle = '#fff'; ctx.fillRect(cx - 1.2, cy - 1.2, 2.4, 2.4);
 			ctx.globalAlpha = 1;
+			if (clearSky > 0.4) { spot('comet', 'comet' + night.day, cx, cy, 34); spot('comet', 'comet' + night.day, cx + 70, cy - 38, 40); }   // (its head, or along its tail)
 		}
 		// shooting stars now and then; many on meteor-shower nights
 		var md = HOMEMODE ? ymd(now()).slice(5) : '', shower = HOMEMODE ? /^(01-0[34]|04-2[1-3]|05-0[5-7]|08-1[1-3])$/.test(md) : night.plan.note && /meteor/.test(night.plan.note) && !weatherOverride;   // (at home: the Quadrantids, Lyrids, Eta Aquariids and Perseids)
@@ -2303,7 +2542,10 @@
 			var x = m.x - m.t * 260, y = m.y + m.t * 120, a = Math.sin(m.t * Math.PI);
 			var g2 = ctx.createLinearGradient(x, y, x + 90, y - 42); g2.addColorStop(0, 'rgba(255,255,255,' + a + ')'); g2.addColorStop(1, 'rgba(255,255,255,0)');
 			ctx.strokeStyle = g2; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + 90, y - 42); ctx.stroke();
+			if (a > 0.15) spot('meteor', m, x + 30, y - 14, 46);   // (quick: tap it before it's gone)
+			if (m.caught) sparkle(x, y, 9, Math.max(0, 1 - (clock - m.caught) * 1.5));
 		});
+		if (shower && clearSky > 0.6 && sunset < 0.15 && day < 0.1) witness('shower');
 	}
 	// The Star starts small, low on the right, when they set out. Night by night it grows and drifts in toward the
 	// middle of the sky; on the last night it comes to rest over the stable.
@@ -2318,10 +2560,13 @@
 		var p = Math.max(0, Math.min(cam, TOTAL)) / TOTAL, s = starPos(), seen = (1 - wx.cover * 0.85) * clamp(1 - (cam - TOTAL) / 1.2, 0, 1) * (1 - 0.65 * daylight());   // (faint by day)
 		if (seen <= 0.01) return;
 		var pulse = reduceMotion ? 1 : 1 + 0.06 * Math.sin(clock * 1.3);
+		var fl = (clock - starFlare) / 1.4;   // tapped: it flares up, brighter and bigger for a moment
+		if (fl > 0 && fl < 1) { pulse *= 1 + 0.45 * Math.sin(Math.PI * fl); glow(s.x, s.y, (140 + 200 * p) * s.size * (1 + fl), 'rgb(255,236,170)', 0.6 * (1 - fl) * seen); }
+		if (seen > 0.3) spot('star', 'star' + night.day, s.x, s.y, 26 * s.size + 14);
 		glow(s.x, s.y, (60 + 160 * p) * pulse * s.size, 'rgb(255,219,89)', (0.3 + 0.4 * p) * seen);
 		glow(s.x, s.y, 30 * pulse * s.size, 'rgb(255,251,232)', 0.9 * seen);
 		ctx.globalAlpha = seen;
-		ctx.save(); ctx.translate(s.x, s.y); ctx.scale(s.size, s.size); ctx.fillStyle = '#fffbe8'; ctx.beginPath();
+		ctx.save(); ctx.translate(s.x, s.y); ctx.scale(s.size * (fl > 0 && fl < 1 ? pulse : 1), s.size * (fl > 0 && fl < 1 ? pulse : 1)); ctx.fillStyle = '#fffbe8'; ctx.beginPath();
 		for (var i = 0; i < 16; i++) { var r = i % 2 ? 5 : (i % 4 === 0 ? 34 : 18), a = i * Math.PI / 8 - Math.PI / 2; ctx.lineTo(Math.cos(a) * r, Math.sin(a) * r); }
 		ctx.closePath(); ctx.fill(); ctx.restore();
 		ctx.globalAlpha = 1;
@@ -2622,9 +2867,9 @@
 		pipCard.hidden = false; verseEl.style.visibility = 'hidden'; pipCard.querySelector('button').focus();
 	}
 	var lastTap = 0;
-	canvas.addEventListener('click', function(evt) { if (performance.now() - lastTap < 800) return; if (nearPip(evt, evt.pointerType === 'touch' ? 40 : 26)) findPip(); else if (pickUp(sceneXY(evt)) || talkToKing(sceneXY(evt)) || pokeCamel(sceneXY(evt)) || traceAt(sceneXY(evt))) return; else if (evt.pointerType !== 'touch') pipCall(evt); });
-	canvas.addEventListener('pointerdown', function(evt) { if (evt.pointerType === 'touch') { lastTap = performance.now(); if (nearPip(evt, 40)) { evt.preventDefault(); findPip(); } else if (!pickUp(sceneXY(evt)) && !talkToKing(sceneXY(evt), 16) && !pokeCamel(sceneXY(evt), 16) && !traceAt(sceneXY(evt))) pipCall(evt); } });
-	canvas.addEventListener('mousemove', function(evt) { pip.near = nearPip(evt, 70); pip.lookX = sceneXY(evt).x; var k = constellation(), sp = sceneXY(evt); canvas.style.cursor = nearPip(evt, 26) || kingBoxes.some(function(b) { return sp.x > b.x0 && sp.x < b.x1 && sp.y > b.y0 && sp.y < b.y1; }) || camelBoxes.some(function(b) { return sp.x > b.x0 && sp.x < b.x1 && sp.y > b.y0 && sp.y < b.y1; }) || (k && daylight() < 0.2 && k.pts.some(function(q) { return Math.hypot(q[0] - sp.x, q[1] - sp.y) < 40; })) ? 'pointer' : ''; });
+	canvas.addEventListener('click', function(evt) { if (performance.now() - lastTap < 800) return; if (nearPip(evt, evt.pointerType === 'touch' ? 40 : 26)) findPip(); else if (pickUp(sceneXY(evt)) || tapSpot(evt, 6, true) || talkToKing(sceneXY(evt)) || pokeCamel(sceneXY(evt)) || tapSpot(evt, 6) || traceAt(sceneXY(evt))) return; else if (evt.pointerType !== 'touch') pipCall(evt); });
+	canvas.addEventListener('pointerdown', function(evt) { if (evt.pointerType === 'touch') { lastTap = performance.now(); if (nearPip(evt, 40)) { evt.preventDefault(); findPip(); } else if (!pickUp(sceneXY(evt)) && !tapSpot(evt, 16, true) && !talkToKing(sceneXY(evt), 16) && !pokeCamel(sceneXY(evt), 16) && !tapSpot(evt, 16) && !traceAt(sceneXY(evt))) pipCall(evt); } });
+	canvas.addEventListener('mousemove', function(evt) { pip.near = nearPip(evt, 70); pip.lookX = sceneXY(evt).x; var k = constellation(), sp = sceneXY(evt); canvas.style.cursor = nearPip(evt, 26) || kingBoxes.some(function(b) { return sp.x > b.x0 && sp.x < b.x1 && sp.y > b.y0 && sp.y < b.y1; }) || camelBoxes.some(function(b) { return sp.x > b.x0 && sp.x < b.x1 && sp.y > b.y0 && sp.y < b.y1; }) || (k && daylight() < 0.2 && k.pts.some(function(q) { return Math.hypot(q[0] - sp.x, q[1] - sp.y) < 40; })) || spotAt(evt, 6) ? 'pointer' : ''; });
 	canvas.addEventListener('mouseleave', function() { pip.near = false; });
 	document.getElementById('pip-close').addEventListener('click', function() {
 		pipCard.hidden = true; verseEl.style.visibility = ''; pip.card = false;
@@ -2777,6 +3022,7 @@
 		ctx.save(); ctx.lineWidth = 6; ctx.globalAlpha = 0.16 * a;
 		cols.forEach(function(c, i) { ctx.strokeStyle = 'rgb(' + c + ')'; ctx.beginPath(); ctx.arc(cx, cy, R - i * 6, Math.PI * 1.08, Math.PI * 1.92); ctx.stroke(); });
 		ctx.restore();
+		if (a > 0.3) [1.2, 1.4, 1.6, 1.8].forEach(function(f) { spot('rainbow', 'rainbow' + night.day, cx + Math.cos(Math.PI * f) * (R - 18), cy + Math.sin(Math.PI * f) * (R - 18), 60); });
 	}
 	// before a sandstorm, a tall brown wall of dust rolls in over the far hills
 	function paintDustWall() {
@@ -2815,6 +3061,7 @@
 			var e = k, most = 0; while (e + 1 < caps.length && caps[e + 1][2] > 0.5) e++;
 			for (var z = k; z <= e; z++) most = Math.max(most, caps[z][2]);
 			if (most < 6) { k = e; continue; }   // too shallow to read as snow: it would only be a thin white line
+			if (most > 12) witness('snow');
 			ctx.beginPath(); ctx.moveTo(caps[k][0], caps[k][1]);
 			for (var q = k + 1; q <= e; q++) ctx.lineTo(caps[q][0], caps[q][1]);
 			for (q = e; q >= k; q--) ctx.lineTo(caps[q][0], caps[q][1] + caps[q][2]);
@@ -2835,6 +3082,7 @@
 			var a = m * smooth((x - VW * 0.2) / (VW * 0.45));   // fading as they draw near
 			if (a <= 0.01) continue;
 			var y = layerY('mid', x - LEAD_X + sh) + 10;   // lying on the flats just beyond the near hills' crest
+			if (a > 0.3) witness('mirage');
 			ctx.save(); ctx.globalAlpha = a;
 			var g = ctx.createLinearGradient(0, y - 16, 0, y + 6);
 			g.addColorStop(0, 'rgba(150,190,240,0)'); g.addColorStop(0.45, 'rgba(150,190,240,0.55)'); g.addColorStop(0.7, 'rgba(180,212,248,0.6)'); g.addColorStop(1, 'rgba(150,190,240,0)');
@@ -2926,6 +3174,7 @@
 				ctx.fillStyle = 'rgba(214,170,110,' + (0.26 * on * (1 - f * 0.6)).toFixed(3) + ')';
 				ctx.beginPath(); ctx.ellipse(x + wob, cy, rx, 4 + f * 3, 0, 0, Math.PI * 2); ctx.fill();
 			}
+			if (on > 0.5 && x > 0 && x < VW) witness('devil');
 		}
 	}
 
@@ -2934,6 +3183,7 @@
 		var shake = wx.shake > 0 ? Math.sin(clock * 60) * 3 * wx.shake : 0;
 		if (homeward(night.day)) ctx.setTransform(-dpr * S, 0, 0, dpr * S, canvas.width, dpr * (canvas.clientHeight - VH * S));   // mirrored: they walk the other way
 		else ctx.setTransform(dpr * S, 0, 0, dpr * S, 0, dpr * (canvas.clientHeight - VH * S));
+		spotsNext = [];
 		paintSky();
 		paintStar();
 		paintCranes();
@@ -2968,6 +3218,8 @@
 		paintCritters(false);
 		paintForeground();
 		paintNearWeather();
+		paintNotes();
+		spots = spotsNext;   // (what can be tapped, as just drawn)
 		var dl = daylight();
 		if (dl > 0) {   // the warm afternoon light over everything, going as the sun goes
 			ctx.save(); ctx.globalCompositeOperation = 'soft-light';
@@ -2999,6 +3251,7 @@
 		makeStars();
 		sound.music(k, k === TOTAL, TOTAL - k);
 		PIECES.forEach(function(p) { p.heard = false; p.seen = null; p.nextCall = 0; });
+		counted = {}; tapNotes = [];   // (the Field Guide counts each thing again each time a night is watched)
 		setNightSounds = function() {
 		var kinds = PIECES.filter(function(p) { return p.night === k; }).map(function(p) { return p.kind + ' ' + p.key; }).join(' ');
 		sound.preload(['voice-1-say', 'voice-2-say', 'voice-3-say'].map(voiceFile));   // (the kings' sayings, for a click in the evening)
@@ -3093,6 +3346,7 @@
 		if (verseOn !== lastVerse) {
 			lastVerse = verseOn;
 			if (verseOn && show) trackOnce('night_finished', {mode: show.mode});   // watched to the end
+			if (verseOn && !HOMEMODE) { var rl = readList(READ_KEY); if (rl.indexOf(viewIdx) < 0) { rl.push(viewIdx); try { localStorage.setItem(READ_KEY, JSON.stringify(rl)); } catch (e) {} } }   // the day's reading, read (for the badges)
 			if (verseOn) {
 				var rd = readingFor(dateOfDay(viewIdx));
 				verseEl.querySelector('blockquote').textContent = T('“{text}”', {text: rd.text});
@@ -3102,6 +3356,11 @@
 		}
 		titleEl.style.opacity = titleOn ? 1 : 0;
 		if (show && show.elapsed > 4.4) firstShow = false;
+		if (show && show.mode === 'night' && show.elapsed > 5 && evening() === 0) {   // seen travelling by daylight, and after dark (a badge)
+			var dn = daynight(), was = dn.day + dn.night;
+			if (daylight() > 0.6) dn.day = 1; else if (daylight() === 0 && nightT() > 0.3) dn.night = 1;
+			if (dn.day + dn.night !== was) try { localStorage.setItem(DAYNIGHT_KEY, JSON.stringify(dn)); } catch (e) {}
+		}
 	}
 
 	// ----- controls: earlier nights, pause, watch again, the journey so far -----
@@ -3221,6 +3480,8 @@
 	var journalEl = document.getElementById('journal'), journalBtn = document.getElementById('journal-btn'), homeWatch = null;
 	var JSEEN = 'journey-journal-seen', JEASTER = 'journey-easter';
 	function readList(key) { try { return JSON.parse(localStorage.getItem(key) || '[]'); } catch (e) { return []; } }
+	var dnCache = null;
+	function daynight() { if (!dnCache) { try { var v = JSON.parse(localStorage.getItem(DAYNIGHT_KEY) || '{}') || {}; dnCache = {day: v.day ? 1 : 0, night: v.night ? 1 : 0}; } catch (e) { dnCache = {day: 0, night: 0}; } } return dnCache; }
 	function withCtx(c, fn) { var main = ctx; ctx = c; try { fn(); } finally { ctx = main; } }
 	function smallCanvas(w, h, draw) {
 		var c = document.createElement('canvas'), r = window.devicePixelRatio || 1;
@@ -3241,8 +3502,13 @@
 		var home = readList(PIP_HOME_KEY), weeks = {};
 		home.forEach(function(ymdStr) { var d = new Date(ymdStr + 'T12:00:00'); weeks[Math.floor(Math.floor((d - new Date(d.getFullYear(), 0, 1)) / DAY) / 7)] = 1; });
 		var best = 0, run = 0; for (var k = 0; k <= END; k++) { run = found.indexOf(k) >= 0 ? run + 1 : 0; best = Math.max(best, run); }
-		return {found: found, picked: picked, kinds: kinds, treasures: made.length, home: home, weeks: weeks, best: best, easter: readList(JEASTER).length > 0};
+		return {found: found, picked: picked, kinds: kinds, treasures: made.length, home: home, weeks: weeks, best: best, easter: readList(JEASTER).length > 0,
+			g: guideData(), read: readList(READ_KEY), dn: daynight()};
 	}
+	function gHas(d, id) { return !!(d.g[id] && d.g[id].n > 0); }
+	function gPage(d, page) { return GUIDE.every(function(e) { return e.page !== page || gHas(d, e.id); }); }
+	function gCount(d) { return GUIDE.filter(function(e) { return gHas(d, e.id); }).length; }
+	function gTotal(d) { return GUIDE.reduce(function(m, e) { return m + (d.g[e.id] ? d.g[e.id].n : 0); }, 0); }
 	var BADGES = [
 		['pip', T('First find'), T('Find Pip for the first time'), function(d) { return d.found.length + d.home.length > 0; }],
 		['run', T('Seven in a row'), T('Find Pip seven nights running'), function(d) { return d.best >= 7; }],
@@ -3251,8 +3517,33 @@
 		['star', T('All of Advent'), T('Find Pip every night of December until Christmas'), function(d) { for (var k = dayOf('12-01'); k < TOTAL; k++) if (d.found.indexOf(k) < 0) return false; return true; }],
 		['seven', T('All seven treasures'), T('Find one of each treasure'), function(d) { return Object.keys(d.kinds).length >= FINDS.length; }],
 		['sunrise', T('Easter morning'), T('Visit the wise men on Easter Sunday'), function(d) { return d.easter; }],
-		['friend', T('Pip’s best friend'), T('Find Pip on all 98 nights'), function(d) { return d.found.length >= END + 1; }]
+		['friend', T('Pip’s best friend'), T('Find Pip on all 98 nights'), function(d) { return d.found.length >= END + 1; }],
+		// the Field Guide's
+		['caravan', T('The whole caravan'), T('Talk to all three kings and pat all three camels'), function(d) { return gPage(d, 'caravan'); }],
+		['gazer', T('Star gazer'), T('Trace all seven constellations'), function(d) { for (var i = 0; i < 7; i++) if (!gHas(d, 'c-' + i)) return false; return true; }],
+		['moons', T('Every face of the moon'), T('See all eight phases of the moon'), function(d) { return GUIDE.every(function(e) { return !/^moon-/.test(e.id) || gHas(d, e.id); }); }],
+		['follow', T('Following the Star'), T('Tap the Star on ten different nights'), function(d) { return !!d.g.star && d.g.star.days.length >= 10; }],
+		['xstar', T('The Star over the stable'), T('Tap the Star on Christmas night'), function(d) { return !!d.g.star && d.g.star.days.indexOf(TOTAL) >= 0; }],
+		['meteors', T('Shooting stars'), T('Catch ten shooting stars'), function(d) { return !!d.g.meteor && d.g.meteor.n >= 10; }],
+		['comet', T('The comet'), T('See the comet, in the second week of November'), function(d) { return gHas(d, 'comet'); }],
+		['rainbow', T('God’s promise'), T('Find a rainbow after the rain'), function(d) { return gHas(d, 'rainbow'); }],
+		['bolt', T('Quick as lightning'), T('Tap a flash of lightning'), function(d) { return gHas(d, 'bolt'); }],
+		['storm', T('Through the storm'), T('Watch a thunderstorm, and hear its thunder'), function(d) { return gHas(d, 'storm') && gHas(d, 'thunder'); }],
+		['animals', T('Animals of the land'), T('Find every animal in the Field Guide'), function(d) { return gPage(d, 'animals'); }],
+		['small', T('Little creatures'), T('Find every small creature'), function(d) { return gPage(d, 'small'); }],
+		['birds', T('Birds of the air'), T('Find every bird, and the bats'), function(d) { return gPage(d, 'birds'); }],
+		['road', T('Friends on the road'), T('Meet everyone on the road'), function(d) { return gPage(d, 'road'); }],
+		['places', T('Every step of the way'), T('Pass every place along the road'), function(d) { return gPage(d, 'places'); }],
+		['weather', T('Weather watcher'), T('See every kind of weather'), function(d) { return gPage(d, 'weather'); }],
+		['daynight', T('By day and by night'), T('See the caravan travel by daylight and after dark'), function(d) { return d.dn.day && d.dn.night; }],
+		['read7', T('Seven readings'), T('Read the day’s Bible reading on seven nights'), function(d) { return d.read.length >= 7; }],
+		['read25', T('Twenty-five readings'), T('Read the day’s Bible reading on 25 nights'), function(d) { return d.read.length >= 25; }],
+		['readall', T('Every reading'), T('Read all 98 of the day’s Bible readings'), function(d) { return d.read.length >= END + 1; }],
+		['explorer', T('Explorer'), T('Make 100 finds in the Field Guide'), function(d) { return gTotal(d) >= 100; }],
+		['guide', T('The whole Field Guide'), T('Find everything in the Field Guide'), function(d) { return gCount(d) >= GUIDE.length; }]
 	];
+	var BADGE_ICON = {caravan: 'camel-1', gazer: 'c-0', moons: 'moon-full', follow: 'star', xstar: 'star', meteors: 'meteor', comet: 'comet', rainbow: 'rainbow', bolt: 'lightning', storm: 'storm',
+		animals: 'wolf', small: 'beetle', birds: 'owl', road: 'merchants', places: 'jerusalem', weather: 'wind', daynight: 'sunset', explorer: 'fox', guide: 'stable'};
 	function badgeIcon(kind) {   // little pictures in the Journey's style, for the medals
 		return smallCanvas(80, 80, function(g) {
 			var pipIm = art('jr-cr-sand-mouse');
@@ -3264,12 +3555,165 @@
 			else if (kind === 'star') { glow(40, 40, 36, 'rgb(255,219,89)', 0.7); sparkle(40, 40, 24, 1); }
 			else if (kind === 'seven') { FINDS.forEach(function(f, i) { var a = i / FINDS.length * Math.PI * 2 - Math.PI / 2; drawFind(f[0], 40 + Math.cos(a) * 24, 44 + Math.sin(a) * 24, 1.5); }); }
 			else if (kind === 'sunrise') { glow(40, 56, 40, 'rgb(255,190,120)', 0.8); g.fillStyle = '#ffd27a'; g.beginPath(); g.arc(40, 56, 16, Math.PI, 0); g.fill(); g.fillStyle = '#c98b3a'; g.fillRect(6, 56, 68, 4); }
+			else if (BADGE_ICON[kind]) guideDraw(GUIDE_BY_ID[BADGE_ICON[kind]], 80, 80);
+			else if (/^read/.test(kind)) drawBook(40, 44);
 			else if (kind === 'friend') { var cm = art('jr-char-camel-1-kneel'); if (cm) { var cw = 60, ch = cw * cm.height / cm.width; g.drawImage(cm, 10, 70 - ch, cw, ch); } drawPip(60, 70, 22); }
 		});
 	}
+	// the Field Guide's pictures: the scene's own art, fitted to the box, or drawn here in the scene's style
+	var ICON_ART = {owl: ['jr-an-owl-1', 'jr-cr-owl-wings-up', 'jr-en-owl'], hare: ['jr-an-hare-0', 'jr-en-hare'], wolf: ['jr-howl-wolf', 'jr-wolf-stand'], jackal: ['jr-howl-jackal', 'jr-jackal-stand']};
+	function fitArt(im, w, h, fill) {
+		var s = Math.min(w * (fill || 0.86) / im.width, h * (fill || 0.86) / im.height);
+		ctx.drawImage(im, (w - im.width * s) / 2, h * 0.94 - im.height * s, im.width * s, im.height * s);
+	}
+	function iconCloud(x, y, s, col) { ctx.fillStyle = col; [[-14, 2, 10], [-3, -5, 13], [11, 0, 10], [3, 5, 9], [-9, 6, 8]].forEach(function(c) { ctx.beginPath(); ctx.arc(x + c[0] * s, y + c[1] * s, c[2] * s, 0, Math.PI * 2); ctx.fill(); }); }
+	function iconBolt(x, y, s) { ctx.fillStyle = '#fff6b0'; ctx.beginPath(); [[0, 0], [-7, 16], [-1, 16], [-5, 30], [9, 11], [2, 11], [7, 0]].forEach(function(p, i) { ctx[i ? 'lineTo' : 'moveTo'](x + p[0] * s, y + p[1] * s); }); ctx.closePath(); ctx.fill(); }
+	function iconMoon(x, y, r, ph) {   // the moon at phase ph (0 new, 0.5 full), lit part pale, the rest dark
+		ctx.fillStyle = '#2a2f5a'; ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill();
+		var kk = Math.cos(ph * 2 * Math.PI);
+		ctx.fillStyle = '#f4f0dc'; ctx.beginPath();
+		if (ph < 0.5) { ctx.arc(x, y, r, -Math.PI / 2, Math.PI / 2, false); ctx.ellipse(x, y, Math.abs(kk) * r, r, 0, Math.PI / 2, -Math.PI / 2, kk > 0); }
+		else { ctx.arc(x, y, r, Math.PI / 2, -Math.PI / 2, false); ctx.ellipse(x, y, Math.abs(kk) * r, r, 0, -Math.PI / 2, Math.PI / 2, kk > 0); }
+		if (ph > 0.03 && ph < 0.97) ctx.fill();
+		ctx.strokeStyle = 'rgba(244,240,220,0.35)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.stroke();
+	}
+	function drawBook(x, y) {   // an open Bible, for the reading badges
+		ctx.fillStyle = '#7a2a1c'; ctx.fillRect(x - 26, y - 4, 52, 26);
+		ctx.fillStyle = '#fbf3e1'; ctx.beginPath(); ctx.moveTo(x, y); ctx.quadraticCurveTo(x - 12, y - 8, x - 24, y - 4); ctx.lineTo(x - 24, y + 20); ctx.quadraticCurveTo(x - 12, y + 16, x, y + 22); ctx.quadraticCurveTo(x + 12, y + 16, x + 24, y + 20); ctx.lineTo(x + 24, y - 4); ctx.quadraticCurveTo(x + 12, y - 8, x, y); ctx.fill();
+		ctx.strokeStyle = 'rgba(90,58,18,0.45)'; ctx.lineWidth = 1;
+		for (var i = 0; i < 4; i++) { ctx.beginPath(); ctx.moveTo(x - 20, y + 2 + i * 4); ctx.lineTo(x - 5, y + 3 + i * 4); ctx.moveTo(x + 5, y + 3 + i * 4); ctx.lineTo(x + 20, y + 2 + i * 4); ctx.stroke(); }
+		sparkle(x, y - 16, 8, 1);
+	}
+	var MOON_AT = {'moon-new': 0, 'moon-wax-crescent': 0.13, 'moon-first-quarter': 0.25, 'moon-wax-gibbous': 0.37, 'moon-full': 0.5, 'moon-wane-gibbous': 0.63, 'moon-last-quarter': 0.75, 'moon-wane-crescent': 0.87};
+	function guideDraw(e, w, h) {
+		if (!e) return;
+		var id = e.id, cx = w / 2, cy = h / 2, u = Math.min(w, h) / 80;
+		var names = ICON_ART[id] || (e.art !== 'draw' ? [e.art] : []), im = names.map(art).filter(Boolean)[0];
+		if (im) { fitArt(im, w, h, /^(king|camel)-/.test(id) ? 0.92 : 0.86); return; }
+		ctx.save(); ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+		var c = /^c-(\d)$/.exec(id);
+		if (c) {   // a constellation: its stars, joined
+			var k = CONSTELLATIONS[+c[1]], bw = w * 0.74, bh = h * 0.7, bx = (w - bw) / 2, by = (h - bh) / 2, pt = function(p) { return [bx + p[0] * bw, by + p[1] * bh]; };
+			ctx.strokeStyle = 'rgba(200,215,255,0.7)'; ctx.lineWidth = 1.2;
+			k.lines.forEach(function(l) { var a = pt(k.stars[l[0]]), b = pt(k.stars[l[1]]); ctx.beginPath(); ctx.moveTo(a[0], a[1]); ctx.lineTo(b[0], b[1]); ctx.stroke(); });
+			k.stars.forEach(function(p) { var q = pt(p); glow(q[0], q[1], 6 * u, 'rgb(220,230,255)', 0.7); ctx.fillStyle = '#fff'; ctx.fillRect(q[0] - 1.4, q[1] - 1.4, 2.8, 2.8); });
+		}
+		else if (MOON_AT[id] != null) { glow(cx, cy, 34 * u, 'rgb(220,225,255)', id === 'moon-new' ? 0 : 0.25); iconMoon(cx, cy, 22 * u, MOON_AT[id]); }
+		else if (id === 'star') {
+			glow(cx, cy, 38 * u, 'rgb(255,219,89)', 0.6); glow(cx, cy, 16 * u, 'rgb(255,251,232)', 0.9);
+			ctx.translate(cx, cy); ctx.scale(0.75 * u, 0.75 * u); ctx.fillStyle = '#fffbe8'; ctx.beginPath();
+			for (var i = 0; i < 16; i++) { var r = i % 2 ? 5 : (i % 4 === 0 ? 34 : 18), an = i * Math.PI / 8 - Math.PI / 2; ctx.lineTo(Math.cos(an) * r, Math.sin(an) * r); }
+			ctx.closePath(); ctx.fill();
+		}
+		else if (id === 'meteor' || id === 'shower') {
+			(id === 'shower' ? [[0.7, 0.2], [0.45, 0.42], [0.85, 0.5], [0.6, 0.7]] : [[0.72, 0.3]]).forEach(function(m) {
+				var x = w * m[0], y = h * m[1], g = ctx.createLinearGradient(x - 34 * u, y + 16 * u, x, y);
+				g.addColorStop(0, 'rgba(255,255,255,0)'); g.addColorStop(1, 'rgba(255,255,255,0.95)');
+				ctx.strokeStyle = g; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(x - 34 * u, y + 16 * u); ctx.lineTo(x, y); ctx.stroke(); glow(x, y, 6 * u, 'rgb(255,255,255)', 0.8);
+			});
+		}
+		else if (id === 'comet') {
+			ctx.translate(w * 0.32, h * 0.62); ctx.rotate(-0.5);
+			var tl = ctx.createLinearGradient(0, 0, 50 * u, 0); tl.addColorStop(0, 'rgba(225,235,255,0.8)'); tl.addColorStop(1, 'rgba(225,235,255,0)');
+			ctx.fillStyle = tl; ctx.beginPath(); ctx.moveTo(0, -2); ctx.quadraticCurveTo(26 * u, -6 * u, 50 * u, -9 * u); ctx.lineTo(50 * u, 8 * u); ctx.quadraticCurveTo(26 * u, 4 * u, 0, 2); ctx.fill();
+			glow(0, 0, 8 * u, 'rgb(235,240,255)', 0.9);
+		}
+		else if (id === 'rainbow') {
+			['255,90,90', '255,170,80', '255,235,110', '120,220,120', '110,170,255', '150,120,255'].forEach(function(col, i) { ctx.strokeStyle = 'rgb(' + col + ')'; ctx.lineWidth = 3 * u; ctx.beginPath(); ctx.arc(cx, h * 0.86, (30 - i * 3) * u, Math.PI, 0); ctx.stroke(); });
+		}
+		else if (id === 'sunset') {
+			glow(cx, h * 0.62, 40 * u, 'rgb(255,170,90)', 0.6);
+			ctx.fillStyle = '#ffb257'; ctx.beginPath(); ctx.arc(cx, h * 0.62, 15 * u, Math.PI, 0); ctx.fill();
+			ctx.fillStyle = '#5a3a5e'; ctx.beginPath(); ctx.moveTo(0, h * 0.62); ctx.quadraticCurveTo(w * 0.3, h * 0.5, w * 0.55, h * 0.6); ctx.quadraticCurveTo(w * 0.8, h * 0.68, w, h * 0.58); ctx.lineTo(w, h); ctx.lineTo(0, h); ctx.fill();
+		}
+		else if (id === 'cranes') {
+			ctx.strokeStyle = '#e1e1f0'; ctx.lineWidth = 1.6;
+			for (var j = 0; j < 7; j++) { var sd = j % 2 ? 1 : -1, rk = Math.ceil(j / 2), x = w * 0.3 + rk * 9 * u, y = cy + sd * rk * 6 * u, s2 = 5 * u;
+				ctx.beginPath(); ctx.moveTo(x - s2, y - 2); ctx.quadraticCurveTo(x - s2 * 0.4, y - 1, x, y); ctx.quadraticCurveTo(x + s2 * 0.4, y - 1, x + s2, y - 2); ctx.stroke(); }
+		}
+		else if (id === 'vultures') {
+			ctx.translate(cx, cy); ctx.scale(1.8 * u, 1.8 * u); ctx.fillStyle = '#d8cbe6'; ctx.beginPath();
+			ctx.moveTo(0, -2); ctx.quadraticCurveTo(-10, -5, -20, -2); ctx.lineTo(-23, 0); ctx.lineTo(-20, 1); ctx.lineTo(-22, 2.5); ctx.lineTo(-18, 2.5);
+			ctx.quadraticCurveTo(-9, 3, 0, 2); ctx.quadraticCurveTo(9, 3, 18, 2.5); ctx.lineTo(22, 2.5); ctx.lineTo(20, 1); ctx.lineTo(23, 0); ctx.lineTo(20, -2); ctx.quadraticCurveTo(10, -5, 0, -2); ctx.fill();
+		}
+		else if (id === 'volcano') { var vs = Math.min(w * 0.92 / 560, h * 0.8 / 190); ctx.translate(cx, h * 0.9); ctx.scale(vs, vs); drawVolcano(0, 0); }
+		else if (/^(scorpion|centipede|spider|beetle|snake)$/.test(id)) {
+			// drawn dark, as on the sand, then lit pale so it shows on the guide's night-blue card
+			var tmp = document.createElement('canvas'), R2 = 3; tmp.width = w * R2; tmp.height = h * R2;
+			var tg = tmp.getContext('2d'); tg.scale(R2, R2);
+			withCtx(tg, function() { tg.translate(cx, h * 0.68); tg.scale(2.3 * u, 2.3 * u); drawBug({kind: id, t: 1.3, moving: true, seed: 2, dir: 1}); });
+			tg.setTransform(1, 0, 0, 1, 0, 0); tg.globalCompositeOperation = 'source-in'; tg.fillStyle = '#ecd3a2'; tg.fillRect(0, 0, tmp.width, tmp.height);
+			ctx.drawImage(tmp, 0, 0, w, h);
+		}
+		else if (id === 'rain' || id === 'storm' || id === 'thunder') {
+			iconCloud(cx, h * 0.36, u, id === 'rain' ? '#9d97cc' : '#45415f');
+			if (id === 'rain') { ctx.strokeStyle = 'rgba(190,210,255,0.9)'; ctx.lineWidth = 1.6; for (var d = 0; d < 6; d++) { var dx = cx - 18 * u + d * 7 * u; ctx.beginPath(); ctx.moveTo(dx, h * 0.55); ctx.lineTo(dx - 3 * u, h * 0.7 + (d % 2) * 5 * u); ctx.stroke(); } }
+			if (id === 'storm') iconBolt(cx + 2 * u, h * 0.46, u);
+			if (id === 'thunder') { ctx.strokeStyle = '#fff6b0'; ctx.lineWidth = 1.8; [10, 16, 22].forEach(function(r) { ctx.beginPath(); ctx.arc(cx, h * 0.48, r * u, 0.25 * Math.PI, 0.75 * Math.PI); ctx.stroke(); }); }
+		}
+		else if (id === 'lightning') { glow(cx, cy, 34 * u, 'rgb(200,200,255)', 0.5); iconBolt(cx + 1 * u, h * 0.14, 1.9 * u); }
+		else if (id === 'wind' || id === 'sandstorm') {
+			if (id === 'sandstorm') { ctx.fillStyle = 'rgba(160,108,58,0.75)'; ctx.fillRect(0, h * 0.2, w, h * 0.7); }
+			ctx.strokeStyle = id === 'wind' ? '#e8e3ff' : '#f0ce96'; ctx.lineWidth = 2.2;
+			[[0.32, 0.8], [0.5, 1], [0.68, 0.7]].forEach(function(l) { var y = h * l[0]; ctx.beginPath(); ctx.moveTo(w * 0.12, y); ctx.lineTo(w * 0.12 + w * 0.6 * l[1], y); ctx.arc(w * 0.12 + w * 0.6 * l[1], y - 6 * u, 6 * u, Math.PI / 2, -Math.PI * 0.9, true); ctx.stroke(); });
+		}
+		else if (id === 'devil') {
+			for (var f = 0; f < 12; f++) { var q2 = f / 11; ctx.fillStyle = 'rgba(214,170,110,' + (0.65 - q2 * 0.35) + ')'; ctx.beginPath(); ctx.ellipse(cx + Math.sin(f) * 2 * u, h * 0.86 - q2 * 54 * u, (4 + q2 * 16) * u, (2 + q2 * 2) * u, 0, 0, Math.PI * 2); ctx.fill(); }
+		}
+		else if (id === 'fog' || id === 'haze') {
+			ctx.fillStyle = id === 'fog' ? '#3a3a68' : '#7a6a9a'; ctx.beginPath(); ctx.moveTo(0, h * 0.7); ctx.quadraticCurveTo(w * 0.3, h * 0.4, w * 0.6, h * 0.62); ctx.quadraticCurveTo(w * 0.8, h * 0.72, w, h * 0.55); ctx.lineTo(w, h); ctx.lineTo(0, h); ctx.fill();
+			ctx.strokeStyle = id === 'fog' ? 'rgba(220,215,245,0.85)' : 'rgba(230,210,240,0.5)'; ctx.lineWidth = 3 * u;
+			[0.5, 0.64, 0.78].forEach(function(y, i) { ctx.beginPath(); ctx.moveTo(w * (0.12 + i * 0.06), h * y); ctx.lineTo(w * (0.8 - i * 0.04), h * y); ctx.stroke(); });
+		}
+		else if (id === 'mirage') {
+			ctx.fillStyle = '#d9a35b'; ctx.fillRect(0, h * 0.6, w, h * 0.4);
+			var mg = ctx.createLinearGradient(0, h * 0.5, 0, h * 0.68); mg.addColorStop(0, 'rgba(150,190,240,0)'); mg.addColorStop(0.5, 'rgba(160,200,245,0.9)'); mg.addColorStop(1, 'rgba(150,190,240,0)');
+			ctx.fillStyle = mg; ctx.beginPath(); ctx.ellipse(cx, h * 0.6, w * 0.36, 7 * u, 0, 0, Math.PI * 2); ctx.fill();
+			ctx.strokeStyle = 'rgba(255,255,255,0.7)'; ctx.lineWidth = 1; [0.57, 0.61].forEach(function(y) { ctx.beginPath(); ctx.moveTo(w * 0.3, h * y); ctx.lineTo(w * 0.62, h * y); ctx.stroke(); });
+		}
+		else if (id === 'snow') {
+			ctx.fillStyle = '#3a3360'; ctx.beginPath(); ctx.moveTo(w * 0.05, h * 0.9); ctx.lineTo(w * 0.45, h * 0.22); ctx.lineTo(w * 0.62, h * 0.5); ctx.lineTo(w * 0.72, h * 0.38); ctx.lineTo(w * 0.95, h * 0.9); ctx.fill();
+			ctx.fillStyle = '#e8eefc'; ctx.beginPath(); ctx.moveTo(w * 0.45, h * 0.22); ctx.lineTo(w * 0.36, h * 0.37); ctx.lineTo(w * 0.42, h * 0.34); ctx.lineTo(w * 0.47, h * 0.39); ctx.lineTo(w * 0.53, h * 0.34); ctx.closePath(); ctx.fill();
+		}
+		else { ctx.fillStyle = '#FFDB59'; ctx.font = '700 ' + Math.round(28 * u) + 'px Merienda, Georgia, serif'; ctx.textAlign = 'center'; ctx.fillText('?', cx, cy + 10 * u); }
+		ctx.restore();
+	}
+	function guideIcon(e, w, h) { return smallCanvas(w, h, function() { guideDraw(e, w, h); }); }
+	function buildGuide(d, seen, first) {
+		var box = document.getElementById('jguide'); box.innerHTML = '';
+		document.getElementById('jguide-lead').textContent = T('Everything you’ve found on the journey: {n} of {total}.', {n: gCount(d), total: GUIDE.length});
+		GUIDE_PAGES.forEach(function(pg) {
+			var list = GUIDE.filter(function(e) { return e.page === pg.id; }), got = list.filter(function(e) { return gHas(d, e.id); }).length;
+			var sec = document.createElement('div'); sec.className = 'gsec';
+			sec.innerHTML = '<h4>' + pg.name + ' <span class="prog">' + T('{n} of {total}', {n: got, total: list.length}) + '</span></h4><p class="lead">' + pg.lead + '</p>';
+			var grid = document.createElement('div'); grid.className = 'gshelf';
+			list.forEach(function(e) {
+				var has = gHas(d, e.id), b = document.createElement('button'); b.type = 'button';
+				b.className = 'gcase' + (has ? '' : ' none') + (has && !first && seen.indexOf('g' + e.id) < 0 ? ' new' : '');
+				b.appendChild(guideIcon(e, 92, 66));
+				b.insertAdjacentHTML('beforeend', '<div class="name">' + (has ? e.name : '?') + '</div>' + (has && d.g[e.id].n > 1 ? '<div class="count">× ' + d.g[e.id].n + '</div>' : ''));
+				b.setAttribute('aria-label', has ? e.name + ', ' + TN(d.g[e.id].n, 'found {n} time', 'found {n} times') : T('Not found yet'));
+				b.addEventListener('click', function() { guideCard(e, d); });
+				grid.appendChild(b);
+			});
+			sec.appendChild(grid); box.appendChild(sec);
+		});
+	}
+	function guideCard(e, d) {   // one entry, close up
+		var has = gHas(d, e.id), r = d.g[e.id], pg = GUIDE_PAGES.filter(function(p) { return p.id === e.page; })[0];
+		var when = has ? TN(r.n, 'Found {n} time', 'Found {n} times') + (r.days && r.days.length ? ' · ' + T('first on {date}', {date: dateOfDay(r.days[0]).toLocaleDateString(LOCALE, {month: 'long', day: 'numeric'})}) : '') : '';
+		jcard.innerHTML = '<h4 id="jcardT">' + (has ? e.name : T('Not found yet')) + '</h4><div class="gbig"></div><p id="jcText"></p>' + (when ? '<div class="when">' + when + '</div>' : '') +
+			'<button type="button" id="jcClose">' + T('Close') + '</button>';
+		var big = guideIcon(e, 220, 150); if (!has) big.className = 'unfound';
+		jcard.querySelector('.gbig').appendChild(big);
+		document.getElementById('jcText').textContent = has ? e.line : pg.lead;
+		document.getElementById('jcClose').onclick = function() { jcard.hidden = true; };
+		jcard.hidden = false; document.getElementById('jcClose').focus();
+		track('guide_card', {id: e.id, found: has ? 'yes' : 'no'});
+	}
 	function buildJournal() {
 		var d = journalData(), seen = readList(JSEEN), first = !localStorage.getItem(JSEEN), C = 2 * Math.PI * 44;
-		var nowSeen = d.found.map(function(k) { return 'p' + k; }).concat(d.picked.map(function(k) { return 'f' + k; }));
+		var nowSeen = d.found.map(function(k) { return 'p' + k; }).concat(d.picked.map(function(k) { return 'f' + k; })).concat(GUIDE.filter(function(e) { return gHas(d, e.id); }).map(function(e) { return 'g' + e.id; }));
 		document.getElementById('jring').setAttribute('stroke-dasharray', '0 ' + C.toFixed(1));
 		setTimeout(function() { document.getElementById('jring').setAttribute('stroke-dasharray', (C * d.found.length / (END + 1)).toFixed(1) + ' ' + C.toFixed(1)); }, 120);
 		document.getElementById('jsub').innerHTML = d.found.length ? T('You’ve found Pip on <b>{n}</b> of {total} nights · <b>{left}</b> to go', {n: d.found.length, total: END + 1, left: END + 1 - d.found.length})
@@ -3318,6 +3762,7 @@
 			if (got) { pc.innerHTML = '<b>' + T('Week {n}', {n: w + 1}) + '</b>'; pc.appendChild(document.createTextNode(text)); } else pc.innerHTML = '<span>✦<br>' + T('Week {n}', {n: w + 1}) + '</span>';
 			cards.appendChild(pc);
 		});
+		buildGuide(d, seen, first);
 		// badges
 		var bd = document.getElementById('jbadges'); bd.innerHTML = '';
 		BADGES.forEach(function(bg) {
@@ -3329,7 +3774,7 @@
 		});
 		try { localStorage.setItem(JSEEN, JSON.stringify(nowSeen)); } catch (e) {}
 		var earned = BADGES.filter(function(bg) { return bg[3](d); }).length;
-		track('journal_open', {found: d.found.length, treasures: d.treasures, badges: earned});
+		track('journal_open', {found: d.found.length, treasures: d.treasures, badges: earned, guide: gCount(d)});
 	}
 	var jcard = document.getElementById('jcard');
 	function journalCard(k, d) {
@@ -3442,6 +3887,15 @@
 			trace: function() { traced = {t: clock, day: night.day}; var k = constellation(); return k && k.c.name; },
 			drawn: function() { var d = Object.keys(drawnNames).sort(); drawnNames = {}; return d; },
 			blink: function(v) { holdBlink = v; },
+			// the Field Guide: what can be tapped now (in the page's pixels, from the canvas's top left), and what's been found
+			spots: function() { var k = canvas.getBoundingClientRect().width / canvas.width; return spots.map(function(s) { return {id: s.id, x: s.x * k, y: s.y * k, r: s.r * k}; }); },
+			guide: function() { return guideData(); },
+			toPage: function(x, y) { var rect = canvas.getBoundingClientRect(); return {x: (homeward(night.day) ? VW - x : x) * S, y: y * S + (rect.height - VH * S)}; },
+			stars: function() {   // tonight's constellation, in the page's pixels from the canvas's top left
+				var k = constellation(), rect = canvas.getBoundingClientRect(); if (!k) return null;
+				return k.pts.map(function(q) { return {x: (homeward(night.day) ? VW - q[0] : q[0]) * S, y: q[1] * S + (rect.height - VH * S)}; });
+			},
+			guideClear: function() { guideStore = {}; guideSave(); counted = {}; },
 			owl: function() { spawnCritter('owl'); },
 			bugs: function() { return critters.filter(function(c) { return /scorpion|centipede|spider|beetle|snake/.test(c.kind); }).map(function(c) { return [c.u - cam * DAYW + LEAD_X, roadY(c.u) + c.depth]; }); },
 			spawn: function(k) { spawnCritter(k); var c = critters[critters.length - 1]; c.u = cam * DAYW + 120 + critters.length * 40; c.dir = -1; return critters.length; },
