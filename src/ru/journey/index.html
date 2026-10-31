@@ -242,10 +242,11 @@ header, .player, .rotate {transition:transform 0.5s ease, opacity 0.5s ease;}
 	.more-items #tonight-btn, .more-items #sofar {min-width:210px;}
 	.more-items .btn.away, .more-items .btn[hidden] {display:none;}
 	.more-items .btn.journal-btn {justify-content:center;}
-	.player .more-items .btn.journal-btn span {display:inline;}
+	.player .more-items .btn.journal-btn span, .player .more-items .btn.sketch-btn span {display:inline;}
+	.more-items .btn.sketch-btn {justify-content:center;}
 	.more-items #full {order:0; font-size:12px;}
-	.more-items #full::after {content:' Full screen';}
-	.is-full .more-items #full::after {content:' Leave full screen';}
+	.more-items #full::after {content:' ' attr(aria-label);}   /* (its label, in the page's language) */
+	.is-full .more-items #full::after {content:' ' attr(aria-label);}
 	.handle {display:flex;}
 	body:not(.tucked) .handle {opacity:0; pointer-events:none;}
 }
@@ -360,8 +361,30 @@ dialog.journal[open] {animation:j-rise .55s cubic-bezier(.2,.9,.3,1.2);}
 @keyframes j-pop {from {transform:scale(1.5) rotate(-6deg); opacity:0;} to {transform:scale(1) rotate(0); opacity:1;}}
 .journal .jcard .gbig {margin:6px auto 2px; padding:8px; border-radius:14px; background:linear-gradient(#2a1f5a,#151a45); width:max-content;}
 .journal .jcard .gbig canvas.unfound {filter:brightness(0) opacity(.45);}
+.journal .sketches {display:grid; grid-template-columns:repeat(auto-fill,minmax(210px,1fr)); gap:22px 18px; padding:8px 4px;}
+.journal .sk {position:relative; border:0; padding:0; background:none; cursor:pointer; transform:rotate(var(--r)); transition:transform .15s;}
+.journal .sk img {display:block; width:100%; border-radius:2px; box-shadow:0 6px 14px rgba(80,50,20,.4);}
+.journal .sk .t {display:block; margin-top:6px; font:400 13px Merienda,Georgia,serif; color:#5a3a12;}
+.journal .sk .st {position:absolute; top:-8px; right:-6px; font-size:20px; color:#e8aa28; text-shadow:0 1px 2px rgba(0,0,0,.4);}
+.journal .sk:hover, .journal .sk:focus-visible {transform:rotate(0) translateY(-3px) scale(1.03); outline:none;}
+.journal .jsk-all {font:600 13px Inter,Arial,sans-serif; padding:9px 16px; border-radius:20px; border:1px solid #b07a20; background:#2a1f5a; color:#FFDB59; cursor:pointer; margin:0 0 14px;}
+.journal .jsk-all[hidden] {display:none;}
+.journal .jcard.wide {width:min(860px,94%); padding:16px 18px 18px;}
+.journal .jcard.wide img.big {display:block; width:100%; margin:10px 0 12px; border-radius:3px; box-shadow:0 8px 20px rgba(80,50,20,.35);}
+.journal .jcard.wide .row {display:flex; flex-wrap:wrap; justify-content:center; gap:8px;}
+.journal .jcard.wide .row button {margin:0;}
 .player .btn.journal-btn {display:inline-flex; align-items:center; gap:6px;}
 .player .btn.journal-btn img {height:18px; filter:sepia(.6) saturate(1.6) brightness(1.15);}
+.player .btn.sketch-btn {display:inline-flex; align-items:center; gap:6px;}
+.player .btn.sketch-btn b {font-size:17px; line-height:1; font-weight:400; color:#FFDB59;}
+/* a sketch: a soft paper-white flash, then the new postcard tucks itself away towards the journal */
+.stage.sketch-flash::after {content:''; position:absolute; inset:0; z-index:6; pointer-events:none; background:#fbf3e1; animation:sk-flash .5s ease-out forwards;}
+@keyframes sk-flash {from {opacity:.75;} to {opacity:0;}}
+.sketch-pop {position:absolute; z-index:7; left:50%; bottom:16%; width:min(340px,46vw); pointer-events:none; text-align:center; animation:sk-pop 3s cubic-bezier(.2,.9,.3,1) forwards;}
+.sketch-pop img {display:block; width:100%; border-radius:3px; box-shadow:0 14px 36px rgba(0,0,0,.55);}
+.sketch-pop span {display:inline-block; margin-top:8px; padding:5px 12px; border-radius:14px; background:rgba(7,11,34,.8); color:#FFDB59; font:600 13px Inter,Arial,sans-serif;}
+.sketch-pop.words {padding:10px 16px; border-radius:14px; background:rgba(7,11,34,.86); color:#fbf3e1; font:400 14px Inter,Arial,sans-serif;}
+@keyframes sk-pop {0% {transform:translate(-50%,30px) rotate(-4deg) scale(.7); opacity:0;} 14% {transform:translate(-50%,0) rotate(-2deg) scale(1); opacity:1;} 72% {transform:translate(-50%,0) rotate(-2deg) scale(1); opacity:1;} 100% {transform:translate(30vw,40vh) rotate(8deg) scale(.15); opacity:0;}}
 .player .btn.journal-btn.glint, .player .btn.more.glint {animation:j-glint 1.2s ease-out 2;}
 @keyframes j-glint {0% {box-shadow:0 0 0 0 rgba(255,219,89,.9);} 100% {box-shadow:0 0 0 14px rgba(255,219,89,0);}}
 .pip-card .pip-journal {margin-left:6px;}
@@ -370,7 +393,8 @@ dialog.journal[open] {animation:j-rise .55s cubic-bezier(.2,.9,.3,1.2);}
 	.journal .jtitle h2 {font-size:26px;} .journal .jpage {margin:0 8px 8px; padding:16px 12px;}
 	.journal .jgrid {grid-template-columns:repeat(auto-fill,minmax(52px,1fr)); gap:6px;}
 	.journal .tabs {padding:6px 10px 0; overflow-x:auto;} .journal .tabs button {font-size:13px; padding:9px 12px;}
-	.player .btn.journal-btn span {display:none;}
+	.player .btn.journal-btn span, .player .btn.sketch-btn span {display:none;}
+	.journal .sketches {grid-template-columns:repeat(2,1fr); gap:14px 10px;}
 }
 @media (max-width:640px), (max-height:560px) {   /* phones: a compact header, and the whole journal scrolls as one (the desktop is untouched) */
 	dialog.journal {width:100vw; height:100dvh; max-width:none; border-radius:0;}
@@ -400,7 +424,7 @@ dialog.journal[open] {animation:j-rise .55s cubic-bezier(.2,.9,.3,1.2);}
 	.journal .jcard {position:fixed;}
 	.player .btn.journal-btn {min-width:0; padding:9px 14px;}
 }
-@media (prefers-reduced-motion:reduce) {.journal *, dialog.journal[open], .player .btn.journal-btn.glint, .player .btn.more.glint {animation:none !important; transition:none !important;}}
+@media (prefers-reduced-motion:reduce) {.journal *, dialog.journal[open], .player .btn.journal-btn.glint, .player .btn.more.glint, .stage.sketch-flash::after, .sketch-pop {animation:none !important; transition:none !important;} .stage.sketch-flash::after {display:none;} .sketch-pop {transform:translateX(-50%);}}
 </style>
 	<link rel="stylesheet" href="/assets/css/lang-ru.css?v=1793239830">
 </head>
@@ -447,6 +471,7 @@ dialog.journal[open] {animation:j-rise .55s cubic-bezier(.2,.9,.3,1.2);}
 					<button type="button" class="btn away" id="tonight-btn">К сегодняшней ночи</button>
 					<button type="button" class="btn" id="sofar">Весь путь до сегодня</button>
 					<button type="button" class="btn journal-btn" id="journal-btn" aria-haspopup="dialog"><img src="/journey/art/jr-cr-sand-mouse.webp" alt=""><span>Дневник Пипа</span></button>
+					<button type="button" class="btn sketch-btn" id="sketch-btn" aria-label="Sketch this moment for your sketchbook" title="Нарисуй этот момент (C)"><b aria-hidden="true">✎</b><span>Рисовать</span></button>
 					<button type="button" class="btn full" id="full" aria-label="Full screen" title="Во весь экран" hidden>⛶</button>
 				</div>
 				<button type="button" class="btn sound" id="sound" aria-pressed="false">Без звука</button>
@@ -470,12 +495,13 @@ dialog.journal[open] {animation:j-rise .55s cubic-bezier(.2,.9,.3,1.2);}
 							<div class="stats"><div class="stat"><div class="n" id="jsPip">0</div><div class="l">Ночи</div></div><div class="stat"><div class="n" id="jsTreasure">0</div><div class="l">Сокровища</div></div><div class="stat"><div class="n" id="jsRun">0</div><div class="l">Лучшая серия</div></div></div>
 						</div>
 						<nav class="tabs" role="tablist">
-							<button type="button" role="tab" aria-selected="true" data-p="journey"><span class="long"> </span>Путешествие</button><button type="button" role="tab" aria-selected="false" data-p="treasures">Сокровища</button><button type="button" role="tab" aria-selected="false" data-p="home">Дом<span class="long"> на Востоке</span></button><button type="button" role="tab" aria-selected="false" data-p="guide">Путеводитель</button><button type="button" role="tab" aria-selected="false" data-p="badges">Значки</button>
+							<button type="button" role="tab" aria-selected="true" data-p="journey"><span class="long"> </span>Путешествие</button><button type="button" role="tab" aria-selected="false" data-p="treasures">Сокровища</button><button type="button" role="tab" aria-selected="false" data-p="home">Дом<span class="long"> на Востоке</span></button><button type="button" role="tab" aria-selected="false" data-p="guide">Путеводитель</button><button type="button" role="tab" aria-selected="false" data-p="sketches">Альбом</button><button type="button" role="tab" aria-selected="false" data-p="badges">Значки</button>
 						</nav>
 						<section class="jpage" id="jp-journey" role="tabpanel"></section>
 						<section class="jpage" id="jp-treasures" role="tabpanel" hidden><h3>Сокровища с дороги</h3><div class="shelf" id="jshelf"></div></section>
 						<section class="jpage" id="jp-home" role="tabpanel" hidden><h3>Открытки из дома</h3><p class="lead" id="jhome-lead"></p><div class="cards" id="jcards"></div></section>
 						<section class="jpage" id="jp-guide" role="tabpanel" hidden><h3>Путеводитель</h3><p class="lead" id="jguide-lead"></p><div id="jguide"></div></section>
+						<section class="jpage" id="jp-sketches" role="tabpanel" hidden><h3>Альбом Пипа</h3><p class="lead" id="jsketch-lead"></p><button type="button" class="jsk-all" id="jsketch-all" hidden>Распечатать весь альбом</button><div class="sketches" id="jsketches"></div></section>
 						<section class="jpage" id="jp-badges" role="tabpanel" hidden><h3>Значки</h3><div class="badges" id="jbadges"></div></section>
 					</div>
 					<div class="jcard" id="jcard" hidden role="dialog" aria-modal="true" aria-labelledby="jcardT"></div>
@@ -556,21 +582,21 @@ dialog.journal[open] {animation:j-rise .55s cubic-bezier(.2,.9,.3,1.2);}
 	</footer>
 
 	<script src="/assets/js/site.js?v=1793240524" defer></script>
-	<script src="/journey/camels.js?v=202610301852" defer></script>
-	<script src="/journey/camel-rig.js?v=202610301852" defer></script>
-	<script src="/journey/canine-rig.js?v=202610301852" defer></script>
-	<script src="/journey/art-ready.js?v=202610301852" defer></script>
-	<script src="/journey/readings.js?v=202610301852" defer></script>
-	<script src="/journey/pip.js?v=202610301852" defer></script>
-	<script src="/journey/sayings.js?v=202610301852" defer></script>
-	<script src="/journey/plan.js?v=202610301852" defer></script>
-	<script src="/journey/audio-ready.js?v=202610301852" defer></script>
-	<script src="/journey/sound.js?v=202610301852" defer></script>
-	<script src="/journey/lang/languages.js?v=202610301852" defer></script>
-	<script src="/journey/lang/ru/strings.js?v=202610301852" defer></script>
-	<script src="/journey/lang/ru/readings.js?v=202610301852" defer></script>
-	<script src="/journey/lang/ru/pip.js?v=202610301852" defer></script>
-	<script src="/journey/lang/ru/sayings.js?v=202610301852" defer></script>
-	<script src="/journey/journey.js?v=202610301852" defer></script>
+	<script src="/journey/camels.js?v=202610301940" defer></script>
+	<script src="/journey/camel-rig.js?v=202610301940" defer></script>
+	<script src="/journey/canine-rig.js?v=202610301940" defer></script>
+	<script src="/journey/art-ready.js?v=202610301940" defer></script>
+	<script src="/journey/readings.js?v=202610301940" defer></script>
+	<script src="/journey/pip.js?v=202610301940" defer></script>
+	<script src="/journey/sayings.js?v=202610301940" defer></script>
+	<script src="/journey/plan.js?v=202610301940" defer></script>
+	<script src="/journey/audio-ready.js?v=202610301940" defer></script>
+	<script src="/journey/sound.js?v=202610301940" defer></script>
+	<script src="/journey/lang/languages.js?v=202610301940" defer></script>
+	<script src="/journey/lang/ru/strings.js?v=202610301940" defer></script>
+	<script src="/journey/lang/ru/readings.js?v=202610301940" defer></script>
+	<script src="/journey/lang/ru/pip.js?v=202610301940" defer></script>
+	<script src="/journey/lang/ru/sayings.js?v=202610301940" defer></script>
+	<script src="/journey/journey.js?v=202610301940" defer></script>
 </body>
 </html>

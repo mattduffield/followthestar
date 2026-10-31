@@ -2258,8 +2258,10 @@
 		var firstEver = !(guideData()[id] && guideData()[id].n);
 		noteFind(id, 'w:' + id, firstEver ? VW / 2 : null, TOPV + 150);
 	}
+	var sketchClean = false;   // (while a sketch is taken: the scene alone, without these words)
 	function paintNotes() {   // the name, rising a little and fading, where something was found ("New!" the first time)
 		tapNotes = tapNotes.filter(function(t) { return clock - t.t < 2.4; });
+		if (sketchClean) return;
 		tapNotes.forEach(function(t) {
 			var q = (clock - t.t) / 2.4, a = Math.min(1, q * 6) * (1 - smooth((q - 0.6) / 0.4));
 			ctx.save(); ctx.globalAlpha = a; ctx.translate(t.x, t.y - 22 - 16 * q); if (homeward(night.day)) ctx.scale(-1, 1);   // (the words the right way round on the way home)
@@ -3388,6 +3390,7 @@
 		setTimeout(resize, 50);
 	}
 	document.addEventListener('fullscreenchange', onFull); document.addEventListener('webkitfullscreenchange', onFull);
+	fullBtn.setAttribute('aria-label', T('Full screen'));   // (in the page's language from the start: the More menu shows it as the button's words)
 	// On a sideways phone the header and buttons step aside a few seconds after the night starts (or after the buttons were
 	// last used), so the whole scene is clear to tap: Pip, the camels, the kings. Only the handle in the top corner brings
 	// them back; a tap on the scene always goes to the scene
@@ -3472,6 +3475,7 @@
 		if (e.target.closest('input, textarea, select, button, dialog') || e.altKey || e.metaKey || e.ctrlKey || (journalEl && journalEl.open)) return;
 		if (e.key === 'ArrowLeft' && !prevBtn.disabled) prevBtn.click();
 		if (e.key === 'ArrowRight' && !nextBtn.disabled) nextBtn.click();
+		if (e.key === 'c' || e.key === 'C') sketchNow();   // (a sketch of this moment)
 	});
 
 	// ----- Pip's Journal: every night Pip was found and every treasure picked up, in the Journey's own look -----
@@ -3503,7 +3507,7 @@
 		home.forEach(function(ymdStr) { var d = new Date(ymdStr + 'T12:00:00'); weeks[Math.floor(Math.floor((d - new Date(d.getFullYear(), 0, 1)) / DAY) / 7)] = 1; });
 		var best = 0, run = 0; for (var k = 0; k <= END; k++) { run = found.indexOf(k) >= 0 ? run + 1 : 0; best = Math.max(best, run); }
 		return {found: found, picked: picked, kinds: kinds, treasures: made.length, home: home, weeks: weeks, best: best, easter: readList(JEASTER).length > 0,
-			g: guideData(), read: readList(READ_KEY), dn: daynight()};
+			g: guideData(), read: readList(READ_KEY), dn: daynight(), sk: skStats()};
 	}
 	function gHas(d, id) { return !!(d.g[id] && d.g[id].n > 0); }
 	function gPage(d, page) { return GUIDE.every(function(e) { return e.page !== page || gHas(d, e.id); }); }
@@ -3540,7 +3544,12 @@
 		['read25', T('Twenty-five readings'), T('Read the day’s Bible reading on 25 nights'), function(d) { return d.read.length >= 25; }],
 		['readall', T('Every reading'), T('Read all 98 of the day’s Bible readings'), function(d) { return d.read.length >= END + 1; }],
 		['explorer', T('Explorer'), T('Make 100 finds in the Field Guide'), function(d) { return gTotal(d) >= 100; }],
-		['guide', T('The whole Field Guide'), T('Find everything in the Field Guide'), function(d) { return gCount(d) >= GUIDE.length; }]
+		['guide', T('The whole Field Guide'), T('Find everything in the Field Guide'), function(d) { return gCount(d) >= GUIDE.length; }],
+		// the sketchbook's
+		['sk1', T('First sketch'), T('Make a sketch for your sketchbook'), function(d) { return d.sk.made >= 1; }],
+		['skbeth', T('A sketch of Bethlehem'), T('Make a sketch as they reach Bethlehem'), function(d) { return !!d.sk.beth; }],
+		['skxmas', T('Christmas at the stable'), T('Make a sketch at the stable on Christmas night'), function(d) { return !!d.sk.xmas; }],
+		['skfull', T('A full sketchbook'), T('Fill your sketchbook with 30 sketches'), function(d) { return d.sk.n >= SK_MAX; }]
 	];
 	var BADGE_ICON = {caravan: 'camel-1', gazer: 'c-0', moons: 'moon-full', follow: 'star', xstar: 'star', meteors: 'meteor', comet: 'comet', rainbow: 'rainbow', bolt: 'lightning', storm: 'storm',
 		animals: 'wolf', small: 'beetle', birds: 'owl', road: 'merchants', places: 'jerusalem', weather: 'wind', daynight: 'sunset', explorer: 'fox', guide: 'stable'};
@@ -3557,6 +3566,7 @@
 			else if (kind === 'sunrise') { glow(40, 56, 40, 'rgb(255,190,120)', 0.8); g.fillStyle = '#ffd27a'; g.beginPath(); g.arc(40, 56, 16, Math.PI, 0); g.fill(); g.fillStyle = '#c98b3a'; g.fillRect(6, 56, 68, 4); }
 			else if (BADGE_ICON[kind]) guideDraw(GUIDE_BY_ID[BADGE_ICON[kind]], 80, 80);
 			else if (/^read/.test(kind)) drawBook(40, 44);
+			else if (/^sk/.test(kind)) drawPencil(40, 42, kind);
 			else if (kind === 'friend') { var cm = art('jr-char-camel-1-kneel'); if (cm) { var cw = 60, ch = cw * cm.height / cm.width; g.drawImage(cm, 10, 70 - ch, cw, ch); } drawPip(60, 70, 22); }
 		});
 	}
@@ -3576,6 +3586,18 @@
 		else { ctx.arc(x, y, r, Math.PI / 2, -Math.PI / 2, false); ctx.ellipse(x, y, Math.abs(kk) * r, r, 0, -Math.PI / 2, Math.PI / 2, kk > 0); }
 		if (ph > 0.03 && ph < 0.97) ctx.fill();
 		ctx.strokeStyle = 'rgba(244,240,220,0.35)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.stroke();
+	}
+	function drawPencil(x, y, kind) {   // a sketch on paper with a pencil across it, for the sketchbook badges
+		ctx.save(); ctx.translate(x, y); ctx.rotate(-0.08);
+		ctx.fillStyle = '#fbf3e1'; ctx.fillRect(-24, -18, 46, 34); ctx.strokeStyle = 'rgba(90,58,18,0.5)'; ctx.lineWidth = 1; ctx.strokeRect(-24, -18, 46, 34);
+		ctx.strokeStyle = '#7a5220'; ctx.lineWidth = 1.4; ctx.beginPath(); ctx.moveTo(-20, 8); ctx.quadraticCurveTo(-8, -4, 2, 6); ctx.quadraticCurveTo(10, 0, 18, 8); ctx.stroke();
+		if (kind === 'skxmas' || kind === 'skbeth') sparkle(6, -9, 5, 1);
+		ctx.restore();
+		ctx.save(); ctx.translate(x + 14, y + 8); ctx.rotate(-0.8);
+		ctx.fillStyle = '#e8aa28'; ctx.fillRect(-3, -22, 6, 26); ctx.fillStyle = '#f2d2a0'; ctx.beginPath(); ctx.moveTo(-3, 4); ctx.lineTo(3, 4); ctx.lineTo(0, 11); ctx.fill();
+		ctx.fillStyle = '#3a2a1a'; ctx.beginPath(); ctx.moveTo(-1, 8.5); ctx.lineTo(1, 8.5); ctx.lineTo(0, 11); ctx.fill(); ctx.fillStyle = '#c96a6a'; ctx.fillRect(-3, -26, 6, 4);
+		ctx.restore();
+		if (kind === 'skfull') { ctx.fillStyle = '#5a3a12'; ctx.font = '700 12px Inter, Arial, sans-serif'; ctx.textAlign = 'center'; ctx.fillText('30', x - 4, y + 30); }
 	}
 	function drawBook(x, y) {   // an open Bible, for the reading badges
 		ctx.fillStyle = '#7a2a1c'; ctx.fillRect(x - 26, y - 4, 52, 26);
@@ -3700,6 +3722,7 @@
 		});
 	}
 	function guideCard(e, d) {   // one entry, close up
+		jcard.className = 'jcard';
 		var has = gHas(d, e.id), r = d.g[e.id], pg = GUIDE_PAGES.filter(function(p) { return p.id === e.page; })[0];
 		var when = has ? TN(r.n, 'Found {n} time', 'Found {n} times') + (r.days && r.days.length ? ' · ' + T('first on {date}', {date: dateOfDay(r.days[0]).toLocaleDateString(LOCALE, {month: 'long', day: 'numeric'})}) : '') : '';
 		jcard.innerHTML = '<h4 id="jcardT">' + (has ? e.name : T('Not found yet')) + '</h4><div class="gbig"></div><p id="jcText"></p>' + (when ? '<div class="when">' + when + '</div>' : '') +
@@ -3763,6 +3786,7 @@
 			cards.appendChild(pc);
 		});
 		buildGuide(d, seen, first);
+		buildSketchbook();
 		// badges
 		var bd = document.getElementById('jbadges'); bd.innerHTML = '';
 		BADGES.forEach(function(bg) {
@@ -3778,6 +3802,7 @@
 	}
 	var jcard = document.getElementById('jcard');
 	function journalCard(k, d) {
+		jcard.className = 'jcard';
 		var dt = dateOfDay(k), f = d.found.indexOf(k) >= 0, p = d.picked.indexOf(k) >= 0, it = FINDS[k % FINDS.length];
 		var key = String(dt.getMonth() + 1).padStart(2, '0') + '-' + String(dt.getDate()).padStart(2, '0');
 		jcard.innerHTML = '<h4 id="jcardT">' + T('Night {n}', {n: k + 1}) + '</h4><div class="when">' + longDate(dt) + '</div><div class="found"><div id="jcPip"></div><div id="jcItem"></div></div><p id="jcText"></p>' +
@@ -3837,6 +3862,184 @@
 		journalBtn.classList.remove('glint'); void journalBtn.offsetWidth; journalBtn.classList.add('glint');
 		if (shortScreen()) { if (document.body.classList.contains('tucked')) nudgeHandle(); else { moreBtn.classList.remove('glint'); void moreBtn.offsetWidth; moreBtn.classList.add('glint'); } }   // (the journal is in the More menu there)
 	}   // "added to your journal"
+
+	// ----- Pip's sketchbook: the moment on screen, sketched onto a postcard and kept in the journal -----
+	// The scene is redrawn as a sketch on the device (its own colours, softened and painted, pencil lines where the
+	// edges are, paper grain), framed on cream paper with a handwritten title, the night and the site's address. Kept in
+	// the browser's IndexedDB (pictures are too big for localStorage), at most SK_MAX, never sent anywhere unless a
+	// grown-up saves, shares or prints one.
+	var SK_MAX = 30, SK_KEY = 'journey-sketch', skDb = null, skURLs = [];
+	var sketchBtn = document.getElementById('sketch-btn');
+	function skStats() { try { return Object.assign({made: 0, n: 0, beth: 0, xmas: 0}, JSON.parse(localStorage.getItem(SK_KEY) || '{}')); } catch (e) { return {made: 0, n: 0, beth: 0, xmas: 0}; } }
+	function skSaveStats(s) { try { localStorage.setItem(SK_KEY, JSON.stringify(s)); } catch (e) {} }
+	function skStore(mode, fn) {   // a transaction on the sketches, as a promise
+		if (!skDb) skDb = new Promise(function(ok, no) {
+			var r = indexedDB.open('journey-sketchbook', 1);
+			r.onupgradeneeded = function() { r.result.createObjectStore('sketches', {keyPath: 'id'}); };
+			r.onsuccess = function() { ok(r.result); }; r.onerror = function() { no(r.error); };
+		});
+		return skDb.then(function(db) { return new Promise(function(ok, no) {
+			var tx = db.transaction('sketches', mode), q = fn(tx.objectStore('sketches'));
+			tx.oncomplete = function() { ok(q && q.result); }; tx.onerror = tx.onabort = function() { no(tx.error); };
+		}); });
+	}
+	function skAll() { return skStore('readonly', function(s) { return s.getAll(); }).then(function(l) { return (l || []).sort(function(a, b) { return b.at - a.at; }); }); }
+	function skPut(rec) { return skStore('readwrite', function(s) { return s.put(rec); }); }
+	function skDel(id) { return skStore('readwrite', function(s) { return s.delete(id); }); }
+	function sketchPicture(src, sx, sy, sw, sh, W, H) {   // the scene, as a pencil-and-paint sketch
+		function layer(filter) { var c = document.createElement('canvas'); c.width = W; c.height = H; var g = c.getContext('2d'); if (filter) g.filter = filter; g.drawImage(src, sx, sy, sw, sh, 0, 0, W, H); return c; }
+		var plain = layer(null).getContext('2d').getImageData(0, 0, W, H).data;
+		var paint = layer('saturate(0.8) blur(1.2px)'), pg = paint.getContext('2d'), img = pg.getImageData(0, 0, W, H), d = img.data;   // (where the browser can't blur, the colour is just a little flatter)
+		// the pencil lines: the picture's lightness against a blurred negative of it (a "colour dodge"), worked at half
+		// size with a box blur so it looks the same in every browser
+		var gw = Math.ceil(W / 2), gh = Math.ceil(H / 2), sm = document.createElement('canvas'); sm.width = gw; sm.height = gh;
+		sm.getContext('2d').drawImage(src, sx, sy, sw, sh, 0, 0, gw, gh);
+		var sd = sm.getContext('2d').getImageData(0, 0, gw, gh).data, inv = new Float32Array(gw * gh), tmp = new Float32Array(gw * gh), R = Math.max(2, Math.round(W / 480));
+		for (var i = 0; i < gw * gh; i++) inv[i] = 255 - (sd[i * 4] * 0.299 + sd[i * 4 + 1] * 0.587 + sd[i * 4 + 2] * 0.114);
+		for (var pass = 0; pass < 2; pass++) {   // a box blur, twice, across then down
+			for (var y = 0; y < gh; y++) { var acc = 0, row = y * gw; for (var x = -R; x < gw; x++) { if (x + R < gw) acc += inv[row + x + R]; if (x - R - 1 >= 0) acc -= inv[row + x - R - 1]; if (x >= 0) tmp[row + x] = acc / (2 * R + 1); } }
+			for (var x2 = 0; x2 < gw; x2++) { var acc2 = 0; for (var y2 = -R; y2 < gh; y2++) { if (y2 + R < gh) acc2 += tmp[(y2 + R) * gw + x2]; if (y2 - R - 1 >= 0) acc2 -= tmp[(y2 - R - 1) * gw + x2]; if (y2 >= 0) inv[y2 * gw + x2] = acc2 / (2 * R + 1); } }
+		}
+		var r = rng(7), PAPER = [245, 235, 214];
+		for (var py = 0; py < H; py++) for (var px = 0; px < W; px++) {
+			var k = (py * W + px) * 4, a = plain[k] * 0.299 + plain[k + 1] * 0.587 + plain[k + 2] * 0.114, b = inv[(py >> 1) * gw + (px >> 1)];
+			var line = Math.min(1, a / Math.max(1, 256 - b)), shade = (1 - (1 - line) * 0.75) * (1 + (r() - 0.5) * 0.12);   // pencil, and the paper's grain
+			for (var c = 0; c < 3; c++) d[k + c] = clamp(d[k + c] * shade * 0.92 + PAPER[c] * 0.08, 0, 255);
+		}
+		pg.putImageData(img, 0, 0);
+		return paint;
+	}
+	function sketchCard(pic, title, when, pipIn) {   // the sketch on its postcard
+		var W = pic.width, H = pic.height, m = Math.round(W * 0.033), band = Math.round(W * 0.086), c = document.createElement('canvas');
+		c.width = W + m * 2; c.height = H + m + band;
+		var g = c.getContext('2d'), r = rng(11);
+		g.fillStyle = '#f2e7cd'; g.fillRect(0, 0, c.width, c.height);
+		for (var i = 0; i < 2600; i++) { g.fillStyle = r() < 0.5 ? 'rgba(120,90,40,0.06)' : 'rgba(255,255,255,0.12)'; g.fillRect(r() * c.width, r() * c.height, 1 + r() * 2, 1 + r() * 2); }   // paper grain
+		g.fillStyle = 'rgba(90,60,20,0.18)'; g.fillRect(m + 3, m + 4, W, H);   // a soft shadow under the sketch
+		g.drawImage(pic, m, m);
+		[[m * 0.2, 0.14], [c.width - m * 0.2 - W * 0.11, -0.14]].forEach(function(t) {   // tape at the top corners
+			g.save(); g.translate(t[0] + W * 0.055, m * 0.75); g.rotate(t[1]); g.fillStyle = 'rgba(240,226,175,0.68)'; g.fillRect(-W * 0.055, -m * 0.35, W * 0.11, m * 0.7); g.restore();
+		});
+		var y0 = m + H, fs = Math.round(W * 0.031);
+		g.textBaseline = 'alphabetic'; g.fillStyle = '#5a3a12';
+		do { g.font = 'italic ' + fs + 'px Merienda, Georgia, serif'; fs--; } while (g.measureText(title).width > W * 0.74 && fs > 12);
+		g.fillText(title, m, y0 + band * 0.5);
+		g.font = Math.round(W * 0.018) + 'px Georgia, serif'; g.fillStyle = '#8c6432'; g.fillText(when, m, y0 + band * 0.84);
+		g.font = 'bold ' + Math.round(W * 0.02) + 'px Georgia, serif'; g.fillStyle = '#751D19'; g.textAlign = 'right'; g.fillText('followthestar.church', c.width - m, y0 + band * 0.84);
+		var sw = W * 0.05, sx = c.width - m - sw, sy = y0 + band * 0.1, sh = sw * 0.78;   // a little stamp: the Star
+		g.strokeStyle = '#751D19'; g.lineWidth = 2; g.strokeRect(sx, sy, sw, sh);
+		g.fillStyle = '#e8aa28'; g.beginPath();
+		for (var p = 0; p < 10; p++) { var an = p * Math.PI / 5 - Math.PI / 2, rr = p % 2 ? sh * 0.15 : sh * 0.38; g.lineTo(sx + sw / 2 + Math.cos(an) * rr, sy + sh / 2 + Math.sin(an) * rr); }
+		g.fill();
+		if (pipIn) {   // Pip is in it: his paw print beside the stamp
+			g.fillStyle = 'rgba(122,82,32,0.75)'; var px = sx - sw * 0.6, py2 = sy + sh * 0.6;
+			g.beginPath(); g.ellipse(px, py2, sw * 0.13, sw * 0.11, 0, 0, Math.PI * 2); g.fill();
+			[[-0.16, -0.17], [-0.05, -0.24], [0.06, -0.24], [0.17, -0.17]].forEach(function(t) { g.beginPath(); g.arc(px + t[0] * sw, py2 + t[1] * sw, sw * 0.045, 0, Math.PI * 2); g.fill(); });
+		}
+		return c;
+	}
+	function sketchTitle() {   // what's in the picture: something just found, the caption showing, or where they are
+		var recent = tapNotes.filter(function(t) { return clock - t.t < 6; }).pop();
+		if (recent) return recent.text;
+		if (lastCaption) return lastCaption;
+		if (evening() > 0) return night.plan.camp ? T('They make camp for the night') : T('They rest by the fire');
+		return homeward(night.day) ? T('On the road home') : T('On the road to Bethlehem');
+	}
+	var sketching = false;
+	function sketchNow() {
+		if (sketching || !window.indexedDB || !canvas.width) return;
+		sketching = true;
+		var title = sketchTitle(), day = HOMEMODE ? -1 : viewIdx;
+		var when = HOMEMODE ? longDate(now()) : T('Night {n}', {n: viewIdx + 1}) + ' · ' + longDate(dateOfDay(viewIdx));
+		var pipIn = !!(pip.box && pip.box.x > 0 && pip.box.x < VW);
+		var sy = Math.max(0, Math.round(canvas.height - VH * S * dpr)), sw = canvas.width, sh = canvas.height - sy, W = Math.min(1200, sw), H = Math.round(sh * W / sw);
+		stageEl.classList.remove('sketch-flash'); void stageEl.offsetWidth; stageEl.classList.add('sketch-flash');
+		setTimeout(function() {   // (after the flash has started, so the tap feels instant)
+			var card;
+			sketchClean = true; paint();   // (drawn once more without the words over the scene, then copied straight away)
+			try { card = sketchCard(sketchPicture(canvas, 0, sy, sw, sh, W, H), title, when, pipIn); } catch (e) { sketching = false; return; } finally { sketchClean = false; }
+			card.toBlob(function(blob) {
+				if (!blob) { sketching = false; return; }
+				var rec = {id: Date.now() + '-' + Math.floor(Math.random() * 1e6), at: Date.now(), day: day, title: title, when: when, blob: blob, star: false};
+				skAll().then(function(list) {
+					var loose = list.filter(function(x) { return !x.star; });   // a full sketchbook: the oldest one not kept with a star makes room
+					if (list.length >= SK_MAX && !loose.length) { sketchPop(null, T('Your sketchbook is full of starred sketches. Unstar one to make room.')); return; }
+					return (list.length >= SK_MAX ? skDel(loose[loose.length - 1].id) : Promise.resolve()).then(function() { return skPut(rec); }).then(function() {
+						var s = skStats(); s.made++; s.n = Math.min(SK_MAX, list.length + 1);
+						if (day >= TOTAL - 1 && day <= TOTAL) s.beth = 1;
+						if (day === TOTAL && evening() > 0) s.xmas = 1;
+						skSaveStats(s); sketchPop(card); journalGlint(); track('sketch', {n: s.made, night: day + 1});
+					});
+				}).catch(function() {}).then(function() { sketching = false; });
+			}, 'image/jpeg', 0.86);
+		}, 60);
+	}
+	function sketchPop(card, words) {   // the new postcard, briefly, before it tucks into the journal
+		var el = document.createElement('div'); el.className = 'sketch-pop' + (card ? '' : ' words');
+		if (card) { var im = new Image(); im.src = card.toDataURL('image/jpeg', 0.6); im.alt = ''; el.appendChild(im); el.insertAdjacentHTML('beforeend', '<span>' + T('Added to your sketchbook') + '</span>'); }
+		else el.textContent = words;
+		stageEl.appendChild(el); setTimeout(function() { el.remove(); }, 3200);
+	}
+	if (sketchBtn) sketchBtn.addEventListener('click', function() { sketchNow(); });
+	// the Sketchbook tab: newest first, a little tilted, with tape at the corners
+	function buildSketchbook() {
+		var box = document.getElementById('jsketches'), lead = document.getElementById('jsketch-lead'), all = document.getElementById('jsketch-all');
+		if (!box || !window.indexedDB) return;
+		skURLs.forEach(function(u) { URL.revokeObjectURL(u); }); skURLs = [];
+		skAll().then(function(list) {
+			box.innerHTML = '';
+			lead.textContent = list.length ? TN(list.length, '{n} sketch, of {max} that fit.', '{n} sketches, of {max} that fit.', {max: SK_MAX}) + ' ' + T('Tap one to see it big, save it, share it or print it.')
+				: T('Tap the pencil ✎ to sketch the moment you’re watching. Your sketches are kept here.');
+			all.hidden = !list.length;
+			list.forEach(function(rec, i) {
+				var u = URL.createObjectURL(rec.blob); skURLs.push(u);
+				var b = document.createElement('button'); b.type = 'button'; b.className = 'sk' + (rec.star ? ' starred' : '');
+				b.style.setProperty('--r', (((i * 37) % 7) - 3) * 0.7 + 'deg');
+				b.innerHTML = '<img alt="" src="' + u + '"><span class="t">' + escapeHTML(rec.title) + '</span>' + (rec.star ? '<span class="st" aria-hidden="true">★</span>' : '');
+				b.setAttribute('aria-label', rec.title + ', ' + rec.when);
+				b.addEventListener('click', function() { sketchView(rec, u); });
+				box.appendChild(b);
+			});
+		}).catch(function() { lead.textContent = ''; });
+	}
+	function escapeHTML(s) { return String(s).replace(/[&<>"]/g, function(ch) { return {'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;'}[ch]; }); }
+	function sketchFileName(rec) { return T('Pip’s sketchbook') + ' - ' + rec.title.replace(/[\\/:*?"<>|]/g, '') + '.jpg'; }
+	function printSketches(list) {   // a page per two sketches, at postcard size (6 × 4 inches)
+		var w = window.open('', '_blank'); if (!w) return;
+		var imgs = list.map(function(rec) { var u = URL.createObjectURL(rec.blob); skURLs.push(u); return '<img src="' + u + '" alt="">'; }).join('');
+		w.document.write('<!doctype html><title>' + escapeHTML(T('Pip’s sketchbook')) + '</title><style>@page{size:letter;margin:0.5in}body{margin:0;text-align:center}img{width:6in;display:block;margin:0 auto 0.4in;break-inside:avoid}img:nth-child(2n){break-after:page}</style>' + imgs);
+		w.document.close();
+		var go = function() { w.focus(); w.print(); };
+		var pics = w.document.images, left = pics.length;
+		[].forEach.call(pics, function(im) { if (im.complete) left--; else im.onload = im.onerror = function() { if (--left <= 0) go(); }; });
+		if (left <= 0) setTimeout(go, 200);
+	}
+	function sketchView(rec, url) {   // one sketch, big, with what can be done with it
+		jcard.className = 'jcard wide';
+		jcard.innerHTML = '<h4 id="jcardT"></h4><div class="when"></div><img class="big" alt="" src="' + url + '">' +
+			'<div class="row"><button type="button" id="skShare">' + T('Save or share') + '</button><button type="button" id="skPrint">' + T('Print') + '</button>' +
+			'<button type="button" id="skStar">' + (rec.star ? T('Unstar') : T('Keep (star it)')) + '</button><button type="button" id="skDel">' + T('Throw away') + '</button>' +
+			'<button type="button" id="jcClose">' + T('Close') + '</button></div>';
+		document.getElementById('jcardT').textContent = rec.title; jcard.querySelector('.when').textContent = rec.when;
+		var close = function() { jcard.hidden = true; jcard.className = 'jcard'; };
+		document.getElementById('jcClose').onclick = close;
+		document.getElementById('skShare').onclick = function() {
+			var file = typeof File === 'function' ? new File([rec.blob], sketchFileName(rec), {type: 'image/jpeg'}) : null;
+			if (file && navigator.canShare && navigator.canShare({files: [file]})) { navigator.share({files: [file], title: rec.title}).catch(function() {}); }
+			else { var a = document.createElement('a'); a.href = url; a.download = sketchFileName(rec); document.body.appendChild(a); a.click(); a.remove(); }
+			track('sketch_share');
+		};
+		document.getElementById('skPrint').onclick = function() { printSketches([rec]); track('sketch_print', {all: 'no'}); };
+		document.getElementById('skStar').onclick = function() { rec.star = !rec.star; skPut(rec).then(function() { close(); buildSketchbook(); }); };
+		var sure = false;
+		document.getElementById('skDel').onclick = function() {
+			if (!sure) { sure = true; this.textContent = T('Sure? Throw it away'); return; }
+			skDel(rec.id).then(function() { var s = skStats(); s.n = Math.max(0, s.n - 1); skSaveStats(s); close(); buildSketchbook(); });
+		};
+		jcard.hidden = false; document.getElementById('jcClose').focus();
+	}
+	var skAllBtn = document.getElementById('jsketch-all');
+	if (skAllBtn) skAllBtn.addEventListener('click', function() { skAll().then(function(list) { printSketches(list.slice().reverse()); track('sketch_print', {all: 'yes'}); }); });
 
 	// ----- test mode (/journey/?test): every night open, faster playback, weather override, the whole plan -----
 	if (TEST) (function() {
