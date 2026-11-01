@@ -3347,7 +3347,7 @@
 		cam = show.from + (show.to - show.from) * easeWalk(t);
 		show.spawns.forEach(function(s) { if (!s.done && t >= s.at) { s.done = true; spawnCritter(s.kind); } });
 		if (show.mode === 'sofar') soFarDay(clamp(Math.floor(cam + 0.15), 0, realToday));   // (it ends on tonight)
-		if (show.elapsed >= show.seconds + showTail()) { playing = false; updateControls(); if (shortScreen()) nudgeHandle(); else document.body.classList.remove('tucked'); }
+		if (show.elapsed >= show.seconds + showTail()) { playing = false; updateControls(); if (tuckable()) nudgeHandle(); else document.body.classList.remove('tucked'); }
 	}
 
 	// ----- words over the scene -----
@@ -3425,9 +3425,14 @@
 	var tuckTimer = null, tapHinted = false, playerEl = document.querySelector('.player'), handleEl = document.getElementById('handle');
 	var moreBtn = document.getElementById('more-btn');
 	function shortScreen() { return window.innerHeight <= 500 && window.innerWidth > window.innerHeight; }
+	// the buttons step aside while a night plays on sideways phones, and on any touch screen (an iPad's whole row of
+	// buttons covers the road, where Pip and the creatures are): a tap on the scene always goes to the scene
+	var touchFirst = window.matchMedia && matchMedia('(pointer: coarse)').matches;
+	function tuckable() { var t = shortScreen() || touchFirst; document.body.classList.toggle('tuckable', t); return t; }
+	tuckable();
 	function setMore(open) { playerEl.classList.toggle('more-open', open); moreBtn.setAttribute('aria-expanded', open ? 'true' : 'false'); }
 	function tuck() {
-		if (!shortScreen()) return;
+		if (!tuckable()) return;
 		if (!pipCard.hidden || document.querySelector('dialog[open]')) { tuckTimer = setTimeout(tuck, 2000); return; }   // (not while Pip's card, the journal or a question is open)
 		setMore(false);
 		document.body.classList.add('tucked');
@@ -3446,7 +3451,7 @@
 	document.addEventListener('pointerdown', function(e) { if (playerEl.classList.contains('more-open') && !playerEl.contains(e.target)) setMore(false); });
 	playerEl.addEventListener('pointerdown', function() { untuck(6000); });
 	window.addEventListener('scroll', function() { if (window.scrollY > 10) untuck(4000); }, {passive: true});
-	window.addEventListener('resize', function() { if (!shortScreen()) { clearTimeout(tuckTimer); setMore(false); document.body.classList.remove('tucked'); } else untuck(4000); });
+	window.addEventListener('resize', function() { if (!tuckable()) { clearTimeout(tuckTimer); setMore(false); document.body.classList.remove('tucked'); } else untuck(4000); });
 	// a phone held upright: the scene waits behind "Turn your phone sideways" until it's turned
 	var uprightMQ = window.matchMedia('(orientation:portrait) and (max-width:600px)');
 	var prevBtn = document.getElementById('prev'), nextBtn = document.getElementById('next'), playBtn = document.getElementById('play');
@@ -3895,7 +3900,8 @@
 	});
 	function journalGlint() {
 		journalBtn.classList.remove('glint'); void journalBtn.offsetWidth; journalBtn.classList.add('glint');
-		if (shortScreen()) { if (document.body.classList.contains('tucked')) nudgeHandle(); else { moreBtn.classList.remove('glint'); void moreBtn.offsetWidth; moreBtn.classList.add('glint'); } }   // (the journal is in the More menu there)
+		if (tuckable() && document.body.classList.contains('tucked')) nudgeHandle();
+		else if (shortScreen()) { moreBtn.classList.remove('glint'); void moreBtn.offsetWidth; moreBtn.classList.add('glint'); }   // (the journal is in the More menu there)
 	}   // "added to your journal"
 
 	// ----- Pip's sketchbook: the moment on screen, sketched onto a postcard and kept in the journal -----
