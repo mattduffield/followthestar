@@ -681,6 +681,13 @@
 		return have.length ? art(have[i % have.length]) : CLOUDS[dark ? 'dark' : 'light'][i % 4];
 	}
 
+	function solidCloud(im) {   // a cloud's shape with its thin and faded parts made (nearly) solid, for hiding the moon and the Star
+		if (!im || !im.width) return im;
+		if (im.solid) return im.solid;
+		var c = document.createElement('canvas'); c.width = im.width; c.height = im.height;
+		var g = c.getContext('2d'); for (var k = 0; k < 4; k++) g.drawImage(im, 0, 0);   // (each pass lets through less: 1 - (1 - a)^4)
+		return (im.solid = c);
+	}
 	function softUnder(im) {   // the cloud pictures end in a flat cut along the bottom: fade their undersides away instead
 		if (!im || im.soft2) return im && im.soft2 || im;
 		if (!im.width) return im;
@@ -692,7 +699,7 @@
 		im.soft2 = c;
 		return c;
 	}
-	function paintClouds(level, which) {
+	function paintClouds(level, which, mask) {   // (mask: only cut each cloud's shape out of the lights layer: see onLights)
 		var w = night.weather, count = {clouds: 7, rain: 10, storm: 13, haze: 3, fog: 3, wind: 3, sandstorm: 0, clear: 0}[w] || 0;
 		if (!count) return;
 		var dark = w === 'storm' || w === 'rain', sh = shiftOf('sky');
@@ -708,6 +715,7 @@
 			// (a cloud in front of the far hills is always solid: see-through, the mountain behind shows through it and the
 			// cloud seems to be both in front of the mountain and behind it)
 			if (a < 0.02) continue;
+			if (mask) { ctx.globalAlpha = Math.min(1, a * 2); ctx.drawImage(solidCloud(softUnder(cloudArt(dark, i))), x, y, cw, ch); continue; }
 			ctx.globalAlpha = a;
 			ctx.drawImage(softUnder(cloudArt(dark, i)), x, y, cw, ch);
 			if (a > 0.4) spot(dark ? 'storm-clouds' : 'clouds', 'cloud' + i + '-' + night.day, x + cw / 2, y + ch * 0.55, ch * 0.42);
@@ -2574,7 +2582,7 @@
 		});
 		ctx.globalAlpha = 1;
 		var mw = moonWords(night.phase);
-		if (mw && night.day !== TOTAL && clearSky > 0.05) {
+		if (mw && night.day !== TOTAL && clearSky > 0.05) onLights(function() {
 			var mx = VW * night.moonX - skyDrift() * 0.5, my = TOPV + 0.2 * skyH + 80, mr = 22;   // drifting a little through the night   // clear of the date in the corner and of the Star
 			var sp = starPos(); if (Math.abs(mx - sp.x) < 140) mx = sp.x - 140;   // never on top of the Star (it moves into this part of the sky as Christmas nears)
 			// a full moon rises big and orange from behind the hills, and shrinks and whitens as it climbs
@@ -2611,7 +2619,7 @@
 			ctx.drawImage(mc, mx - mr, my - mr, mr * 2, mr * 2);
 			ctx.globalAlpha = 1;
 			if (clearSky * (1 - 0.6 * sunUp) > 0.3) spot(moonKind(night.phase), 'moon' + night.day, mx, my, mr + 12);
-		}
+		});
 		else if (!mw && night.day !== TOTAL && clearSky > 0.6 && day < 0.1 && sunset < 0.15) witness('moon-new');   // a night with no moon
 		// a comet for a week in November: a soft head with a long tail streaming away
 		if (cometNight(night.day) && clearSky > 0.1) {
@@ -2649,6 +2657,24 @@
 		var x = VW * (0.88 - 0.26 * smooth(p)), y = TOPV + (150 - TOPV) * 0.35 + 150 - 50 * smooth(p);
 		sx = clamp(sx, VW * 0.3, VW * 0.82);   // stays in the sky until the stable comes into view, then settles over it
 		return {x: x + (sx - x) * smooth(arrive), y: y + 30 * arrive, arrive: arrive, size: 0.42 + 0.78 * Math.pow(p, 1.3)};
+	}
+	// The moon and the Star are drawn on a layer of their own, and every cloud's shape is cut out of that layer before it
+	// goes into the sky, so a cloud always hides them: a cloud's thin or faded parts let the sky show through, but never
+	// the moon or the Star (drawing them behind see-through clouds let them shine through, as if in front)
+	function lightsLayer() { return fadeCanvas(4); }
+	function onLights(fn) {   // draws fn's moon or Star on the lights layer instead of straight into the sky
+		var main = ctx; ctx = lightsLayer().getContext('2d'); ctx.setTransform(main.getTransform());
+		try { fn(); } finally { ctx.globalAlpha = 1; ctx = main; }
+	}
+	function lightsBegin() {
+		var g = lightsLayer().getContext('2d'); g.setTransform(1, 0, 0, 1, 0, 0); g.globalAlpha = 1; g.globalCompositeOperation = 'source-over'; g.clearRect(0, 0, g.canvas.width, g.canvas.height);
+	}
+	function lightsIntoSky() {   // the clouds cut out, then the moon and the Star laid into the sky (the clouds are drawn over them after)
+		var main = ctx, g = lightsLayer().getContext('2d');
+		ctx = g; g.setTransform(main.getTransform()); g.globalCompositeOperation = 'destination-out';
+		paintClouds(wx.level, 'back', true); paintClouds(wx.level, 'front', true);
+		g.globalCompositeOperation = 'source-over'; g.globalAlpha = 1; ctx = main;
+		ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalAlpha = 1; ctx.drawImage(g.canvas, 0, 0); ctx.restore();
 	}
 	function paintStar() {
 		// the Star leads them; storms hide it for a while; on the last night it comes to rest over the stable
@@ -3284,8 +3310,10 @@
 		if (homeward(night.day)) ctx.setTransform(-dpr * S, 0, 0, dpr * S, canvas.width, dpr * (canvas.clientHeight - VH * S));   // mirrored: they walk the other way
 		else ctx.setTransform(dpr * S, 0, 0, dpr * S, 0, dpr * (canvas.clientHeight - VH * S));
 		spotsNext = [];
+		lightsBegin();
 		paintSky();
-		paintStar();
+		onLights(paintStar);
+		lightsIntoSky();
 		paintCranes();
 		paintVultures();
 		paintClouds(wx.level, 'back');
