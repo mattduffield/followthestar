@@ -4381,7 +4381,7 @@
 	// ----- test mode (/journey/?test): every night open, faster playback, weather override, the whole plan -----
 	if (TEST) (function() {
 		var panel = document.getElementById('test-panel'), table = document.getElementById('plan-table');
-		panel.hidden = false; table.hidden = false;
+		panel.hidden = false; table.hidden = false; document.getElementById('today').hidden = false;
 		panel.querySelectorAll('[data-speed]').forEach(function(b) {
 			b.addEventListener('click', function() { timeScale = +b.dataset.speed; panel.querySelectorAll('[data-speed]').forEach(function(o) { o.classList.toggle('on', o === b); }); });
 		});
