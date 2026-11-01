@@ -3119,7 +3119,9 @@
 		ctx.save(); ctx.lineWidth = 6; ctx.globalAlpha = 0.16 * a;
 		cols.forEach(function(c, i) { ctx.strokeStyle = 'rgb(' + c + ')'; ctx.beginPath(); ctx.arc(cx, cy, R - i * 6, Math.PI * 1.08, Math.PI * 1.92); ctx.stroke(); });
 		ctx.restore();
-		if (a > 0.3) [1.2, 1.4, 1.6, 1.8].forEach(function(f) { spot('rainbow', 'rainbow' + night.day, cx + Math.cos(Math.PI * f) * (R - 18), cy + Math.sin(Math.PI * f) * (R - 18), 60); });
+		// tappable all along its bow (small spots close together, so a tap anywhere on it counts, and the rainbow wins
+		// over a cloud behind it)
+		if (a > 0.3) for (var f = 1.1; f < 1.905; f += 0.03) spot('rainbow', 'rainbow' + night.day, cx + Math.cos(Math.PI * f) * (R - 18), cy + Math.sin(Math.PI * f) * (R - 18), 26);
 	}
 	// before a sandstorm, a tall brown wall of dust rolls in over the far hills
 	function paintDustWall() {
