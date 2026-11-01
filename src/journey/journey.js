@@ -892,6 +892,23 @@
 		for (var m = 0; m < 3; m++) { var bl = Math.sin(t + m * 2) * 1; ctx.beginPath(); ctx.moveTo(-1 + m * 1.2, -1.5); ctx.lineTo(-2 + m * 1.2 + bl, 0); ctx.stroke(); }
 		return true;
 	}
+	// A bat from its one picture (wings spread), its wings beating: the picture is cut at the shoulders and each wing is
+	// swung up and down about its shoulder (sheared, so the tip travels furthest, and a little shorter at the top and
+	// bottom of the beat, as a wing seen end-on would be), then the body is drawn over the joins. f: -1 (down) to 1 (up).
+	var BAT_CUT = {left: 0.44, right: 0.59, shoulder: 0.4};   // (where the shoulders are, as parts of the picture's width and height)
+	function drawBatFlap(im, x, y, w, f) {
+		var k = w / im.width, h = im.height * k, iw = im.width, ih = im.height;
+		var lx = BAT_CUT.left * iw, rx = BAT_CUT.right * iw, sy = BAT_CUT.shoulder * ih;
+		var x0 = x - w / 2, y0 = y - h / 2, shear = 0.6 * f, short = 1 - 0.22 * Math.abs(f);
+		[[0, lx + 0.03 * iw, lx, 1], [rx - 0.03 * iw, iw, rx, -1]].forEach(function(wg) {   // [from, to, shoulder x, side]
+			ctx.save();
+			ctx.translate(x0 + wg[2] * k, y0 + sy * k);
+			ctx.transform(short, wg[3] * shear * short, 0, 1, 0, 0);
+			ctx.drawImage(im, wg[0], 0, wg[1] - wg[0], ih, (wg[0] - wg[2]) * k, -sy * k, (wg[1] - wg[0]) * k, h);
+			ctx.restore();
+		});
+		ctx.drawImage(im, lx - 0.02 * iw, 0, rx - lx + 0.04 * iw, ih, x0 + (lx - 0.02 * iw) * k, y0, (rx - lx + 0.04 * iw) * k, h);
+	}
 	function paintCritters(sky) {
 		critters.forEach(function(c) {
 			if ((c.kind === 'owl' || c.kind === 'bats') !== sky) return;
@@ -924,7 +941,7 @@
 					var bx = c.x + Math.sin(c.t * (1.3 + b * 0.3) + b * 2) * 140 + Math.sin(c.t * 5 + b) * 20, by = c.y + Math.cos(c.t * (1.7 + b * 0.2) + b) * 50;
 					var f = Math.sin(clock * 22 + b * 1.7), a = Math.min(1, c.t, c.life - c.t);
 					ctx.globalAlpha = a; spot('bats', c, bx, by, 18);
-					if (im) { ctx.drawImage(im, bx - 9, by - 6, 18, 18 * im.height / im.width); continue; }
+					if (im) { drawBatFlap(im, bx, by - f * 1.2, 18, f); continue; }   // (bobbing a little with each beat)
 					ctx.fillStyle = '#140e1c'; ctx.beginPath(); ctx.moveTo(bx - 9, by - 4 * f); ctx.quadraticCurveTo(bx - 4, by + 2, bx, by); ctx.quadraticCurveTo(bx + 4, by + 2, bx + 9, by - 4 * f); ctx.quadraticCurveTo(bx, by + 5, bx - 9, by - 4 * f); ctx.fill();
 				}
 				ctx.globalAlpha = 1;
