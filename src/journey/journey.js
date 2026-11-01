@@ -41,7 +41,7 @@
 	var TEST = params.has('test');
 	// Saving the journal across devices (a household code; the gsp tenant's journey endpoints, made in API Studio). On this
 	// computer, or with ?test, the dev endpoints; on the site, the live ones once they're published (SYNC_LIVE).
-	var SYNC_LIVE = false;
+	var SYNC_LIVE = true;   // (the live endpoints went up on gsp.informaevents.com, checked end to end, 31 October 2026)
 	var SYNC_DEV = /^(localhost|127\.0\.0\.1)$/.test(location.hostname) || TEST;
 	var SYNC_BASE = SYNC_DEV ? 'https://gsp.dev.informaevents.com/api/x/journey/' : SYNC_LIVE ? 'https://gsp.informaevents.com/api/x/journey/' : '';
 	var SYNC_KEY = 'journey-sync' + (SYNC_DEV ? '-dev' : '');
