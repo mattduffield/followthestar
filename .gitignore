@@ -7,3 +7,6 @@ uploads
 # Private planning documents (this repo is public on GitHub)
 docs/
 src/journey/journal-mockup.html
+
+# wrangler dev's local cache
+.wrangler/

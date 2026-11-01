@@ -2,10 +2,15 @@
 	"$schema": "node_modules/wrangler/config-schema.json",
 	"name": "followthestar",
 	"compatibility_date": "2026-09-28",
+	// a few lines that run before the tickets pages only (until the public sale opens, they send visitors home)
+	"main": "worker.js",
 	"assets": {
-		// serve the static site from src/ (no Worker script needed)
+		// serve the static site from src/
 		"directory": "./src",
+		"binding": "ASSETS",
 		// serve src/404.html with a 404 status for missing pages
-		"not_found_handling": "404-page"
+		"not_found_handling": "404-page",
+		// everything else is served straight from src/ without the worker
+		"run_worker_first": ["/tickets*", "/es/tickets*", "/ru/tickets*"]
 	}
 }
