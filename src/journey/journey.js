@@ -710,6 +710,7 @@
 			if (a < 0.02) continue;
 			ctx.globalAlpha = a;
 			ctx.drawImage(softUnder(cloudArt(dark, i)), x, y, cw, ch);
+			if (a > 0.4) spot(dark ? 'storm-clouds' : 'clouds', 'cloud' + i + '-' + night.day, x + cw / 2, y + ch * 0.55, ch * 0.42);
 			if (wx.flash > 0 && dark) { ctx.globalAlpha = a * wx.flash * 0.5; ctx.drawImage(CLOUDS.light[i % 4], x, y, cw, ch); }
 		}
 		ctx.globalAlpha = 1;
@@ -747,6 +748,14 @@
 		if ((ww === 'rain' || ww === 'storm') && wx.level > 0.6) witness('rain');
 		if ((ww === 'storm' || ww === 'sandstorm') && wx.level > 0.6) witness(ww);
 		if ((ww === 'wind' || ww === 'fog' || ww === 'haze') && t > 0.08) witness(ww);
+		if (show && t > 0.08) {   // the sky tonight, and the land they're crossing
+			var sk = night.skyKey || '';
+			if (/^dusk/.test(sk) && t < 0.6) witness('sky-dusk');
+			if (sk === 'deep' && t > 0.2) witness('sky-deep');
+			if (sk === 'predawn' && t > 0.2) witness('sky-predawn');
+			if (night.plan && night.plan.sun === 'day' && daylight() > 0.6) witness('sky-day');
+			if (evening() === 0) witness('land-' + stageAt(cam).key);
+		}
 		if (wx.flash <= 0.05) wx.bolt = null;
 		// rain and dust move in screen space
 		var raining = (night.weather === 'rain' || night.weather === 'storm') ? smooth((wx.level - 0.3) / 0.6) : 0;   // the rain stops while there are still clouds
@@ -1554,7 +1563,7 @@
 		if (hit && hit.n === 0) {   // the armillary sphere
 			var ARM = [T('An armillary sphere: the wise men’s model of the heavens.'), T('Its rings show the paths of the sun and the stars.'), T('“The heavens declare the glory of God” (Psalm 19:1).')];
 			lastSaid.arm = ((lastSaid.arm == null ? -1 : lastSaid.arm) + 1) % ARM.length;
-			said = {n: 0, text: ARM[lastSaid.arm], at: clock, dur: 4}; track('armillary'); return true;
+			said = {n: 0, text: ARM[lastSaid.arm], at: clock, dur: 4}; track('armillary'); noteFind('armillary', 'armillary', hit.x, hit.head); return true;
 		}
 		if (!hit || !SAYINGS) return false;
 		var place = sayPlace(), lines = (SAYINGS[hit.n] || {})[place] || [];
@@ -1814,6 +1823,7 @@
 		var f = fires[opt.id || 'camp'] || (fires[opt.id || 'camp'] = {embers: [], smoke: [], clock: clock});
 		var y = opt.y != null ? opt.y : kingY(x), dt = clamp(clock - f.clock, 0, 0.1); f.clock = clock;
 		var size = 0.25 + 0.75 * grow;
+		if (a > 0.5 && grow > 0.3) spot('fire', 'fire' + (opt.id || 'camp') + night.day, x, y - 14 * (opt.s || 1), 26 * (opt.s || 1));
 		ctx.save(); ctx.globalAlpha = a;
 		if (opt.s) { ctx.translate(x, y); ctx.scale(opt.s, opt.s); ctx.translate(-x, -y); }
 		// firelight on the sand and on whoever stands near
@@ -2134,6 +2144,7 @@
 		{id: 'animals', name: T('Animals of the land'), lead: T('Tap the animals you see along the way.')},
 		{id: 'small', name: T('Small creatures'), lead: T('Tap the little creatures that scurry across the sand.')},
 		{id: 'birds', name: T('Birds and bats'), lead: T('Tap the birds and bats flying over.')},
+		{id: 'plants', name: T('Rocks and plants'), lead: T('Tap the rocks, trees and flowers as they pass close by.')},
 		{id: 'road', name: T('People on the road'), lead: T('Tap the people they meet along the way.')},
 		{id: 'places', name: T('Places along the way'), lead: T('These are added as the wise men pass them.')},
 		{id: 'weather', name: T('Weather'), lead: T('These are added as you watch. Turn the sound on to hear the thunder.')}
@@ -2225,7 +2236,33 @@
 		['fog', 'weather', T('Mist'), T('Cool, damp air lying low in the valleys.'), 'draw', 'watch'],
 		['haze', 'weather', T('Haze'), T('Dust in the air makes the far hills soft and pale.'), 'draw', 'watch'],
 		['mirage', 'weather', T('Mirage'), T('In the midday heat, the hot air makes the sky look like a pool of water.'), 'draw', 'watch'],
-		['snow', 'weather', T('Snow on the mountains'), T('Winter snow on the tops of the far peaks.'), 'draw', 'watch']
+		['snow', 'weather', T('Snow on the mountains'), T('Winter snow on the tops of the far peaks.'), 'draw', 'watch'],
+		['clouds', 'weather', T('Clouds'), T('Soft clouds drifting over the hills.'), 'draw'],
+		['storm-clouds', 'weather', T('Storm clouds'), T('Dark clouds, heavy with rain.'), 'draw'],
+		['camp', 'caravan', T('The camp'), T('Where they rest for the night, their tents pitched by the road.'), 'jr-lm-camp', 'watch'],
+		['fire', 'caravan', T('The campfire'), T('The kings warm themselves by it at the end of the night.'), 'draw'],
+		['armillary', 'caravan', T('The armillary sphere'), T('The wise men’s model of the heavens, at their home in the East.'), 'jr-pr-armillary'],
+		['shower-draconids', 'sky', T('The Draconids'), T('A meteor shower in early October.'), 'draw', 'watch'],
+		['shower-orionids', 'sky', T('The Orionids'), T('A meteor shower in October, from the dust of Halley’s comet.'), 'draw', 'watch'],
+		['shower-leonids', 'sky', T('The Leonids'), T('A meteor shower in November, from the dust of a comet called Tempel-Tuttle.'), 'draw', 'watch'],
+		['shower-geminids', 'sky', T('The Geminids'), T('A meteor shower in December, one of the brightest of the year.'), 'draw', 'watch'],
+		['shower-quadrantids', 'sky', T('The Quadrantids'), T('A meteor shower in the first days of January.'), 'draw', 'watch'],
+		['sky-dusk', 'sky', T('The evening glow'), T('The last light of evening, as the first stars come out.'), 'draw', 'watch'],
+		['sky-deep', 'sky', T('A deep, dark night'), T('No moon and no clouds: the darkest nights show the most stars.'), 'draw', 'watch'],
+		['sky-predawn', 'sky', T('Christmas morning'), T('The first light of Christmas morning over Bethlehem.'), 'draw', 'watch'],
+		['sky-day', 'sky', T('A day on the road'), T('Some stretches they travel by day, under the sun.'), 'draw', 'watch'],
+		['land-east', 'places', T('The lands of the East'), T('Green plains and rivers, where the journey begins and ends.'), 'jr-mid-fields', 'watch'],
+		['land-desert', 'places', T('The great desert'), T('Dunes of sand as far as the eye can see.'), 'jr-mid-dunes-2', 'watch'],
+		['land-rocky', 'places', T('Rocky country'), T('Rough hills of stone on the way to Judea.'), 'jr-mid-rocky', 'watch'],
+		['land-judea', 'places', T('The hills of Judea'), T('Terraced hills of olive trees around Jerusalem and Bethlehem.'), 'jr-mid-olive-terraces', 'watch'],
+		['fg-palm', 'plants', T('Date palm'), T('Its sweet dates fed travelers across the desert.'), 'jr-fg-date-palm'],
+		['fg-acacia', 'plants', T('Acacia tree'), T('A thorny desert tree. Its wood, called shittim wood, made the ark of the covenant (Exodus 25:10).'), 'jr-fg-acacia'],
+		['fg-olive', 'plants', T('Olive tree'), T('Olive trees can live for hundreds of years.'), 'jr-fg-olive-tree-2'],
+		['fg-reeds', 'plants', T('Reeds'), T('Tall grasses that grow by the water.'), 'jr-fg-reeds'],
+		['fg-grass', 'plants', T('Desert grass'), T('Tough grass that holds the sand in place.'), 'jr-fg-grass'],
+		['fg-boulders', 'plants', T('Boulders'), T('Great rocks, smoothed by the wind and the sand.'), 'jr-fg-boulders-2'],
+		['fg-wall', 'plants', T('Stone wall'), T('Old walls of stacked stones around the fields of Judea.'), 'jr-fg-stone-wall'],
+		['flowers', 'plants', T('Desert flowers'), T('After rain the desert blossoms like the rose (Isaiah 35:1).'), 'draw']
 	].map(function(e) { return {id: e[0], page: e[1], name: e[2], line: e[3], art: e[4], watch: e[5] === 'watch'}; });
 	var GUIDE_BY_ID = {}; GUIDE.forEach(function(e) { GUIDE_BY_ID[e.id] = e; });
 	GUIDE_BY_ID.bolt = {id: 'bolt', name: T('Lightning')};   // (a flash of lightning tapped: a badge, not a page of its own)
@@ -2234,7 +2271,7 @@
 		hare: 'hare', stones: 'stones', ibex: 'ibex', lanterns: 'lanterns', sheep: 'sheep', donkey: 'donkey', kite: 'kite', potter: 'potter', 'well-women': 'well-women',
 		shepherdess: ['shepherdess', 'lambs'], palace: 'east-palace', home: 'east-palace', river: 'river', oasis: 'oasis', 'oasis-2': 'oasis', ruins: 'ruins', inn: 'inn',
 		'inn-2': 'inn', pass: 'pass', well: 'well', olives: 'olives', 'jerusalem-far': 'jerusalem', 'jerusalem-gate': 'jerusalem', jerusalem: 'jerusalem', herod: 'herod',
-		shepherds: 'shepherds', bethlehem: 'bethlehem', 'bethlehem-far': 'bethlehem', stable: 'stable', angel: 'angel', volcano: 'volcano'};
+		shepherds: 'shepherds', bethlehem: 'bethlehem', 'bethlehem-far': 'bethlehem', stable: 'stable', angel: 'angel', volcano: 'volcano', camp: 'camp'};
 	function pieceGuide(p) { return p.kind === 'howl' ? p.who : p.kind === 'trotter' ? 'jackal' : PIECE_GUIDE[p.key]; }
 	function moonKind(p) {   // the moon's eight phases (the same edges as moonWords)
 		return p < 0.03 || p > 0.97 ? 'moon-new' : p < 0.22 ? 'moon-wax-crescent' : p < 0.28 ? 'moon-first-quarter' : p < 0.47 ? 'moon-wax-gibbous'
@@ -2309,7 +2346,10 @@
 	}
 	function spotAt(evt, pad, small) {   // (small: only the little things, the size of a creature on the sand)
 		var rect = canvas.getBoundingClientRect(), k = canvas.width / rect.width, px = (evt.clientX - rect.left) * k, py = (evt.clientY - rect.top) * k, best = null, bd = 1e9;
-		spots.forEach(function(s) { if (small && s.r > 30 * dpr * S) return; var d = Math.hypot(s.x - px, s.y - py) - s.r - (pad || 0) * dpr * S; if (d < 0 && d < bd) { bd = d; best = s; } });
+		spots.forEach(function(s) {   // of everything under the finger, the smallest (a star in front of a cloud, a creature in front of a tree)
+			if (small && s.r > 30 * dpr * S) return;
+			if (Math.hypot(s.x - px, s.y - py) - s.r - (pad || 0) * dpr * S < 0 && s.r < bd) { bd = s.r; best = s; }
+		});
 		return best;
 	}
 	var starFlare = -9;
@@ -2575,7 +2615,11 @@
 			if (a > 0.15) spot('meteor', m, x + 30, y - 14, 46);   // (quick: tap it before it's gone)
 			if (m.caught) sparkle(x, y, 9, Math.max(0, 1 - (clock - m.caught) * 1.5));
 		});
-		if (shower && clearSky > 0.6 && sunset < 0.15 && day < 0.1) witness('shower');
+		if (shower && clearSky > 0.6 && sunset < 0.15 && day < 0.1) {
+			witness('shower');
+			var nm = HOMEMODE ? (/^01-0[34]$/.test(md) ? 'Quadrantid' : '') : ((night.plan.note || '').match(/(Draconid|Orionid|Leonid|Geminid|Quadrantid)/) || [])[1];
+			if (nm) witness('shower-' + nm.toLowerCase() + 's');   // (which shower it is)
+		}
 	}
 	// The Star starts small, low on the right, when they set out. Night by night it grows and drifts in toward the
 	// middle of the sky; on the last night it comes to rest over the stable.
@@ -2641,6 +2685,7 @@
 			var kind = kinds[Math.floor(hash(i + 7000) * kinds.length)];
 			var h = 120 + hash(i + 8000) * 120, col = '#0d0919';
 			var names = FG_ART[kind].filter(art), im = art(names[Math.floor(hash(i + 9000) * names.length)]);
+			spot('fg-' + kind, 'fg' + i, x, VH - h * 0.45, h * 0.42);
 			if (im && im.base) {
 				var w = h * 1.15 * im.width / im.height, bend = plantBend(kind, i);
 				if (!bend) { ctx.drawImage(im, x - w / 2, VH + 16 - im.base * h * 1.15, w, h * 1.15); continue; }
@@ -3181,6 +3226,7 @@
 			var u = i * seg + hash(i + 7800) * seg, x = u - base, depth = hash(i + 7900);   // scattered over the near sand, some further back
 			var y = groundY(u) + 10 + depth * 46, sc = 0.7 + depth * 0.6, col = FLOWER_COLS[Math.floor(hash(i + 8100) * FLOWER_COLS.length)];
 			var n = 1 + Math.floor(hash(i + 8200) * 3);   // a little clump
+			spot('flowers', 'flowers' + i, x, y - 8 * sc, 14);
 			for (var f = 0; f < n; f++) {
 				var fx = x + (f - (n - 1) / 2) * 6 * sc, hgt = (6 + hash(i * 3 + f) * 6) * sc, sway = Math.sin(clock * 1.5 + i + f) * night.wind * 2;
 				ctx.strokeStyle = '#6f8a4a'; ctx.lineWidth = 1.1 * sc;
@@ -3557,7 +3603,8 @@
 		['sunrise', T('Easter morning'), T('Visit the wise men on Easter Sunday'), function(d) { return d.easter; }],
 		['friend', T('Pip’s best friend'), T('Find Pip on all 98 nights'), function(d) { return d.found.length >= END + 1; }],
 		// the Field Guide's
-		['caravan', T('The whole caravan'), T('Talk to all three kings and pat all three camels'), function(d) { return gPage(d, 'caravan'); }],
+		['caravan', T('The whole caravan'), T('Talk to all three kings and pat all three camels'), function(d) { return ['king-1', 'king-2', 'king-3', 'camel-1', 'camel-2', 'camel-3'].every(function(id) { return gHas(d, id); }); }],
+		['plants', T('Rocks and plants'), T('Find every rock, tree and flower'), function(d) { return gPage(d, 'plants'); }],
 		['gazer', T('Star gazer'), T('Trace all seven constellations'), function(d) { for (var i = 0; i < 7; i++) if (!gHas(d, 'c-' + i)) return false; return true; }],
 		['moons', T('Every face of the moon'), T('See all eight phases of the moon'), function(d) { return GUIDE.every(function(e) { return !/^moon-/.test(e.id) || gHas(d, e.id); }); }],
 		['follow', T('Following the Star'), T('Tap the Star on ten different nights'), function(d) { return !!d.g.star && d.g.star.days.length >= 10; }],
@@ -3587,7 +3634,7 @@
 		['visit', T('I was there!'), T('Come to Follow the Star in Gladstone and scan the sign at the end'), function(d) { return d.visits.length > 0; }]
 	];
 	var BADGE_ICON = {caravan: 'camel-1', gazer: 'c-0', moons: 'moon-full', follow: 'star', xstar: 'star', meteors: 'meteor', comet: 'comet', rainbow: 'rainbow', bolt: 'lightning', storm: 'storm',
-		visit: 'stable', animals: 'wolf', small: 'beetle', birds: 'owl', road: 'merchants', places: 'jerusalem', weather: 'wind', daynight: 'sunset', explorer: 'fox', guide: 'stable'};
+		visit: 'stable', plants: 'fg-palm', animals: 'wolf', small: 'beetle', birds: 'owl', road: 'merchants', places: 'jerusalem', weather: 'wind', daynight: 'sunset', explorer: 'fox', guide: 'stable'};
 	function badgeIcon(kind) {   // little pictures in the Journey's style, for the medals
 		return smallCanvas(80, 80, function(g) {
 			var pipIm = art('jr-cr-sand-mouse');
@@ -3662,8 +3709,8 @@
 			for (var i = 0; i < 16; i++) { var r = i % 2 ? 5 : (i % 4 === 0 ? 34 : 18), an = i * Math.PI / 8 - Math.PI / 2; ctx.lineTo(Math.cos(an) * r, Math.sin(an) * r); }
 			ctx.closePath(); ctx.fill();
 		}
-		else if (id === 'meteor' || id === 'shower') {
-			(id === 'shower' ? [[0.7, 0.2], [0.45, 0.42], [0.85, 0.5], [0.6, 0.7]] : [[0.72, 0.3]]).forEach(function(m) {
+		else if (id === 'meteor' || id === 'shower' || /^shower-/.test(id)) {
+			(id !== 'meteor' ? [[0.7, 0.2], [0.45, 0.42], [0.85, 0.5], [0.6, 0.7]] : [[0.72, 0.3]]).forEach(function(m) {
 				var x = w * m[0], y = h * m[1], g = ctx.createLinearGradient(x - 34 * u, y + 16 * u, x, y);
 				g.addColorStop(0, 'rgba(255,255,255,0)'); g.addColorStop(1, 'rgba(255,255,255,0.95)');
 				ctx.strokeStyle = g; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(x - 34 * u, y + 16 * u); ctx.lineTo(x, y); ctx.stroke(); glow(x, y, 6 * u, 'rgb(255,255,255)', 0.8);
@@ -3692,6 +3739,30 @@
 			ctx.translate(cx, cy); ctx.scale(1.8 * u, 1.8 * u); ctx.fillStyle = '#d8cbe6'; ctx.beginPath();
 			ctx.moveTo(0, -2); ctx.quadraticCurveTo(-10, -5, -20, -2); ctx.lineTo(-23, 0); ctx.lineTo(-20, 1); ctx.lineTo(-22, 2.5); ctx.lineTo(-18, 2.5);
 			ctx.quadraticCurveTo(-9, 3, 0, 2); ctx.quadraticCurveTo(9, 3, 18, 2.5); ctx.lineTo(22, 2.5); ctx.lineTo(20, 1); ctx.lineTo(23, 0); ctx.lineTo(20, -2); ctx.quadraticCurveTo(10, -5, 0, -2); ctx.fill();
+		}
+		else if (id === 'fire') {   // a little campfire: logs, flames, sparks
+			glow(cx, h * 0.72, 34 * u, 'rgb(255,140,50)', 0.55);
+			ctx.fillStyle = '#5a3418'; ctx.save(); ctx.translate(cx, h * 0.8); [-0.35, 0.35].forEach(function(r) { ctx.save(); ctx.rotate(r); ctx.fillRect(-16 * u, -3 * u, 32 * u, 6 * u); ctx.restore(); }); ctx.restore();
+			[['#ff7a2a', 16, 26], ['#ffb347', 11, 19], ['#fff1a8', 6, 11]].forEach(function(f) { ctx.fillStyle = f[0]; ctx.beginPath(); ctx.moveTo(cx - f[1] * u, h * 0.78); ctx.quadraticCurveTo(cx - f[1] * u, h * 0.78 - f[2] * u, cx, h * 0.78 - f[2] * 1.7 * u); ctx.quadraticCurveTo(cx + f[1] * u, h * 0.78 - f[2] * u, cx + f[1] * u, h * 0.78); ctx.fill(); });
+		}
+		else if (id === 'clouds' || id === 'storm-clouds') { var cl = CLOUDS[id === 'clouds' ? 'light' : 'dark'][1]; fitArt(cl, w, h, 0.95); }
+		else if (/^sky-/.test(id)) {   // a window onto that sky
+			var key = {'sky-dusk': 'dusk', 'sky-deep': 'deep', 'sky-predawn': 'predawn'}[id], sim = key && art(SKIES[key].art), sk2 = key ? SKIES[key] : null;
+			ctx.beginPath(); ctx.rect(w * 0.08, h * 0.08, w * 0.84, h * 0.84); ctx.clip();
+			if (sim) { var sc2 = Math.max(w / sim.width, h / sim.height); ctx.drawImage(sim, (w - sim.width * sc2) / 2, h - sim.height * sc2, sim.width * sc2, sim.height * sc2); }
+			else { var gg = ctx.createLinearGradient(0, 0, 0, h); if (sk2) { gg.addColorStop(0, sk2.top); gg.addColorStop(0.55, sk2.mid); gg.addColorStop(1, sk2.glow); } else { gg.addColorStop(0, '#5e8fd6'); gg.addColorStop(1, '#f2d39a'); } ctx.fillStyle = gg; ctx.fillRect(0, 0, w, h); }
+			if (id === 'sky-day') { glow(w * 0.68, h * 0.38, 30 * u, 'rgb(255,215,140)', 0.8); ctx.fillStyle = '#ffe39a'; ctx.beginPath(); ctx.arc(w * 0.68, h * 0.38, 10 * u, 0, Math.PI * 2); ctx.fill(); }
+			if (id === 'sky-deep') for (var st = 0; st < 26; st++) { ctx.fillStyle = 'rgba(255,255,255,' + (0.4 + 0.6 * hash(st + 40)) + ')'; ctx.fillRect(w * hash(st + 1), h * 0.8 * hash(st + 20), 1.4, 1.4); }
+			if (id === 'sky-predawn') { glow(w * 0.5, h * 0.95, 40 * u, 'rgb(255,210,150)', 0.6); sparkle(w * 0.62, h * 0.3, 7 * u, 1); }
+		}
+		else if (id === 'flowers') {
+			ctx.fillStyle = '#d9a35b'; ctx.fillRect(0, h * 0.8, w, h * 0.2);
+			[[0.3, '#f28fb1'], [0.5, '#ffd45e'], [0.7, '#c39bf0']].forEach(function(fl, k) {
+				var fx = w * fl[0], fy = h * (0.42 + 0.08 * (k % 2));
+				ctx.strokeStyle = '#6f8a4a'; ctx.lineWidth = 2 * u; ctx.beginPath(); ctx.moveTo(fx, h * 0.82); ctx.quadraticCurveTo(fx - 4 * u, h * 0.62, fx, fy); ctx.stroke();
+				ctx.fillStyle = fl[1]; for (var pt = 0; pt < 5; pt++) { var an = pt / 5 * Math.PI * 2; ctx.beginPath(); ctx.arc(fx + Math.cos(an) * 5 * u, fy + Math.sin(an) * 5 * u, 3.6 * u, 0, Math.PI * 2); ctx.fill(); }
+				ctx.fillStyle = '#c9761e'; ctx.beginPath(); ctx.arc(fx, fy, 2.4 * u, 0, Math.PI * 2); ctx.fill();
+			});
 		}
 		else if (id === 'volcano') { var vs = Math.min(w * 0.92 / 560, h * 0.8 / 190); ctx.translate(cx, h * 0.9); ctx.scale(vs, vs); drawVolcano(0, 0); }
 		else if (/^(scorpion|centipede|spider|beetle|snake)$/.test(id)) {
