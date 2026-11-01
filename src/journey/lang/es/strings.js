@@ -98,7 +98,7 @@ JOURNEY_LANG.strings = {
 	"Cygnus, the swan": "Cygnus, el cisne",
 	"Taurus, the bull": "Tauro, el toro",
 	"The caravan": "La caravana",
-	"Tap the kings by the fire to hear what they say, and tap their camels.": "Toca a los reyes junto al fuego para oír lo que dicen, y toca sus camellos.",
+	"Find Pip, tap the kings by the fire to hear what they say, and tap their camels.": "Encuentra a Pip, toca a los reyes junto al fuego para oír lo que dicen, y toca sus camellos.",
 	"The sky": "El cielo",
 	"Tap the Star, the moon, shooting stars, the comet and the week’s constellation.": "Toca la Estrella, la luna, las estrellas fugaces, el cometa y la constelación de la semana.",
 	"Animals of the land": "Animales de la tierra",
@@ -115,6 +115,8 @@ JOURNEY_LANG.strings = {
 	"These are added as the wise men pass them.": "Se añaden cuando los sabios pasan por ellos.",
 	"Weather": "El tiempo",
 	"These are added as you watch. Turn the sound on to hear the thunder.": "Se añaden mientras miras. Activa el sonido para oír el trueno.",
+	"Pip": "Pip",
+	"The little mouse who travels with the wise men. He hides somewhere every night: tap him when you spot him.": "El ratoncito que viaja con los sabios. Se esconde en algún lugar cada noche: tócalo cuando lo veas.",
 	"The king with gold": "El rey del oro",
 	"Gold, a gift fit for a king.": "Oro, un regalo digno de un rey.",
 	"The king with frankincense": "El rey del incienso",
@@ -184,6 +186,7 @@ JOURNEY_LANG.strings = {
 	"A strong, patient helper that carries heavy loads.": "Un ayudante fuerte y paciente que lleva cargas pesadas.",
 	"Sand mouse": "Ratón de arena",
 	"One of Pip’s cousins! Sand mice hide in burrows by day.": "¡Un primo de Pip! Los ratones de arena se esconden en sus madrigueras de día.",
+	"A little grey mouse that sometimes scurries across the road. It isn’t Pip: he has his own card in the caravan.": "Un ratoncito gris que a veces cruza corriendo el camino. No es Pip: él tiene su propia tarjeta en la caravana.",
 	"Jerboa": "Jerbo",
 	"A tiny desert mouse with long back legs that hops like a kangaroo.": "Un ratoncito del desierto con patas traseras largas que salta como un canguro.",
 	"Gecko": "Geco",
@@ -636,5 +639,6 @@ JOURNEY_LANG.strings = {
 	"Hide the buttons": "Ocultar los botones",
 	"Show the buttons": "Mostrar los botones",
 	"Close the journal": "Cerrar el diario",
+	"Tap the kings by the fire to hear what they say, and tap their camels.": "Toca a los reyes junto al fuego para oír lo que dicen, y toca sus camellos.",
 	"Language": "Idioma"
 };

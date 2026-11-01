@@ -98,7 +98,7 @@ JOURNEY_LANG.strings = {
 	"Cygnus, the swan": "Лебедь",
 	"Taurus, the bull": "Телец",
 	"The caravan": "Караван",
-	"Tap the kings by the fire to hear what they say, and tap their camels.": "Нажми на царей у костра, чтобы услышать, что они говорят, и нажми на их верблюдов.",
+	"Find Pip, tap the kings by the fire to hear what they say, and tap their camels.": "Найди Пипа, нажми на царей у костра, чтобы услышать, что они говорят, и нажми на их верблюдов.",
 	"The sky": "Небо",
 	"Tap the Star, the moon, shooting stars, the comet and the week’s constellation.": "Нажми на Звезду, луну, падающие звёзды, комету и созвездие недели.",
 	"Animals of the land": "Животные",
@@ -115,6 +115,8 @@ JOURNEY_LANG.strings = {
 	"These are added as the wise men pass them.": "Они добавляются, когда волхвы проходят мимо.",
 	"Weather": "Погода",
 	"These are added as you watch. Turn the sound on to hear the thunder.": "Она добавляется, пока ты смотришь. Включи звук, чтобы услышать гром.",
+	"Pip": "Пип",
+	"The little mouse who travels with the wise men. He hides somewhere every night: tap him when you spot him.": "Маленький мышонок, который путешествует с волхвами. Каждую ночь он где-то прячется: нажми на него, когда увидишь.",
 	"The king with gold": "Царь с золотом",
 	"Gold, a gift fit for a king.": "Золото, дар, достойный царя.",
 	"The king with frankincense": "Царь с ладаном",
@@ -184,6 +186,7 @@ JOURNEY_LANG.strings = {
 	"A strong, patient helper that carries heavy loads.": "Сильный и терпеливый помощник, который носит тяжёлые грузы.",
 	"Sand mouse": "Песчаная мышь",
 	"One of Pip’s cousins! Sand mice hide in burrows by day.": "Двоюродная сестра Пипа! Днём песчаные мыши прячутся в норках.",
+	"A little grey mouse that sometimes scurries across the road. It isn’t Pip: he has his own card in the caravan.": "Маленькая серая мышка, которая иногда перебегает дорогу. Это не Пип: у него своя карточка в караване.",
 	"Jerboa": "Тушканчик",
 	"A tiny desert mouse with long back legs that hops like a kangaroo.": "Крошечный зверёк пустыни с длинными задними лапками, прыгает как кенгуру.",
 	"Gecko": "Геккон",
@@ -635,5 +638,6 @@ JOURNEY_LANG.strings = {
 	"Sketch this moment (C)": "Нарисуй этот момент (C)",
 	"Hide the buttons": "Скрыть кнопки",
 	"Show the buttons": "Показать кнопки",
-	"Close the journal": "Закрыть дневник"
+	"Close the journal": "Закрыть дневник",
+	"Tap the kings by the fire to hear what they say, and tap their camels.": "Нажми на царей у костра, чтобы услышать, что они говорят, и нажми на их верблюдов."
 };

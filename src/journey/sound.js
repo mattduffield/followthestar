@@ -64,6 +64,14 @@ var JourneySound = (function() {
 
 	// ----- called by the scene -----
 	// state: {wind, rain, storm, sandstorm 0..1, clear, camp, water, sheep, walking 0..1}
+	// a fire tapped: its crackle swells, louder for a moment over the quiet background loop, then settles
+	function fireSwell() {
+		if (!on) return;
+		var buf = buffers['amb-campfire']; if (!buf) { load('amb-campfire'); return; }
+		var src = ac.createBufferSource(), g = ac.createGain(), t = ac.currentTime;
+		src.buffer = buf; g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(0.8, t + 0.15); g.gain.setValueAtTime(0.8, t + 1.2); g.gain.linearRampToValueAtTime(0, t + 3);
+		src.connect(g); g.connect(master); src.start(t, Math.random() * Math.max(0, buf.duration - 4)); src.stop(t + 3.1);
+	}
 	function update(state) {
 		if (!on) return;
 		if (state.storm > 0) variants('thunder').forEach(load);   // ready before the first strike
@@ -145,6 +153,6 @@ var JourneySound = (function() {
 	}
 	function wanted() { try { return localStorage.getItem(KEY) === '1'; } catch (e) { return false; } }
 
-	return {preload: preload, toggle: toggle, isOn: function() { return on; }, wanted: wanted, update: update, thunder: thunder, hoot: hoot, animal: animal, squeak: squeak,
+	return {preload: preload, fireSwell: fireSwell, toggle: toggle, isOn: function() { return on; }, wanted: wanted, update: update, thunder: thunder, hoot: hoot, animal: animal, squeak: squeak,
 		music: setMusic, step: function() {}, bell: function() {}, hasAny: function() { return READY.length > 0; }};
 })();

@@ -936,7 +936,7 @@
 			spot(c.kind, c, 0, -8, 20);
 			ctx.fillStyle = 'rgba(60,30,10,0.25)'; ctx.beginPath(); ctx.ellipse(0, hop, 9, 2, 0, 0, 7); ctx.fill();
 			if (drawBug(c)) { ctx.restore(); return; }
-			if (im) { var hh = {jerboa: 26, mouse: 14, gecko: 10, hedgehog: 20}[c.kind]; ctx.drawImage(im, -hh * im.width / im.height / 2, -hh, hh * im.width / im.height, hh); ctx.restore(); return; }
+			if (im) { var hh = {jerboa: 26, mouse: 12, gecko: 10, hedgehog: 20}[c.kind]; if (c.kind === 'mouse') ctx.filter = MOUSE_LOOK; ctx.drawImage(im, -hh * im.width / im.height / 2, -hh, hh * im.width / im.height, hh); ctx.filter = 'none'; ctx.restore(); return; }   // (the sand mice greyer and smaller than Pip, so he's never mistaken for one)
 			ctx.fillStyle = col; ctx.strokeStyle = col; ctx.lineCap = 'round';
 			if (c.kind === 'jerboa') {
 				ctx.beginPath(); ctx.ellipse(0, -8, 6, 5, -0.3, 0, 7); ctx.fill(); ctx.beginPath(); ctx.arc(5, -12, 3.4, 0, 7); ctx.fill();
@@ -1822,8 +1822,9 @@
 		grow = grow == null ? 1 : grow;
 		var f = fires[opt.id || 'camp'] || (fires[opt.id || 'camp'] = {embers: [], smoke: [], clock: clock});
 		var y = opt.y != null ? opt.y : kingY(x), dt = clamp(clock - f.clock, 0, 0.1); f.clock = clock;
-		var size = 0.25 + 0.75 * grow;
-		if (a > 0.5 && grow > 0.3) spot('fire', 'fire' + (opt.id || 'camp') + night.day, x, y - 14 * (opt.s || 1), 26 * (opt.s || 1));
+		var size = 0.25 + 0.75 * grow, fl = (clock - (f.burst || -9)) / 1.2;
+		if (fl > 0 && fl < 1) size *= 1 + 0.45 * Math.sin(Math.PI * fl);   // tapped: the flames leap up for a moment
+		if (a > 0.5 && grow > 0.3) spot('fire', 'fire' + (opt.id || 'camp') + night.day, x, y - 14 * (opt.s || 1), 26 * (opt.s || 1), {fire: opt.id || 'camp'});
 		ctx.save(); ctx.globalAlpha = a;
 		if (opt.s) { ctx.translate(x, y); ctx.scale(opt.s, opt.s); ctx.translate(-x, -y); }
 		// firelight on the sand and on whoever stands near
@@ -1867,6 +1868,7 @@
 		glow(x, y - 12 * size, 16 * size, 'rgb(255,230,150)', 0.45 * grow * flicker(2));   // the hot heart, low in the fire
 		// sparks rising from it
 		var embers = f.embers, smoke = f.smoke;
+		if (!reduceMotion && clock - (f.burst || -9) < 0.4) for (var kb = 0; kb < 6; kb++) embers.push({x: x + (Math.random() - 0.5) * 30, y: y - 18, vx: (Math.random() - 0.5) * 90 + night.wind * 20, vy: -140 - Math.random() * 140, life: 1.2 + Math.random() * 1.2, t: 0});   // tapped: a burst of sparks
 		if (!opt.id && clock - fireKick < 0.25) for (var kk = 0; kk < 3; kk++) embers.push({x: x + (Math.random() - 0.5) * 24, y: y - 16, vx: (Math.random() - 0.5) * 50, vy: -90 - Math.random() * 90, life: 1 + Math.random(), t: 0});   // a king stirred it
 		if (!reduceMotion && Math.random() < dt * 14 * grow) embers.push({x: x + (Math.random() - 0.5) * 20, y: y - 20, vx: (Math.random() - 0.5) * 18 + night.wind * 20, vy: -50 - Math.random() * 60, life: 1.2 + Math.random() * 1.4, t: 0});
 		embers = f.embers = embers.filter(function(e) {
@@ -2139,7 +2141,7 @@
 	// along the road, are found just by being there to see them (witness()). Each entry: id, its page in the journal,
 	// its name, a line about it, and its picture (an art name, or drawn in code by guideDraw).
 	var GUIDE_PAGES = [
-		{id: 'caravan', name: T('The caravan'), lead: T('Tap the kings by the fire to hear what they say, and tap their camels.')},
+		{id: 'caravan', name: T('The caravan'), lead: T('Find Pip, tap the kings by the fire to hear what they say, and tap their camels.')},
 		{id: 'sky', name: T('The sky'), lead: T('Tap the Star, the moon, shooting stars, the comet and the week’s constellation.')},
 		{id: 'animals', name: T('Animals of the land'), lead: T('Tap the animals you see along the way.')},
 		{id: 'small', name: T('Small creatures'), lead: T('Tap the little creatures that scurry across the sand.')},
@@ -2150,6 +2152,7 @@
 		{id: 'weather', name: T('Weather'), lead: T('These are added as you watch. Turn the sound on to hear the thunder.')}
 	];
 	var GUIDE = [
+		['pip', 'caravan', T('Pip'), T('The little mouse who travels with the wise men. He hides somewhere every night: tap him when you spot him.'), 'jr-cr-sand-mouse'],
 		['king-1', 'caravan', T('The king with gold'), T('Gold, a gift fit for a king.'), 'jr-char-king-1-rest'],
 		['king-2', 'caravan', T('The king with frankincense'), T('Frankincense, sweet incense for worship. He is the eldest of the three.'), 'jr-char-king-2-walk-free'],
 		['king-3', 'caravan', T('The king with myrrh'), T('Myrrh, a precious spice.'), 'jr-char-king-3-rest'],
@@ -2187,7 +2190,7 @@
 		['sheep', 'animals', T('Sheep'), T('The shepherd calls his own sheep by name (John 10:3).'), 'jr-en-sheep'],
 		['lambs', 'animals', T('Lambs'), T('Jesus is called the Lamb of God (John 1:29).'), 'jr-en-shepherdess'],
 		['donkey', 'animals', T('Donkey'), T('A strong, patient helper that carries heavy loads.'), 'jr-en-donkey'],
-		['mouse', 'small', T('Sand mouse'), T('One of Pip’s cousins! Sand mice hide in burrows by day.'), 'jr-cr-sand-mouse'],
+		['mouse', 'small', T('Sand mouse'), T('One of Pip’s cousins! Sand mice hide in burrows by day.'), 'jr-cr-sand-mouse', null, T('A little grey mouse that sometimes scurries across the road. It isn’t Pip: he has his own card in the caravan.')],
 		['jerboa', 'small', T('Jerboa'), T('A tiny desert mouse with long back legs that hops like a kangaroo.'), 'jr-cr-jerboa'],
 		['gecko', 'small', T('Gecko'), T('A little lizard with sticky toes that can climb walls.'), 'jr-cr-gecko'],
 		['hedgehog', 'small', T('Hedgehog'), T('When it’s scared it rolls up into a prickly ball.'), 'jr-cr-hedgehog'],
@@ -2263,7 +2266,7 @@
 		['fg-boulders', 'plants', T('Boulders'), T('Great rocks, smoothed by the wind and the sand.'), 'jr-fg-boulders-2'],
 		['fg-wall', 'plants', T('Stone wall'), T('Old walls of stacked stones around the fields of Judea.'), 'jr-fg-stone-wall'],
 		['flowers', 'plants', T('Desert flowers'), T('After rain the desert blossoms like the rose (Isaiah 35:1).'), 'draw']
-	].map(function(e) { return {id: e[0], page: e[1], name: e[2], line: e[3], art: e[4], watch: e[5] === 'watch'}; });
+	].map(function(e) { return {id: e[0], page: e[1], name: e[2], line: e[3], art: e[4], watch: e[5] === 'watch', hint: e[6]}; });
 	var GUIDE_BY_ID = {}; GUIDE.forEach(function(e) { GUIDE_BY_ID[e.id] = e; });
 	GUIDE_BY_ID.bolt = {id: 'bolt', name: T('Lightning')};   // (a flash of lightning tapped: a badge, not a page of its own)
 	// what each thing on the road is in the guide (a few count for two: a herder and his goats)
@@ -2340,9 +2343,9 @@
 	// where each thing that can be tapped is drawn this frame: kept in the canvas's own pixels (the scene's current
 	// transform applied), so the camera, the mirrored way home and any turn or flip all just work
 	var spots = [], spotsNext = [];
-	function spot(id, uid, x, y, r) {
+	function spot(id, uid, x, y, r, tag) {
 		var m = ctx.getTransform();
-		spotsNext.push({id: id, uid: uid, x: m.a * x + m.c * y + m.e, y: m.b * x + m.d * y + m.f, r: r * Math.hypot(m.a, m.b)});
+		spotsNext.push({id: id, uid: uid, tag: tag, x: m.a * x + m.c * y + m.e, y: m.b * x + m.d * y + m.f, r: r * Math.hypot(m.a, m.b)});
 	}
 	function spotAt(evt, pad, small) {   // (small: only the little things, the size of a creature on the sand)
 		var rect = canvas.getBoundingClientRect(), k = canvas.width / rect.width, px = (evt.clientX - rect.left) * k, py = (evt.clientY - rect.top) * k, best = null, bd = 1e9;
@@ -2357,6 +2360,7 @@
 		var s = spotAt(evt, pad, small); if (!s) return false;
 		var p = sceneXY(evt);
 		if (s.id === 'star') starFlare = clock;   // it flares up
+		if (s.tag && s.tag.fire && fires[s.tag.fire]) { fires[s.tag.fire].burst = clock; if (sound.fireSwell) sound.fireSwell(); }   // a fire: sparks, the flames leap, the crackle swells
 		if (s.id === 'meteor') s.uid.caught = clock;   // (and a caught shooting star glints)
 		noteFind(s.id, s.uid, p.x, p.y);
 		return true;
@@ -2884,6 +2888,7 @@
 	// Pip is drawn from the sand mouse, warmed a little: darker than the sand, so he's easier to spot. He moves in
 	// little springy hops (squashing as he lands) with a soft shadow on the sand that shrinks as he jumps; when found
 	// he gives a big hop, then keeps bouncing happily while his card is open.
+	var MOUSE_LOOK = 'grayscale(0.7) brightness(0.82) contrast(1.1)';   // the sand mice that scurry past: grey, where Pip is warm
 	var PIP_LOOK = 'sepia(0.6) saturate(1.6) brightness(1.15)', PIP_WAVE_LOOK = 'sepia(0.35) saturate(1.1) brightness(0.72) hue-rotate(-12deg)';
 	function paintPip() {
 		if (!charsReady()) { pip.box = null; return; }
@@ -3331,6 +3336,7 @@
 		setNightSounds = function() {
 		var kinds = PIECES.filter(function(p) { return p.night === k; }).map(function(p) { return p.kind + ' ' + p.key; }).join(' ');
 		sound.preload(['voice-1-say', 'voice-2-say', 'voice-3-say'].map(voiceFile));   // (the kings' sayings, for a click in the evening)
+		sound.preload(['amb-campfire']);   // (for a tap on a fire)
 		sound.preload(['camel-grunt'].concat(['voice-1-urge', 'voice-1-calm', 'voice-2-urge', 'voice-2-calm', 'voice-3-urge', 'voice-3-calm'].map(voiceFile)));   // (ready for a click on a camel)
 		sound.preload([/howl/.test(kinds) ? 'jackal' : '', /howl/.test(kinds) ? 'wolf' : '', /fox/.test(kinds) ? 'fox' : '', /sheep|shepherd/.test(kinds) ? 'sheep' : '', /sheep|shepherd/.test(kinds) ? 'lamb' : '', /herder/.test(kinds) ? 'goat' : '', /donkey|caravan/.test(kinds) ? 'donkey' : '', /jerusalem-gate|herod/.test(kinds) ? 'shofar' : ''].filter(Boolean));
 		};
@@ -3587,7 +3593,7 @@
 		home.forEach(function(ymdStr) { var d = new Date(ymdStr + 'T12:00:00'); weeks[Math.floor(Math.floor((d - new Date(d.getFullYear(), 0, 1)) / DAY) / 7)] = 1; });
 		var best = 0, run = 0; for (var k = 0; k <= END; k++) { run = found.indexOf(k) >= 0 ? run + 1 : 0; best = Math.max(best, run); }
 		return {found: found, picked: picked, kinds: kinds, treasures: made.length, home: home, weeks: weeks, best: best, easter: readList(JEASTER).length > 0,
-			g: guideData(), read: readList(READ_KEY), dn: dayNightAll(), sk: skStats(), visits: sync && sync.visits || []};
+			g: found.length + home.length ? Object.assign({}, guideData(), {pip: {n: found.length + home.length, days: found}}) : guideData(), read: readList(READ_KEY), dn: dayNightAll(), sk: skStats(), visits: sync && sync.visits || []};
 	}
 	function gHas(d, id) { return !!(d.g[id] && d.g[id].n > 0); }
 	function gPage(d, page) { return GUIDE.every(function(e) { return e.page !== page || gHas(d, e.id); }); }
@@ -3693,7 +3699,7 @@
 		if (!e) return;
 		var id = e.id, cx = w / 2, cy = h / 2, u = Math.min(w, h) / 80;
 		var names = ICON_ART[id] || (e.art !== 'draw' ? [e.art] : []), im = names.map(art).filter(Boolean)[0];
-		if (im) { fitArt(im, w, h, /^(king|camel)-/.test(id) ? 0.92 : 0.86); return; }
+		if (im) { ctx.save(); ctx.filter = id === 'pip' ? PIP_LOOK : id === 'mouse' ? MOUSE_LOOK : 'none'; fitArt(im, w, h, /^(king|camel)-/.test(id) ? 0.92 : id === 'mouse' ? 0.6 : 0.86); ctx.restore(); return; }
 		ctx.save(); ctx.lineCap = 'round'; ctx.lineJoin = 'round';
 		var c = /^c-(\d)$/.exec(id);
 		if (c) {   // a constellation: its stars, joined
@@ -3835,7 +3841,7 @@
 			'<button type="button" id="jcClose">' + T('Close') + '</button>';
 		var big = guideIcon(e, 220, 150); if (!has) big.className = 'unfound';
 		jcard.querySelector('.gbig').appendChild(big);
-		document.getElementById('jcText').textContent = has ? e.line : pg.lead;
+		document.getElementById('jcText').textContent = has ? e.line : e.hint || pg.lead;
 		document.getElementById('jcClose').onclick = function() { jcard.hidden = true; };
 		jcard.hidden = false; document.getElementById('jcClose').focus();
 		track('guide_card', {id: e.id, found: has ? 'yes' : 'no'});
