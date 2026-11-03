@@ -1,7 +1,7 @@
 // Sound for The Journey: real recordings, mixed low, off until the visitor turns it on.
 //
 //   amb-*     background loops, faded in and out with the weather and what they're passing
-//   one-shot  thunder, a camel's grumble, an owl, a sheep, lamb, goat or donkey, the shofar at Jerusalem
+//   one-shot  thunder, a camel's grumble, an owl, a sheep, lamb, goat or donkey, a frog, the shofar at Jerusalem
 //   music-*   background music, a different piece on different nights
 //
 // Files live in /journey/audio/ (made by docs/sound/process-audio.py, which also writes audio-ready.js).
@@ -14,11 +14,11 @@ var JourneySound = (function() {
 	// background loops and how loud each is at full strength (the mix is kept low on purpose)
 	var BEDS = {
 		'amb-night': 0.35, 'amb-crickets': 0.18, 'amb-wind': 0.4, 'amb-sandstorm': 0.55, 'amb-rain': 0.4, 'amb-storm-rain': 0.5,
-		'amb-campfire': 0.35, 'amb-water': 0.3, 'amb-sheep': 0.25, 'amb-camel-bells': 0.16, 'amb-footsteps': 0.22
+		'amb-campfire': 0.35, 'amb-water': 0.3, 'amb-frogs': 0.2, 'amb-sheep': 0.25, 'amb-camel-bells': 0.16, 'amb-footsteps': 0.22
 	};
 	var MUSIC_LEVEL = 0.28;
 
-	var ac = null, master, musicGain, buffers = {}, loading = {}, beds = {}, on = false, music = null, musicName = '', nextGrunt = 0;
+	var ac = null, master, musicGain, buffers = {}, loading = {}, beds = {}, on = false, music = null, musicName = '', nextGrunt = 0, nextCroak = 0;
 
 	function has(name) { return READY.indexOf(name) >= 0; }
 	function variants(prefix) { return READY.filter(function(n) { return n === prefix || n.indexOf(prefix + '-') === 0; }); }
@@ -63,7 +63,8 @@ var JourneySound = (function() {
 	}
 
 	// ----- called by the scene -----
-	// state: {wind, rain, storm, sandstorm 0..1, clear, camp, water, sheep, walking 0..1}
+	// state: {wind, rain, storm, sandstorm 0..1, clear, camp, water, frogs, sheep, walking 0..1} (water and frogs: how near
+	// they are to the water, rising as they come up to it and falling away after)
 	// a fire tapped: its crackle swells, louder for a moment over the quiet background loop, then settles
 	function fireSwell() {
 		if (!on) return;
@@ -84,6 +85,13 @@ var JourneySound = (function() {
 		bed('amb-storm-rain', BEDS['amb-storm-rain'] * state.storm);
 		bed('amb-campfire', BEDS['amb-campfire'] * (state.camp || 0));   // as loud as the fire is lit
 		bed('amb-water', BEDS['amb-water'] * state.water);
+		// frogs by the river and the oases: a soft chorus, faint far off and fuller close by; quiet in a storm
+		var frogs = (state.frogs || 0) * calm;
+		bed('amb-frogs', BEDS['amb-frogs'] * frogs);
+		if (frogs > 0.7 && ac.currentTime > nextCroak) {   // and right beside the water, now and then one frog nearer than the rest
+			if (nextCroak) once('frog', 0.12 + 0.08 * frogs);
+			nextCroak = ac.currentTime + 7 + Math.random() * 9;
+		}
 		bed('amb-sheep', BEDS['amb-sheep'] * state.sheep);
 		bed('amb-camel-bells', BEDS['amb-camel-bells'] * state.walking);
 		bed('amb-footsteps', BEDS['amb-footsteps'] * state.walking);

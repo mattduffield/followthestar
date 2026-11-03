@@ -4612,9 +4612,14 @@
 			var w = night.weather, lv = wx.level, t = show ? show.elapsed / show.seconds : 1;
 			// what they're passing: water near the river and oases, sheep near the shepherds
 			var nearBy = function(kinds) { return PIECES.some(function(p) { return kinds.indexOf(p.kind) >= 0 && Math.abs(cam - p.pass) < 0.18; }) ? 1 : 0; };
+			// how near the water is: faint while it's still far ahead, full beside it, and fading away again behind them
+			// (full within `close` of it, nothing beyond `reach`, in days of the journey)
+			var nearness = function(kinds, close, reach) {
+				return PIECES.reduce(function(m, p) { return kinds.indexOf(p.kind) < 0 ? m : Math.max(m, smooth((reach - Math.abs(cam - p.pass)) / (reach - close))); }, 0);
+			};
 			sound.update({fast: show && show.mode === 'sofar' && playing && evening() === 0 ? 3 : 1, wind: night.wind * (w === 'wind' ? 1 : 0.4), rain: w === 'rain' || w === 'storm' ? lv : 0, sandstorm: w === 'sandstorm' ? lv : 0,
 				storm: w === 'storm' ? lv : 0, clear: (w === 'clear' || w === 'haze') && night.day !== TOTAL, camp: HOMEMODE && !EASTER() ? 0.5 : evening() > 0 ? fireNow : 0,
-				water: nearBy(['river', 'oasis', 'heron', 'well']), sheep: nearBy(['shepherds', 'sheep']), walking: walk});
+				water: nearness(['river', 'oasis', 'heron', 'well'], 0.06, 0.3), frogs: nearness(['river', 'oasis', 'heron'], 0.05, 0.4), sheep: nearBy(['shepherds', 'sheep']), walking: walk});
 			// the animals they pass call out now and then while they're in view (sheep and lambs, goats, a donkey)
 			PIECES.forEach(function(p) {
 				if (!playing || cam < p.pass - 0.16 || cam > p.pass + 0.12) return;
