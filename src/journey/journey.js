@@ -1153,7 +1153,11 @@
 				ctx.beginPath(); ctx.moveTo(-12, -2); ctx.bezierCurveTo(-20, -1, -24, -3, -26, 1); ctx.bezierCurveTo(-22, 0, -17, 1, -11, 1); ctx.fill();   // tail along the ground
 				ctx.restore();
 				break;
-			case 'volcano': drawVolcano(x, y); if (x > VW * 0.05 && x < VW * 0.95) witness('volcano'); break;
+			case 'volcano':
+				drawVolcano(x, y); if (x > VW * 0.05 && x < VW * 0.95) witness('volcano');
+				// its smoke can be tapped, anywhere along the plume (small spots close together, from the summit up and away)
+				for (var va = 0.04; va < 0.9; va += 0.08) spot('volcano', 'volcano', x + va * 150, y - 172 - va * 110, 12 + va * 26);
+				break;
 			case 'angel': glow(x, y - 300, 140, 'rgb(255,236,180)', 0.45); person(x, y - 250, 2.4, 'rgba(255,248,225,0.9)'); break;
 			case 'gazelles': case 'ibex': for (var g = 0; g < 4; g++) animal(x + g * 34 - 50, y - (g % 2) * 4, 1.1, col, p.kind, clock * 3 + g); break;
 			case 'fox': case 'hare': animal(x, y, 1.3, col, p.kind, clock * 6); break;
@@ -1186,6 +1190,7 @@
 	// broad cone whose slopes sweep up steeper and steeper to a small ragged summit, lit by the moon on one side and in
 	// shadow on the other, snow on its upper slopes reaching down the gullies in long tongues, its foot lost in the haze,
 	// and a thin wisp of steam drifting off the top
+	var volcanoPuff = -99;
 	function drawVolcano(x, y) {
 		var top = y - 168;
 		var cone = function() {
@@ -1232,6 +1237,11 @@
 		for (var sm = 0; sm < 14; sm++) {   // a thin wisp of steam, soft puffs drifting off with the wind
 			var age = (clock * 0.05 + sm / 14) % 1;
 			glow(x + age * 150 + Math.sin(age * 6 + sm) * 6, top - 4 - age * 110, 8 + age * 38, 'rgb(170,165,198)', 0.2 * (1 - age) * Math.min(1, age * 6));
+		}
+		var pf = (clock - volcanoPuff) / 6;   // tapped: a bigger cloud of steam billows up from the top and drifts away
+		if (pf > 0 && pf < 1) for (var pb = 0; pb < 6; pb++) {
+			var pa = pf * (0.55 + pb * 0.09);
+			glow(x + pa * 120 + Math.sin(pb * 2.3) * 10, top - 6 - pa * 150, 16 + pa * 60, 'rgb(190,186,214)', 0.32 * Math.sin(Math.PI * pf) * (1 - pb * 0.1));
 		}
 	}
 	function paintPieces(layer) {
@@ -2385,6 +2395,7 @@
 		var s = spotAt(evt, pad, small); if (!s) return false;
 		var p = sceneXY(evt);
 		if (s.id === 'star') starFlare = clock;   // it flares up
+		if (s.id === 'volcano') volcanoPuff = clock;   // (and the smoking mountain puffs out a cloud of steam)
 		if (s.tag && s.tag.fire && fires[s.tag.fire]) { fires[s.tag.fire].burst = clock; if (sound.fireSwell) sound.fireSwell(); }   // a fire: sparks, the flames leap, the crackle swells
 		if (s.id === 'meteor') s.uid.caught = clock;   // (and a caught shooting star glints)
 		noteFind(s.id, s.uid, p.x, p.y);
