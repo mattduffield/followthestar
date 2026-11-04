@@ -1,7 +1,8 @@
 // Sound for The Journey: real recordings, mixed low, off until the visitor turns it on.
 //
 //   amb-*     background loops, faded in and out with the weather and what they're passing
-//   one-shot  thunder, a camel's grumble, an owl, a sheep, lamb, goat or donkey, a frog, the shofar at Jerusalem
+//   one-shot  thunder, a camel's grumble, an owl, a sheep, lamb, goat or donkey, a frog, the rumble by the smoking
+//             mountain, the shofar at Jerusalem
 //   music-*   background music, a different piece on different nights
 //
 // Files live in /journey/audio/ (made by docs/sound/process-audio.py, which also writes audio-ready.js).
@@ -110,6 +111,12 @@ var JourneySound = (function() {
 		musicGain.gain.setTargetAtTime(MUSIC_LEVEL, ac.currentTime + 2.5, 1);
 	}
 	function hoot() { once('owl', 0.4, 0.6); }
+	function rumble() {   // the ground trembling by the smoking mountain: a deep, distant rumble, the music dipping a little under it
+		if (!on) return;
+		once('rumble', 0.45);
+		musicGain.gain.setTargetAtTime(MUSIC_LEVEL * 0.6, ac.currentTime, 0.4);
+		musicGain.gain.setTargetAtTime(MUSIC_LEVEL, ac.currentTime + 4, 1.5);
+	}
 	function animal(kind, volume) { var src = once(kind, volume || 0.35, 0.3); return src ? src.buffer.duration + 0.3 : 0; }   // (how long it lasts: 0 if not loaded yet)
 	// Pip's squeak when he's found: made here rather than recorded, two quick chirps sliding up, like a squeaky toy
 	function squeak() {
@@ -161,6 +168,6 @@ var JourneySound = (function() {
 	}
 	function wanted() { try { return localStorage.getItem(KEY) === '1'; } catch (e) { return false; } }
 
-	return {preload: preload, fireSwell: fireSwell, toggle: toggle, isOn: function() { return on; }, wanted: wanted, update: update, thunder: thunder, hoot: hoot, animal: animal, squeak: squeak,
+	return {preload: preload, fireSwell: fireSwell, toggle: toggle, isOn: function() { return on; }, wanted: wanted, update: update, thunder: thunder, rumble: rumble, hoot: hoot, animal: animal, squeak: squeak,
 		music: setMusic, step: function() {}, bell: function() {}, hasAny: function() { return READY.length > 0; }};
 })();

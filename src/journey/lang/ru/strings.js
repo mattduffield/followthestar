@@ -230,6 +230,8 @@ JOURNEY_LANG.strings = {
 	"The palace in the East": "Дворец на Востоке",
 	"Where the wise men set out from, and come home to.": "Отсюда волхвы отправились в путь, и сюда они возвращаются.",
 	"The smoking mountain": "Дымящаяся гора",
+	"The ground trembles": "Земля дрожит",
+	"Near the smoking mountain the ground shook a little, and a deep rumble rolled across the desert.": "Возле дымящейся горы земля слегка задрожала, и глухой гул прокатился по пустыне.",
 	"A great snowy mountain, smoking far to the north.": "Большая снежная гора дымится далеко на севере.",
 	"The great river": "Великая река",
 	"They cross it on their way west.": "Они переходят её по пути на запад.",

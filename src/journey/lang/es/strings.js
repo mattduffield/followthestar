@@ -230,6 +230,8 @@ JOURNEY_LANG.strings = {
 	"The palace in the East": "El palacio del Oriente",
 	"Where the wise men set out from, and come home to.": "De donde salieron los sabios, y adonde vuelven.",
 	"The smoking mountain": "La montaña que humea",
+	"The ground trembles": "La tierra tiembla",
+	"Near the smoking mountain the ground shook a little, and a deep rumble rolled across the desert.": "Cerca de la montaña que humea, la tierra tembló un poco y un retumbo profundo cruzó el desierto.",
 	"A great snowy mountain, smoking far to the north.": "Una gran montaña nevada que echa humo, muy al norte.",
 	"The great river": "El gran río",
 	"They cross it on their way west.": "Lo cruzan en su camino hacia el oeste.",

@@ -1157,6 +1157,7 @@
 				drawVolcano(x, y); if (x > VW * 0.05 && x < VW * 0.95) witness('volcano');
 				// its smoke can be tapped, anywhere along the plume (small spots close together, from the summit up and away)
 				for (var va = 0.04; va < 0.9; va += 0.08) spot('volcano', 'volcano', x + va * 150, y - 172 - va * 110, 12 + va * 26);
+				if (x > VW * 0.1 && x < VW * 0.9) volcanoInView();
 				break;
 			case 'angel': glow(x, y - 300, 140, 'rgb(255,236,180)', 0.45); person(x, y - 250, 2.4, 'rgba(255,248,225,0.9)'); break;
 			case 'gazelles': case 'ibex': for (var g = 0; g < 4; g++) animal(x + g * 34 - 50, y - (g % 2) * 4, 1.1, col, p.kind, clock * 3 + g); break;
@@ -1191,6 +1192,27 @@
 	// shadow on the other, snow on its upper slopes reaching down the gullies in long tongues, its foot lost in the haze,
 	// and a thin wisp of steam drifting off the top
 	var volcanoPuff = -99;
+	// Passing the smoking mountain, the ground trembles now and then: twice while it's in view (the first a few seconds
+	// after it comes into sight), and whenever its smoke is tapped. A light, slow shake of the scene (none for visitors
+	// who ask for less motion), a deep rumble, and a bigger puff of steam from the top. Never in a storm (it would be
+	// lost in the thunder, or taken for it).
+	var tremor = {t0: -99, dur: 2.6, next: 0, night: -1, count: 0};
+	function tremorNow() { return clock - tremor.t0 < tremor.dur + 3; }   // (one at a time, with a moment after)
+	function startTremor() {
+		tremor.t0 = clock; volcanoPuff = clock;
+		if (sound.rumble) sound.rumble();
+		witness('tremor');
+	}
+	function volcanoInView() {
+		if (tremor.night !== night.day) { tremor.night = night.day; tremor.count = 0; tremor.next = clock + 4 + Math.random() * 6; }
+		if (night.weather === 'storm' || tremor.count >= 2 || clock < tremor.next || tremorNow()) return;
+		startTremor(); tremor.count++; tremor.next = clock + 20 + Math.random() * 15;
+	}
+	function tremorShake() {   // how far the scene is moved by a tremor just now (in scene units, a couple at most)
+		var q = (clock - tremor.t0) / tremor.dur;
+		if (q <= 0 || q >= 1 || reduceMotion) return 0;
+		return (Math.sin(clock * 31) + 0.6 * Math.sin(clock * 47 + 1)) * 1.5 * Math.sin(Math.PI * q);
+	}
 	function drawVolcano(x, y) {
 		var top = y - 168;
 		var cone = function() {
@@ -2248,6 +2270,7 @@
 		['well-women', 'road', T('Women at the well'), T('Drawing water for their families, as people did every day.'), 'jr-en-well-women'],
 		['east-palace', 'places', T('The palace in the East'), T('Where the wise men set out from, and come home to.'), 'jr-lm-east-palace', 'watch'],
 		['volcano', 'places', T('The smoking mountain'), T('A great snowy mountain, smoking far to the north.'), 'jr-far-volcano', 'watch'],
+		['tremor', 'places', T('The ground trembles'), T('Near the smoking mountain the ground shook a little, and a deep rumble rolled across the desert.'), 'draw', 'watch'],
 		['river', 'places', T('The great river'), T('They cross it on their way west.'), 'jr-lm-river', 'watch'],
 		['oasis', 'places', T('Oasis'), T('Water and palm trees in the middle of the desert.'), 'jr-lm-oasis', 'watch'],
 		['tents', 'places', T('Desert tents'), T('Herders live in tents woven from goat hair.'), 'jr-en-bedouin-tents', 'watch'],
@@ -2395,7 +2418,7 @@
 		var s = spotAt(evt, pad, small); if (!s) return false;
 		var p = sceneXY(evt);
 		if (s.id === 'star') starFlare = clock;   // it flares up
-		if (s.id === 'volcano') volcanoPuff = clock;   // (and the smoking mountain puffs out a cloud of steam)
+		if (s.id === 'volcano') { volcanoPuff = clock; if (night.weather !== 'storm' && !tremorNow()) startTremor(); }   // (and the smoking mountain puffs out a cloud of steam, and the ground trembles)
 		if (s.tag && s.tag.fire && fires[s.tag.fire]) { fires[s.tag.fire].burst = clock; if (sound.fireSwell) sound.fireSwell(); }   // a fire: sparks, the flames leap, the crackle swells
 		if (s.id === 'meteor') s.uid.caught = clock;   // (and a caught shooting star glints)
 		noteFind(s.id, s.uid, p.x, p.y);
@@ -3317,7 +3340,7 @@
 
 	function paint() {
 		var t = show ? clamp(show.elapsed / show.seconds, 0, 1) : 1;
-		var shake = wx.shake > 0 ? Math.sin(clock * 60) * 3 * wx.shake : 0;
+		var shake = (wx.shake > 0 ? Math.sin(clock * 60) * 3 * wx.shake : 0) + tremorShake();
 		if (homeward(night.day)) ctx.setTransform(-dpr * S, 0, 0, dpr * S, canvas.width, dpr * (canvas.clientHeight - VH * S));   // mirrored: they walk the other way
 		else ctx.setTransform(dpr * S, 0, 0, dpr * S, 0, dpr * (canvas.clientHeight - VH * S));
 		spotsNext = [];
@@ -3829,6 +3852,15 @@
 			});
 		}
 		else if (id === 'volcano') { var vs = Math.min(w * 0.92 / 560, h * 0.8 / 190); ctx.translate(cx, h * 0.9); ctx.scale(vs, vs); drawVolcano(0, 0); }
+		else if (id === 'tremor') {   // the mountain, small, and the ground shaking under it
+			ctx.save(); var ts = Math.min(w * 0.8 / 560, h * 0.62 / 190); ctx.translate(cx, h * 0.72); ctx.scale(ts, ts); drawVolcano(0, 0); ctx.restore();
+			ctx.strokeStyle = 'rgba(235,225,255,0.75)'; ctx.lineWidth = 1.6 * u; ctx.lineCap = 'round';
+			[0.8, 0.9].forEach(function(f, k) {
+				ctx.beginPath();
+				for (var tx = 0.14; tx <= 0.861; tx += 0.02) { var ty = h * f + Math.sin(tx * 40 + k * 2) * 2.2 * u; if (tx < 0.141) ctx.moveTo(w * tx, ty); else ctx.lineTo(w * tx, ty); }
+				ctx.stroke();
+			});
+		}
 		else if (/^(scorpion|centipede|spider|beetle|snake)$/.test(id)) {
 			// drawn dark, as on the sand, then lit pale so it shows on the guide's night-blue card
 			var tmp = document.createElement('canvas'), R2 = 3; tmp.width = w * R2; tmp.height = h * R2;
