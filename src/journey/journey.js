@@ -514,9 +514,44 @@
 		g.putImageData(d, 0, 0); c.bottom = im.bottom;
 		return (im.solid = c);
 	}
+	// Some of the ground pictures have tall plants painted in (a leafy plant on the riverbank, cacti, tall grass). On a
+	// campfire night nothing tall may stand where they camp, in front of the tents and the fire: the stretch of ground
+	// where they stop is drawn from a copy of its picture with the tall plants taken out (the same all night, so nothing
+	// vanishes as they arrive). Low rocks, tufts and the ground itself are left as they are.
+	function clearOf(im) {
+		if (im.clear) return im.clear;
+		var c = document.createElement('canvas'); c.width = im.width; c.height = im.height;
+		var g = c.getContext('2d'); g.drawImage(im, 0, 0);
+		var w = c.width, h = c.height, d = g.getImageData(0, 0, w, h), a = d.data, raw = new Int32Array(w), tall = new Uint8Array(w), win = [];
+		for (var x = 0; x < w; x++) { var r = 0; while (r < h - 1 && a[(r * w + x) * 4 + 3] < 140) r++; raw[x] = r; }   // the top of whatever is there
+		var gh = Math.round(w * 0.06), TALL = h * 0.14, pad = Math.round(w * 0.005);
+		for (x = 0; x < w; x++) {   // tall: standing well above the ground around it (a low point over a wide window)
+			win.length = 0;
+			for (var k = -gh; k <= gh; k += 3) win.push(raw[Math.min(w - 1, Math.max(0, x + k))]);
+			win.sort(function(p, q) { return p - q; });
+			if (win[Math.floor(win.length * 0.85)] - raw[x] > TALL) for (k = -pad; k <= pad; k++) if (x + k >= 0 && x + k < w) tall[x + k] = 1;
+		}
+		for (x = 0; x < w; x++) {
+			if (!tall[x]) continue;
+			var x0 = x; while (x < w && tall[x]) x++;   // one tall thing, from x0 to x - 1: cut it off along the line of the ground either side
+			var yl = x0 > 0 ? raw[x0 - 1] : raw[Math.min(w - 1, x)], yr = x < w ? raw[x] : yl;
+			for (var cx = x0; cx < x; cx++) {
+				var line = yl + (yr - yl) * (cx - x0 + 1) / (x - x0 + 1);
+				for (var y = 0; y < line - 1; y++) a[(y * w + cx) * 4 + 3] = 0;
+			}
+		}
+		g.putImageData(d, 0, 0); c.bottom = im.bottom;
+		return (im.clear = c);
+	}
+	function campGround(layer, x) {   // is this tile of road (now at x) where they'll stop and camp tonight?
+		if (layer !== 'road' || !show || eveningKind() !== 'fire') return false;
+		var xr = x + shiftOf(layer) - restAt * DAYW * SPEED[layer];   // (where it will be once they've stopped)
+		return xr < LEAD_X + 700 && xr + LAYER[layer].w > LEAD_X - 300;
+	}
 	function drawTilePart(im, layer, x, n, f0, f1, exact) {   // (exact: no overlap with the next part, for adding parts together)
 		var b = box(im, layer);
 		if (solidHills) im = solidOf(im);
+		else if (campGround(layer, x)) im = clearOf(im);
 		var dx = x + f0 * b.w, dw = (f1 - f0) * b.w, o = exact ? 0 : 0.5;
 		var s0 = (n % 2 ? 1 - f1 : f0) * im.width, sw = (f1 - f0) * im.width;
 		// the outermost columns of a land picture are pale (left from cutting out the background): never use them, or where
