@@ -4562,10 +4562,14 @@
 		WEATHER_KINDS.forEach(function(w) { var o = document.createElement('option'); o.value = w; o.textContent = w; sel.appendChild(o); });
 		sel.addEventListener('change', function() { weatherOverride = sel.value || null; playNight(viewIdx, 0.3); });
 		document.getElementById('test-skip').addEventListener('click', function() { if (show) { show.delay = 0; show.elapsed = Math.max(show.elapsed, show.seconds * 0.5 - 0.01); } });
+		document.getElementById('test-tremor').addEventListener('click', function() {   // night 3, the smoking mountain in front of them, and the ground trembles now
+			playNight(2, 0); if (show) { show.delay = 0; show.elapsed = show.seconds * 0.5; } canvas.scrollIntoView({behavior: 'smooth'});
+			setTimeout(function() { tremor.night = night.day; tremor.count = 0; tremor.next = clock + 20; tremor.t0 = -99; startTremor(); }, 600);
+		});
 		var rows = '<thead><tr><th>Night</th><th>Date</th><th>Land</th><th>Sky</th><th>Weather</th><th>Landmark</th><th>Encounter</th><th>Critters</th><th>Camp</th><th>Also in the sky / land</th><th>Reading</th><th>Note</th></tr></thead><tbody>';
 		function extras(k) {   // the scenery that comes from the date rather than the plan
 			var x = [], ph = moonPhase(dateOfDay(k)), w = planFor(k).weather;
-			if (k <= 4) x.push('smoking mountain');
+			if (k <= 4) x.push(k >= 2 && k <= 3 && planFor(k).weather !== 'storm' ? 'smoking mountain: the ground trembles (twice; tap its smoke for more)' : 'smoking mountain');
 			if (cometNight(k)) x.push('comet');
 			if (ph > 0.44 && ph < 0.56 && k !== TOTAL) x.push('orange moonrise');
 			if (litSky(k) && (w === 'storm' || w === 'rain')) x.push('rainbow as it clears'); else if (litSky(k) && w === 'clouds') x.push('rainbow at first');
