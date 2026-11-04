@@ -2453,6 +2453,11 @@
 		var s = spotAt(evt, pad, small); if (!s) return false;
 		var p = sceneXY(evt);
 		if (s.id === 'star') starFlare = clock;   // it flares up
+		if (s.uid === 'sun' || /^sun\d/.test(String(s.uid))) {   // the sun: it flares up (unless a cloud is in front of it: then it's the cloud that's tapped)
+			var cl = spots.filter(function(q) { return /cloud/.test(q.id) && Math.hypot(q.x - s.x, q.y - s.y) < q.r; })[0];
+			if (cl) s = cl; else sunFlare = clock;
+			if (s.id === 'sun-easter') return true;
+		}
 		if (s.id === 'volcano') { volcanoPuff = clock; if (night.weather !== 'storm' && !tremorNow()) startTremor(); }   // (and the smoking mountain puffs out a cloud of steam, and the ground trembles)
 		if (s.tag && s.tag.fire && fires[s.tag.fire]) { fires[s.tag.fire].burst = clock; if (sound.fireSwell) sound.fireSwell(); }   // a fire: sparks, the flames leap, the crackle swells
 		if (s.id === 'meteor') s.uid.caught = clock;   // (and a caught shooting star glints)
@@ -2578,6 +2583,17 @@
 		ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalCompositeOperation = 'source-in'; ctx.drawImage(fadeCanvas(3), 0, 0); ctx.globalCompositeOperation = 'source-over';   // ...filled with the sky
 		ctx = main; ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.drawImage(m, 0, 0); ctx.restore();
 	}
+	// The sun can be tapped, as often as you like: it flares up for a moment, a burst of warm light and the disc swelling
+	// a little (by day it counts "A day on the road", low in the west "Sunset"; on Easter morning it just shines)
+	var sunFlare = -9;
+	function sunFlareAt(x, y, r, a) {   // draws the flare's light, if it's flaring now; returns how much to swell the disc
+		var q = (clock - sunFlare) / 1.3;
+		if (q <= 0 || q >= 1) return 1;
+		var k = Math.sin(Math.PI * q);
+		glow(x, y, r * (3 + 4 * q), 'rgb(255,236,170)', 0.55 * k * a);
+		glow(x, y, r * 1.6, 'rgb(255,250,225)', 0.5 * k * a);
+		return 1 + 0.12 * k;
+	}
 	function paintSky() {
 		var sk = night.sky, im = art(sk.art);
 		if (im) { var sc = Math.max(VW / im.width, (VH - TOPV) / im.height); ctx.drawImage(im, (VW - im.width * sc) / 2, VH - im.height * sc, im.width * sc, im.height * sc); }
@@ -2598,9 +2614,11 @@
 			sunset = 0.85; skyShot();
 			var ex = VW * 0.6, ey = 455;   // (the scene is drawn turned round at home, so this is to the left of centre: the east)
 			glow(ex, ey, 520, 'rgb(255,190,120)', 0.45); glow(ex, ey, 180, 'rgb(255,230,160)', 0.6);
-			ctx.save(); var eg = ctx.createRadialGradient(ex, ey - 6, 4, ex, ey, 44);
+			var ef = sunFlareAt(ex, ey, 44, 1);
+			ctx.save(); var eg = ctx.createRadialGradient(ex, ey - 6, 4, ex, ey, 44 * ef);
 			eg.addColorStop(0, '#fffbe6'); eg.addColorStop(0.6, '#ffe09a'); eg.addColorStop(1, '#ffb257');
-			ctx.fillStyle = eg; ctx.beginPath(); ctx.arc(ex, ey, 44, 0, Math.PI * 2); ctx.fill(); ctx.restore();
+			ctx.fillStyle = eg; ctx.beginPath(); ctx.arc(ex, ey, 44 * ef, 0, Math.PI * 2); ctx.fill(); ctx.restore();
+			spot('sun-easter', 'sun', ex, ey - 10, 50);
 		}
 		var hi = noon();
 		if (day > 0) {   // the afternoon sky: blue above, warm towards the sun, fading as the sun goes down (at midday clear blue)
@@ -2619,7 +2637,10 @@
 			if (hy > 420 && clearSky > 0.5) witness('sunset');   // (going down behind the hills)
 			glow(hx, hy, 460, 'rgb(255,170,90)', 0.35 * day * clearSky);
 			glow(hx, hy, 160, 'rgb(255,215,140)', 0.5 * day * clearSky);
+			var hf = sunFlareAt(hx, hy, hr, clearSky);
+			if (hy < 430 && clearSky > 0.3) spot(hy > 380 ? 'sunset' : 'sky-day', 'sun' + night.day, hx, hy, hr + 12);   // (not once it's sinking behind the hills)
 			ctx.save(); ctx.globalAlpha = clearSky;
+			hr *= hf;
 			var hg = ctx.createRadialGradient(hx, hy - 8, 4, hx, hy, hr);
 			hg.addColorStop(0, '#fffbe6'); hg.addColorStop(0.6, day > 0.6 ? '#ffe39a' : '#ffb257'); hg.addColorStop(1, day > 0.6 ? '#ffc56b' : '#ff7a3d');
 			ctx.fillStyle = hg; ctx.beginPath(); ctx.arc(hx, hy, hr, 0, Math.PI * 2); ctx.fill();
@@ -2634,6 +2655,8 @@
 				skyShot();
 				glow(sx, sy, 420, 'rgb(255,150,80)', 0.32 * sunset * clearSky);
 				glow(sx, sy, 150, 'rgb(255,190,110)', 0.45 * sunset * clearSky);
+				sr *= sunFlareAt(sx, sy, sr, clearSky);
+				if (sy < 430 && clearSky > 0.3) spot('sunset', 'sun' + night.day, sx, sy, 46 + 12);
 				ctx.save(); ctx.globalAlpha = (0.55 + 0.45 * sunset) * clearSky;
 				var sg = ctx.createRadialGradient(sx, sy - 8, 4, sx, sy, sr);
 				sg.addColorStop(0, '#fff2c0'); sg.addColorStop(0.6, '#ffb257'); sg.addColorStop(1, '#ff7a3d');
