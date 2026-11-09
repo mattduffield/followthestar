@@ -33,6 +33,22 @@
 		<priority>0.9</priority>
 	</url>
 	<url>
+		<loc>https://followthestar.church/ru/</loc>
+		<priority>0.9</priority>
+	</url>
+	<url>
+		<loc>https://followthestar.church/ru/journey/</loc>
+		<priority>0.7</priority>
+	</url>
+	<url>
+		<loc>https://followthestar.church/ru/faq/</loc>
+		<priority>0.7</priority>
+	</url>
+	<url>
+		<loc>https://followthestar.church/ru/privacy/</loc>
+		<priority>0.7</priority>
+	</url>
+	<url>
 		<loc>https://followthestar.church/uk/</loc>
 		<priority>0.9</priority>
 	</url>
