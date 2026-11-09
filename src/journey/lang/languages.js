@@ -5,5 +5,5 @@ var JOURNEY_LANGUAGES = [
 	{"code": "en", "name": "English", "word": "Language", "locale": "en-US", "href": "/journey/", "ready": true, "ask": "See The Journey in English?", "yes": "Yes"},
 	{"code": "es", "name": "Español", "word": "Idioma", "locale": "es-US", "href": "/es/journey/", "ready": true, "ask": "¿Ver El Viaje en español?", "yes": "Sí"},
 	{"code": "ru", "name": "Русский", "word": "Язык", "locale": "ru-RU", "href": "/ru/journey/", "ready": true, "ask": "Открыть «Путешествие» на русском?", "yes": "Да", "css": "/assets/css/lang-ru.css"},
-	{"code": "uk", "name": "Українська", "word": "Мова", "locale": "uk-UA", "href": "/uk/journey/", "ready": false, "ask": "Відкрити «Подорож» українською?", "yes": "Так", "css": "/assets/css/lang-ru.css"}
+	{"code": "uk", "name": "Українська", "word": "Мова", "locale": "uk-UA", "href": "/uk/journey/", "ready": true, "ask": "Відкрити «Подорож» українською?", "yes": "Так", "css": "/assets/css/lang-ru.css"}
 ];
