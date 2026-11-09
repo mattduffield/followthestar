@@ -1,7 +1,8 @@
-/* Russian pages: Merienda (the Journey's and the site's handwritten font) has no Cyrillic letters, so Kurale's Cyrillic
+/* Russian and Ukrainian pages: Merienda (the Journey's and the site's handwritten font) has no Cyrillic letters, so Kurale's Cyrillic
    letters are added under Merienda's own name. The browser uses them only for Cyrillic text (unicode-range), so every
    style that names Merienda carries on working, and Latin text still uses Merienda itself. Kurale: SIL Open Font
-   License, from Google Fonts. Loaded by the Russian pages only (docs/site-lang.py, from "css" in languages.js). */
+   License, from Google Fonts. Loaded by the Russian and Ukrainian pages only (docs/site-lang.py, from "css" in languages.js; Kurale has
+   the Ukrainian letters і ї є ґ too). */
 @font-face {
 	font-family: 'Merienda';
 	font-style: normal;
