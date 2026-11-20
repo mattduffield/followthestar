@@ -90,6 +90,7 @@ article .schedule em {margin-top:4px;}
 
 .script-download {text-align:center; margin-top:16px;}
 .script-download p {font-size:16px; color:#555;}
+.audio-list .acts {display:flex; gap:8px; flex-shrink:0;}
 a.button {border:1px solid #fff; border-radius: 5px; color:#fff; background:#751D19; padding:10px 25px; font:400 18px Inter,Arial,sans-serif; text-decoration: none; text-transform: uppercase; cursor:pointer; white-space: nowrap; display:inline-block; position: relative;}
 a.button:hover {background:#8E2620; transform: translateY(-2px); box-shadow: 0 4px 6px rgba(0,0,0,0.2);}
 
@@ -99,6 +100,10 @@ a.button:hover {background:#8E2620; transform: translateY(-2px); box-shadow: 0 4
 	article .schedule .row {flex-direction: column; align-items:flex-start;}
 	article .schedule .col:last-child {align-items:flex-start; text-align:left;}
 	.audio-folder a.button {white-space:normal; max-width:100%;}
+	.audio-list li:has(.acts) {flex-wrap:wrap;}   /* (the script's scenes: Read and Download below the name) */
+	.audio-list li:has(.acts) > div {flex:1 1 100%;}
+	.audio-list .acts {width:100%;}
+	.audio-list .acts a.listen {flex:1; text-align:center; padding:9px 10px;}
 }
 </style>
 
@@ -247,7 +252,14 @@ a.button:hover {background:#8E2620; transform: translateY(-2px); box-shadow: 0 4
 		<section class="volunteer-section" id="script">
 			<h2>Script</h2>
 
-			<p class="lead">Download just the scene you're in, or open the full script, starting with the Assistant Guide's introduction.</p>
+			<p class="lead">Read it online with your part highlighted, download just the scene you're in, or open the full script, starting with the Assistant Guide's introduction.</p>
+
+			<!-- The script online, with a volunteer's own lines highlighted: made by tools/script-scenes.py along with the PDFs. -->
+			<h3 class="group">Find your part</h3>
+			<div class="script-download">
+				<a class="button" href="/volunteers/script/">Show me my lines</a>
+				<p>Pick your part (Wiseman 2, Shepherd 1, Mary…) and your lines are highlighted, in the whole script or just one scene. Easy to read on a phone, and it prints with your lines highlighted.</p>
+			</div>
 
 			<!-- Each scene's PDF is made from the Google Doc by tools/script-scenes.py: run it again after the script is edited
 			     there (the full script below always shows the latest). -->
@@ -255,39 +267,39 @@ a.button:hover {background:#8E2620; transform: translateY(-2px); box-shadow: 0 4
 			<ul class="audio-list">
 				<li>
 					<div><span class="track-num">Introduction</span><span class="track-title">Assistant Guide</span></div>
-					<a class="listen" href="/volunteers/script/introduction.pdf" download="Follow the Star script - Introduction - Assistant Guide.pdf" aria-label="Download the script for the introduction: Assistant Guide">Download</a>
+					<span class="acts"><a class="listen" href="/volunteers/script/?scene=0" aria-label="Read the introduction: Assistant Guide online">Read</a><a class="listen" href="/volunteers/script/introduction.pdf" download="Follow the Star script - Introduction - Assistant Guide.pdf" aria-label="Download the script for the introduction: Assistant Guide">Download</a></span>
 				</li>
 				<li>
 					<div><span class="track-num">Scene 1</span><span class="track-title">A Modern Family</span></div>
-					<a class="listen" href="/volunteers/script/scene-1.pdf" download="Follow the Star script - Scene 1 - A Modern Family.pdf" aria-label="Download the script for Scene 1: A Modern Family">Download</a>
+					<span class="acts"><a class="listen" href="/volunteers/script/?scene=1" aria-label="Read Scene 1: A Modern Family online">Read</a><a class="listen" href="/volunteers/script/scene-1.pdf" download="Follow the Star script - Scene 1 - A Modern Family.pdf" aria-label="Download the script for Scene 1: A Modern Family">Download</a></span>
 				</li>
 				<li>
 					<div><span class="track-num">Scene 2</span><span class="track-title">The Temple in Jerusalem</span></div>
-					<a class="listen" href="/volunteers/script/scene-2.pdf" download="Follow the Star script - Scene 2 - The Temple in Jerusalem.pdf" aria-label="Download the script for Scene 2: The Temple in Jerusalem">Download</a>
+					<span class="acts"><a class="listen" href="/volunteers/script/?scene=2" aria-label="Read Scene 2: The Temple in Jerusalem online">Read</a><a class="listen" href="/volunteers/script/scene-2.pdf" download="Follow the Star script - Scene 2 - The Temple in Jerusalem.pdf" aria-label="Download the script for Scene 2: The Temple in Jerusalem">Download</a></span>
 				</li>
 				<li>
 					<div><span class="track-num">Scene 3</span><span class="track-title">Herod's Palace</span></div>
-					<a class="listen" href="/volunteers/script/scene-3.pdf" download="Follow the Star script - Scene 3 - Herod’s Palace.pdf" aria-label="Download the script for Scene 3: Herod's Palace">Download</a>
+					<span class="acts"><a class="listen" href="/volunteers/script/?scene=3" aria-label="Read Scene 3: Herod's Palace online">Read</a><a class="listen" href="/volunteers/script/scene-3.pdf" download="Follow the Star script - Scene 3 - Herod’s Palace.pdf" aria-label="Download the script for Scene 3: Herod's Palace">Download</a></span>
 				</li>
 				<li>
 					<div><span class="track-num">Scene 4</span><span class="track-title">Shepherds</span></div>
-					<a class="listen" href="/volunteers/script/scene-4.pdf" download="Follow the Star script - Scene 4 - Shepherds.pdf" aria-label="Download the script for Scene 4: Shepherds">Download</a>
+					<span class="acts"><a class="listen" href="/volunteers/script/?scene=4" aria-label="Read Scene 4: Shepherds online">Read</a><a class="listen" href="/volunteers/script/scene-4.pdf" download="Follow the Star script - Scene 4 - Shepherds.pdf" aria-label="Download the script for Scene 4: Shepherds">Download</a></span>
 				</li>
 				<li>
 					<div><span class="track-num">Scene 5</span><span class="track-title">Mounted Soldiers</span></div>
-					<a class="listen" href="/volunteers/script/scene-5.pdf" download="Follow the Star script - Scene 5 - Mounted Soldiers.pdf" aria-label="Download the script for Scene 5: Mounted Soldiers">Download</a>
+					<span class="acts"><a class="listen" href="/volunteers/script/?scene=5" aria-label="Read Scene 5: Mounted Soldiers online">Read</a><a class="listen" href="/volunteers/script/scene-5.pdf" download="Follow the Star script - Scene 5 - Mounted Soldiers.pdf" aria-label="Download the script for Scene 5: Mounted Soldiers">Download</a></span>
 				</li>
 				<li>
 					<div><span class="track-num">Scene 6</span><span class="track-title">Bethlehem</span></div>
-					<a class="listen" href="/volunteers/script/scene-6.pdf" download="Follow the Star script - Scene 6 - Bethlehem.pdf" aria-label="Download the script for Scene 6: Bethlehem">Download</a>
+					<span class="acts"><a class="listen" href="/volunteers/script/?scene=6" aria-label="Read Scene 6: Bethlehem online">Read</a><a class="listen" href="/volunteers/script/scene-6.pdf" download="Follow the Star script - Scene 6 - Bethlehem.pdf" aria-label="Download the script for Scene 6: Bethlehem">Download</a></span>
 				</li>
 				<li>
 					<div><span class="track-num">Scene 7</span><span class="track-title">The Manger</span></div>
-					<a class="listen" href="/volunteers/script/scene-7.pdf" download="Follow the Star script - Scene 7 - The Manger.pdf" aria-label="Download the script for Scene 7: The Manger">Download</a>
+					<span class="acts"><a class="listen" href="/volunteers/script/?scene=7" aria-label="Read Scene 7: The Manger online">Read</a><a class="listen" href="/volunteers/script/scene-7.pdf" download="Follow the Star script - Scene 7 - The Manger.pdf" aria-label="Download the script for Scene 7: The Manger">Download</a></span>
 				</li>
 				<li>
 					<div><span class="track-num">Scene 8</span><span class="track-title">A Modern Family</span></div>
-					<a class="listen" href="/volunteers/script/scene-8.pdf" download="Follow the Star script - Scene 8 - A Modern Family.pdf" aria-label="Download the script for Scene 8: A Modern Family">Download</a>
+					<span class="acts"><a class="listen" href="/volunteers/script/?scene=8" aria-label="Read Scene 8: A Modern Family online">Read</a><a class="listen" href="/volunteers/script/scene-8.pdf" download="Follow the Star script - Scene 8 - A Modern Family.pdf" aria-label="Download the script for Scene 8: A Modern Family">Download</a></span>
 				</li>
 			</ul>
 

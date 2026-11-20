@@ -92,6 +92,7 @@ article .schedule em {margin-top:4px;}
 
 .script-download {text-align:center; margin-top:16px;}
 .script-download p {font-size:16px; color:#555;}
+.audio-list .acts {display:flex; gap:8px; flex-shrink:0;}
 a.button {border:1px solid #fff; border-radius: 5px; color:#fff; background:#751D19; padding:10px 25px; font:400 18px Inter,Arial,sans-serif; text-decoration: none; text-transform: uppercase; cursor:pointer; white-space: nowrap; display:inline-block; position: relative;}
 a.button:hover {background:#8E2620; transform: translateY(-2px); box-shadow: 0 4px 6px rgba(0,0,0,0.2);}
 
@@ -101,6 +102,10 @@ a.button:hover {background:#8E2620; transform: translateY(-2px); box-shadow: 0 4
 	article .schedule .row {flex-direction: column; align-items:flex-start;}
 	article .schedule .col:last-child {align-items:flex-start; text-align:left;}
 	.audio-folder a.button {white-space:normal; max-width:100%;}
+	.audio-list li:has(.acts) {flex-wrap:wrap;}   /* (the script's scenes: Read and Download below the name) */
+	.audio-list li:has(.acts) > div {flex:1 1 100%;}
+	.audio-list .acts {width:100%;}
+	.audio-list .acts a.listen {flex:1; text-align:center; padding:9px 10px;}
 }
 </style>
 
@@ -249,7 +254,14 @@ a.button:hover {background:#8E2620; transform: translateY(-2px); box-shadow: 0 4
 		<section class="volunteer-section" id="script">
 			<h2>Сценарій</h2>
 
-			<p class="lead">Завантажте лише свою сцену або відкрийте повний сценарій, що починається зі вступу помічника гіда. (Сценарій англійською мовою.)</p>
+			<p class="lead">Читайте онлайн із виділеною роллю, завантажте лише свою сцену або відкрийте весь сценарій, починаючи зі вступу помічника гіда.</p>
+
+			<!-- The script online, with a volunteer's own lines highlighted: made by tools/script-scenes.py along with the PDFs. -->
+			<h3 class="group">Знайдіть свою роль</h3>
+			<div class="script-download">
+				<a class="button" href="/volunteers/script/">Показати мої репліки</a>
+				<p>Оберіть свою роль (Wiseman 2, Shepherd 1, Mary…), і ваші репліки буде виділено в усьому сценарії або в одній сцені. Зручно читати на телефоні, а під час друку репліки залишаються виділеними. (Сценарій англійською.)</p>
+			</div>
 
 			<!-- Each scene's PDF is made from the Google Doc by tools/script-scenes.py: run it again after the script is edited
 			     there (the full script below always shows the latest). -->
@@ -257,39 +269,39 @@ a.button:hover {background:#8E2620; transform: translateY(-2px); box-shadow: 0 4
 			<ul class="audio-list">
 				<li>
 					<div><span class="track-num">Вступ</span><span class="track-title">Помічник гіда</span></div>
-					<a class="listen" href="/volunteers/script/introduction.pdf" download="Follow the Star script - Introduction - Assistant Guide.pdf" aria-label="Завантажити сценарій вступу: Помічник гіда">Завантажити</a>
+					<span class="acts"><a class="listen" href="/volunteers/script/?scene=0" aria-label="Читати онлайн сценарій вступу: Помічник гіда">Читати</a><a class="listen" href="/volunteers/script/introduction.pdf" download="Follow the Star script - Introduction - Assistant Guide.pdf" aria-label="Завантажити сценарій вступу: Помічник гіда">Завантажити</a></span>
 				</li>
 				<li>
 					<div><span class="track-num">Сцена 1</span><span class="track-title">Сучасна родина</span></div>
-					<a class="listen" href="/volunteers/script/scene-1.pdf" download="Follow the Star script - Scene 1 - A Modern Family.pdf" aria-label="Завантажити сценарій сцени 1: Сучасна родина">Завантажити</a>
+					<span class="acts"><a class="listen" href="/volunteers/script/?scene=1" aria-label="Читати онлайн сценарій сцени 1: Сучасна родина">Читати</a><a class="listen" href="/volunteers/script/scene-1.pdf" download="Follow the Star script - Scene 1 - A Modern Family.pdf" aria-label="Завантажити сценарій сцени 1: Сучасна родина">Завантажити</a></span>
 				</li>
 				<li>
 					<div><span class="track-num">Сцена 2</span><span class="track-title">Єрусалимський храм</span></div>
-					<a class="listen" href="/volunteers/script/scene-2.pdf" download="Follow the Star script - Scene 2 - The Temple in Jerusalem.pdf" aria-label="Завантажити сценарій сцени 2: Єрусалимський храм">Завантажити</a>
+					<span class="acts"><a class="listen" href="/volunteers/script/?scene=2" aria-label="Читати онлайн сценарій сцени 2: Єрусалимський храм">Читати</a><a class="listen" href="/volunteers/script/scene-2.pdf" download="Follow the Star script - Scene 2 - The Temple in Jerusalem.pdf" aria-label="Завантажити сценарій сцени 2: Єрусалимський храм">Завантажити</a></span>
 				</li>
 				<li>
 					<div><span class="track-num">Сцена 3</span><span class="track-title">Палац Ірода</span></div>
-					<a class="listen" href="/volunteers/script/scene-3.pdf" download="Follow the Star script - Scene 3 - Herod’s Palace.pdf" aria-label="Завантажити сценарій сцени 3: Палац Ірода">Завантажити</a>
+					<span class="acts"><a class="listen" href="/volunteers/script/?scene=3" aria-label="Читати онлайн сценарій сцени 3: Палац Ірода">Читати</a><a class="listen" href="/volunteers/script/scene-3.pdf" download="Follow the Star script - Scene 3 - Herod’s Palace.pdf" aria-label="Завантажити сценарій сцени 3: Палац Ірода">Завантажити</a></span>
 				</li>
 				<li>
 					<div><span class="track-num">Сцена 4</span><span class="track-title">Пастухи</span></div>
-					<a class="listen" href="/volunteers/script/scene-4.pdf" download="Follow the Star script - Scene 4 - Shepherds.pdf" aria-label="Завантажити сценарій сцени 4: Пастухи">Завантажити</a>
+					<span class="acts"><a class="listen" href="/volunteers/script/?scene=4" aria-label="Читати онлайн сценарій сцени 4: Пастухи">Читати</a><a class="listen" href="/volunteers/script/scene-4.pdf" download="Follow the Star script - Scene 4 - Shepherds.pdf" aria-label="Завантажити сценарій сцени 4: Пастухи">Завантажити</a></span>
 				</li>
 				<li>
 					<div><span class="track-num">Сцена 5</span><span class="track-title">Вершники</span></div>
-					<a class="listen" href="/volunteers/script/scene-5.pdf" download="Follow the Star script - Scene 5 - Mounted Soldiers.pdf" aria-label="Завантажити сценарій сцени 5: Вершники">Завантажити</a>
+					<span class="acts"><a class="listen" href="/volunteers/script/?scene=5" aria-label="Читати онлайн сценарій сцени 5: Вершники">Читати</a><a class="listen" href="/volunteers/script/scene-5.pdf" download="Follow the Star script - Scene 5 - Mounted Soldiers.pdf" aria-label="Завантажити сценарій сцени 5: Вершники">Завантажити</a></span>
 				</li>
 				<li>
 					<div><span class="track-num">Сцена 6</span><span class="track-title">Вифлеєм</span></div>
-					<a class="listen" href="/volunteers/script/scene-6.pdf" download="Follow the Star script - Scene 6 - Bethlehem.pdf" aria-label="Завантажити сценарій сцени 6: Вифлеєм">Завантажити</a>
+					<span class="acts"><a class="listen" href="/volunteers/script/?scene=6" aria-label="Читати онлайн сценарій сцени 6: Вифлеєм">Читати</a><a class="listen" href="/volunteers/script/scene-6.pdf" download="Follow the Star script - Scene 6 - Bethlehem.pdf" aria-label="Завантажити сценарій сцени 6: Вифлеєм">Завантажити</a></span>
 				</li>
 				<li>
 					<div><span class="track-num">Сцена 7</span><span class="track-title">Ясла</span></div>
-					<a class="listen" href="/volunteers/script/scene-7.pdf" download="Follow the Star script - Scene 7 - The Manger.pdf" aria-label="Завантажити сценарій сцени 7: Ясла">Завантажити</a>
+					<span class="acts"><a class="listen" href="/volunteers/script/?scene=7" aria-label="Читати онлайн сценарій сцени 7: Ясла">Читати</a><a class="listen" href="/volunteers/script/scene-7.pdf" download="Follow the Star script - Scene 7 - The Manger.pdf" aria-label="Завантажити сценарій сцени 7: Ясла">Завантажити</a></span>
 				</li>
 				<li>
 					<div><span class="track-num">Сцена 8</span><span class="track-title">Сучасна родина</span></div>
-					<a class="listen" href="/volunteers/script/scene-8.pdf" download="Follow the Star script - Scene 8 - A Modern Family.pdf" aria-label="Завантажити сценарій сцени 8: Сучасна родина">Завантажити</a>
+					<span class="acts"><a class="listen" href="/volunteers/script/?scene=8" aria-label="Читати онлайн сценарій сцени 8: Сучасна родина">Читати</a><a class="listen" href="/volunteers/script/scene-8.pdf" download="Follow the Star script - Scene 8 - A Modern Family.pdf" aria-label="Завантажити сценарій сцени 8: Сучасна родина">Завантажити</a></span>
 				</li>
 			</ul>
 

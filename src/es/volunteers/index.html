@@ -91,6 +91,7 @@ article .schedule em {margin-top:4px;}
 
 .script-download {text-align:center; margin-top:16px;}
 .script-download p {font-size:16px; color:#555;}
+.audio-list .acts {display:flex; gap:8px; flex-shrink:0;}
 a.button {border:1px solid #fff; border-radius: 5px; color:#fff; background:#751D19; padding:10px 25px; font:400 18px Inter,Arial,sans-serif; text-decoration: none; text-transform: uppercase; cursor:pointer; white-space: nowrap; display:inline-block; position: relative;}
 a.button:hover {background:#8E2620; transform: translateY(-2px); box-shadow: 0 4px 6px rgba(0,0,0,0.2);}
 
@@ -100,6 +101,10 @@ a.button:hover {background:#8E2620; transform: translateY(-2px); box-shadow: 0 4
 	article .schedule .row {flex-direction: column; align-items:flex-start;}
 	article .schedule .col:last-child {align-items:flex-start; text-align:left;}
 	.audio-folder a.button {white-space:normal; max-width:100%;}
+	.audio-list li:has(.acts) {flex-wrap:wrap;}   /* (the script's scenes: Read and Download below the name) */
+	.audio-list li:has(.acts) > div {flex:1 1 100%;}
+	.audio-list .acts {width:100%;}
+	.audio-list .acts a.listen {flex:1; text-align:center; padding:9px 10px;}
 }
 </style>
 
@@ -248,7 +253,14 @@ a.button:hover {background:#8E2620; transform: translateY(-2px); box-shadow: 0 4
 		<section class="volunteer-section" id="script">
 			<h2>Libreto</h2>
 
-			<p class="lead">Descarga solo la escena en la que participas, o abre el libreto completo, comenzando con la introducción del Guía asistente. (El libreto está en inglés.)</p>
+			<p class="lead">Léelo en línea con tu papel resaltado, descarga solo la escena en la que participas o abre el libreto completo, que comienza con la introducción del guía asistente.</p>
+
+			<!-- The script online, with a volunteer's own lines highlighted: made by tools/script-scenes.py along with the PDFs. -->
+			<h3 class="group">Encuentra tu papel</h3>
+			<div class="script-download">
+				<a class="button" href="/volunteers/script/">Mostrar mis líneas</a>
+				<p>Elige tu papel (Wiseman 2, Shepherd 1, Mary…) y tus líneas quedan resaltadas, en el libreto completo o en una sola escena. Fácil de leer en el teléfono, y se imprime con tus líneas resaltadas. (El libreto está en inglés.)</p>
+			</div>
 
 			<!-- Each scene's PDF is made from the Google Doc by tools/script-scenes.py: run it again after the script is edited
 			     there (the full script below always shows the latest). -->
@@ -256,39 +268,39 @@ a.button:hover {background:#8E2620; transform: translateY(-2px); box-shadow: 0 4
 			<ul class="audio-list">
 				<li>
 					<div><span class="track-num">Introducción</span><span class="track-title">Guía asistente</span></div>
-					<a class="listen" href="/volunteers/script/introduction.pdf" download="Follow the Star script - Introduction - Assistant Guide.pdf" aria-label="Descargar el libreto de la introducción: Guía asistente">Descargar</a>
+					<span class="acts"><a class="listen" href="/volunteers/script/?scene=0" aria-label="Leer en línea el libreto de la introducción: Guía asistente">Leer</a><a class="listen" href="/volunteers/script/introduction.pdf" download="Follow the Star script - Introduction - Assistant Guide.pdf" aria-label="Descargar el libreto de la introducción: Guía asistente">Descargar</a></span>
 				</li>
 				<li>
 					<div><span class="track-num">Escena 1</span><span class="track-title">Una familia moderna</span></div>
-					<a class="listen" href="/volunteers/script/scene-1.pdf" download="Follow the Star script - Scene 1 - A Modern Family.pdf" aria-label="Descargar el libreto de la escena 1: Una familia moderna">Descargar</a>
+					<span class="acts"><a class="listen" href="/volunteers/script/?scene=1" aria-label="Leer en línea el libreto de la escena 1: Una familia moderna">Leer</a><a class="listen" href="/volunteers/script/scene-1.pdf" download="Follow the Star script - Scene 1 - A Modern Family.pdf" aria-label="Descargar el libreto de la escena 1: Una familia moderna">Descargar</a></span>
 				</li>
 				<li>
 					<div><span class="track-num">Escena 2</span><span class="track-title">El templo de Jerusalén</span></div>
-					<a class="listen" href="/volunteers/script/scene-2.pdf" download="Follow the Star script - Scene 2 - The Temple in Jerusalem.pdf" aria-label="Descargar el libreto de la escena 2: El templo de Jerusalén">Descargar</a>
+					<span class="acts"><a class="listen" href="/volunteers/script/?scene=2" aria-label="Leer en línea el libreto de la escena 2: El templo de Jerusalén">Leer</a><a class="listen" href="/volunteers/script/scene-2.pdf" download="Follow the Star script - Scene 2 - The Temple in Jerusalem.pdf" aria-label="Descargar el libreto de la escena 2: El templo de Jerusalén">Descargar</a></span>
 				</li>
 				<li>
 					<div><span class="track-num">Escena 3</span><span class="track-title">El palacio de Herodes</span></div>
-					<a class="listen" href="/volunteers/script/scene-3.pdf" download="Follow the Star script - Scene 3 - Herod’s Palace.pdf" aria-label="Descargar el libreto de la escena 3: El palacio de Herodes">Descargar</a>
+					<span class="acts"><a class="listen" href="/volunteers/script/?scene=3" aria-label="Leer en línea el libreto de la escena 3: El palacio de Herodes">Leer</a><a class="listen" href="/volunteers/script/scene-3.pdf" download="Follow the Star script - Scene 3 - Herod’s Palace.pdf" aria-label="Descargar el libreto de la escena 3: El palacio de Herodes">Descargar</a></span>
 				</li>
 				<li>
 					<div><span class="track-num">Escena 4</span><span class="track-title">Los pastores</span></div>
-					<a class="listen" href="/volunteers/script/scene-4.pdf" download="Follow the Star script - Scene 4 - Shepherds.pdf" aria-label="Descargar el libreto de la escena 4: Los pastores">Descargar</a>
+					<span class="acts"><a class="listen" href="/volunteers/script/?scene=4" aria-label="Leer en línea el libreto de la escena 4: Los pastores">Leer</a><a class="listen" href="/volunteers/script/scene-4.pdf" download="Follow the Star script - Scene 4 - Shepherds.pdf" aria-label="Descargar el libreto de la escena 4: Los pastores">Descargar</a></span>
 				</li>
 				<li>
 					<div><span class="track-num">Escena 5</span><span class="track-title">Los soldados a caballo</span></div>
-					<a class="listen" href="/volunteers/script/scene-5.pdf" download="Follow the Star script - Scene 5 - Mounted Soldiers.pdf" aria-label="Descargar el libreto de la escena 5: Los soldados a caballo">Descargar</a>
+					<span class="acts"><a class="listen" href="/volunteers/script/?scene=5" aria-label="Leer en línea el libreto de la escena 5: Los soldados a caballo">Leer</a><a class="listen" href="/volunteers/script/scene-5.pdf" download="Follow the Star script - Scene 5 - Mounted Soldiers.pdf" aria-label="Descargar el libreto de la escena 5: Los soldados a caballo">Descargar</a></span>
 				</li>
 				<li>
 					<div><span class="track-num">Escena 6</span><span class="track-title">Belén</span></div>
-					<a class="listen" href="/volunteers/script/scene-6.pdf" download="Follow the Star script - Scene 6 - Bethlehem.pdf" aria-label="Descargar el libreto de la escena 6: Belén">Descargar</a>
+					<span class="acts"><a class="listen" href="/volunteers/script/?scene=6" aria-label="Leer en línea el libreto de la escena 6: Belén">Leer</a><a class="listen" href="/volunteers/script/scene-6.pdf" download="Follow the Star script - Scene 6 - Bethlehem.pdf" aria-label="Descargar el libreto de la escena 6: Belén">Descargar</a></span>
 				</li>
 				<li>
 					<div><span class="track-num">Escena 7</span><span class="track-title">El pesebre</span></div>
-					<a class="listen" href="/volunteers/script/scene-7.pdf" download="Follow the Star script - Scene 7 - The Manger.pdf" aria-label="Descargar el libreto de la escena 7: El pesebre">Descargar</a>
+					<span class="acts"><a class="listen" href="/volunteers/script/?scene=7" aria-label="Leer en línea el libreto de la escena 7: El pesebre">Leer</a><a class="listen" href="/volunteers/script/scene-7.pdf" download="Follow the Star script - Scene 7 - The Manger.pdf" aria-label="Descargar el libreto de la escena 7: El pesebre">Descargar</a></span>
 				</li>
 				<li>
 					<div><span class="track-num">Escena 8</span><span class="track-title">Una familia moderna</span></div>
-					<a class="listen" href="/volunteers/script/scene-8.pdf" download="Follow the Star script - Scene 8 - A Modern Family.pdf" aria-label="Descargar el libreto de la escena 8: Una familia moderna">Descargar</a>
+					<span class="acts"><a class="listen" href="/volunteers/script/?scene=8" aria-label="Leer en línea el libreto de la escena 8: Una familia moderna">Leer</a><a class="listen" href="/volunteers/script/scene-8.pdf" download="Follow the Star script - Scene 8 - A Modern Family.pdf" aria-label="Descargar el libreto de la escena 8: Una familia moderna">Descargar</a></span>
 				</li>
 			</ul>
 

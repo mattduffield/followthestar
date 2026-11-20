@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<!-- Made by tools/script-scenes.py from the Google Doc (and this template, tools/script-page.html): edit those, not this. -->
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>Script: find your part | Follow the Star volunteers</title>
+	<meta name="description" content="The Follow the Star script, with your part's lines highlighted: the whole script or one scene, on your phone or printed.">
+	<meta name="robots" content="noindex">
+	<link rel="icon" href="/favicon.ico" type="image/x-icon">
+	<link rel="apple-touch-icon" sizes="180x180" href="/assets/images/global/apple-touch-icon.png">
+	<meta name="theme-color" content="#751D19">
+	<link rel="preconnect" href="https://fonts.googleapis.com">
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Merienda&display=swap" rel="stylesheet">
+<style>
+:root {--burgundy:#751D19; --gold:#F4D18B; --cream:#FBF3E1; --mark:#FFE36E; --mark-soft:#FFF4C2; --ink:#1d1a17; --muted:#6b625a;}
+* {box-sizing:border-box;}
+html {-webkit-text-size-adjust:100%;}
+body {margin:0; background:#fff; color:var(--ink); font:18px/1.55 Inter,Arial,sans-serif;}
+a {color:var(--burgundy);}
+
+/* the slim bar at the top, and the controls that stay in view while you read */
+.top {background:var(--burgundy); color:#fff; display:flex; align-items:center; gap:14px; padding:10px 16px;}
+.top img {width:46px; height:37px; flex:none;}
+.top .t {font:20px Merienda,Arial,sans-serif; line-height:1.2;}
+.top a.back {margin-left:auto; color:#FFDB59; font-size:15px; text-decoration:none; border:1px solid rgba(255,219,89,0.6); border-radius:5px; padding:6px 12px; white-space:nowrap;}
+.controls {position:sticky; top:0; z-index:5; background:var(--cream); border-bottom:1px solid #e3d3ad; padding:8px 12px; display:flex; gap:8px; align-items:end;}
+.controls label {display:flex; flex-direction:column; font-size:11px; font-weight:600; letter-spacing:0.05em; text-transform:uppercase; color:var(--burgundy); flex:1 1 0; min-width:0;}
+.controls select {margin-top:3px; font:16px Inter,Arial,sans-serif; padding:7px 8px; border:1px solid #c9b48a; border-radius:8px; background:#fff; color:var(--ink); width:100%; min-height:42px; text-overflow:ellipsis;}
+.controls .acts {display:flex; gap:8px; flex:0 0 auto;}
+.controls button {font:600 15px Inter,Arial,sans-serif; border:1px solid var(--burgundy); background:#fff; color:var(--burgundy); border-radius:8px; padding:9px 14px; min-height:42px; cursor:pointer;}
+.controls button:hover {background:var(--burgundy); color:#fff;}
+.summary {font-size:16px; color:var(--muted); margin:14px 0 0; padding:10px 12px; background:var(--cream); border-radius:8px;}
+.summary b {color:var(--ink);}
+.summary label.only {display:inline-flex; flex-direction:row; align-items:center; gap:6px; text-transform:none; letter-spacing:0; font-weight:400; font-size:15px; color:var(--ink); margin-left:10px; cursor:pointer;}
+.summary label.only input {width:18px; height:18px;}
+
+/* the script itself: easy to read on a phone */
+main {max-width:760px; margin:0 auto; padding:8px 16px 120px;}
+.intro-note {font-size:15px; color:var(--muted); margin:16px 0 0;}
+section.scene {margin:28px 0 10px;}
+section.scene > h2 {font:22px Merienda,Arial,sans-serif; color:var(--burgundy); border-bottom:2px solid var(--gold); padding-bottom:6px; margin:0 0 14px;}
+section.scene > h2 small {display:block; font:600 13px Inter,Arial,sans-serif; letter-spacing:0.06em; text-transform:uppercase; color:var(--muted);}
+.cue {font-weight:700; letter-spacing:0.05em; font-size:15px; margin:18px 0 2px; color:#3b332c;}
+.say {margin:0 0 6px;}
+.say i, .dir {font-style:italic; color:var(--muted);}
+.dir {margin:10px 0; font-size:16px; padding-left:12px; border-left:3px solid #eee;}
+/* your part: your lines marked like a highlighter, the stage directions that mention you marked lightly */
+.mine {background:var(--mark); box-shadow:-10px 0 0 var(--mark), 10px 0 0 var(--mark); border-radius:2px;}
+.cue.mine {display:inline-block; margin-top:18px; padding:0 2px; color:var(--ink);}
+.cue.mine::after {content:"YOU"; font-size:11px; letter-spacing:0.08em; background:var(--burgundy); color:#fff; border-radius:4px; padding:1px 6px; margin-left:8px; vertical-align:2px;}
+.say.mine i {color:#5a4a20;}
+.dir.me {background:var(--mark-soft); border-left-color:var(--mark); color:#4c4334;}
+.dir.me::before {content:"You: "; font-style:normal; font-weight:700; color:var(--burgundy); font-size:13px;}
+.hidden {display:none;}
+.flash {outline:3px solid var(--burgundy); outline-offset:4px; transition:outline-color 1.2s;}
+
+/* the button that jumps to your next line, at the bottom of the screen */
+.next {position:fixed; right:16px; bottom:16px; z-index:6; font:600 16px Inter,Arial,sans-serif; background:var(--burgundy); color:#fff; border:0; border-radius:28px; padding:14px 20px; box-shadow:0 4px 14px rgba(0,0,0,0.25); cursor:pointer;}
+.next[hidden] {display:none;}
+footer {text-align:center; color:var(--muted); font-size:14px; padding:20px 16px 40px;}
+.print-head {display:none;}
+
+@media (max-width:520px) {
+	body {font-size:17px;}
+	.top .t {font-size:17px;}
+	.controls .acts button.print {display:none;}   /* (printing is from a computer) */
+}
+@media print {
+	@page {margin:0.6in;}
+	body {font-size:12pt; -webkit-print-color-adjust:exact; print-color-adjust:exact;}
+	.top, .controls, .next, footer, .intro-note, .summary {display:none !important;}
+	.print-head {display:block; font:10pt Inter,Arial,sans-serif; color:#555; border-bottom:1px solid #bbb; padding-bottom:4pt; margin-bottom:10pt;}
+	main {max-width:none; padding:0;}
+	section.scene {break-before:page;}
+	section.scene:first-of-type {break-before:auto;}
+	.cue {break-after:avoid;}
+	.say, .dir {break-inside:avoid;}
+}
+</style>
+</head>
+<body>
+	<div class="top">
+		<a href="/"><img src="/assets/images/global/yellow-logo-partial.png" alt="Follow the Star"></a>
+		<div class="t">Script</div>
+		<a class="back" href="/volunteers/#script">Volunteers</a>
+	</div>
+
+	<div class="controls" role="region" aria-label="Choose your part and scene">
+		<label>My part
+			<select id="part"><option value="">Choose your part…</option></select>
+		</label>
+		<label>Show
+			<select id="scene"><option value="all">The whole script</option></select>
+		</label>
+		<div class="acts"><button type="button" class="print" id="print">Print</button></div>
+	</div>
+
+	<main>
+		<div class="print-head" id="print-head"></div>
+		<p class="summary" id="summary">Pick your part to see your lines highlighted.</p>
+		<p class="intro-note">Your lines are in yellow; stage directions that mention you are marked lightly. The button at the bottom
+			jumps to your next line. To print your part, pick it and print from a computer (the highlights print too).
+			Script as of __DATE__.</p>
+		<div id="script"></div>
+	</main>
+	<button type="button" class="next" id="next" hidden>Next line ↓</button>
+	<footer>Follow the Star script, as of __DATE__ · <a href="/volunteers/#script">Back to Volunteers</a></footer>
+
+<script>
+var DATA = __SCRIPT__;
+(function() {
+	'use strict';
+	var partSel = document.getElementById('part'), sceneSel = document.getElementById('scene'), out = document.getElementById('script');
+	var summary = document.getElementById('summary'), nextBtn = document.getElementById('next'), printHead = document.getElementById('print-head');
+	var KEY = 'fts-script-part', onlyMine = false;
+
+	// names as people say them: WISEMAN 2 → Wiseman 2, ANGEL OF THE LORD → Angel of the Lord
+	function nice(n) {
+		return n.toLowerCase().replace(/(^|[\s&-])([a-z])/g, function(m, a, b) { return a + b.toUpperCase(); })
+			.replace(/ (Of|The|And|In) /g, function(m) { return m.toLowerCase(); });
+	}
+	function slug(n) { return n.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, ''); }
+	function sceneName(s) { return s.n ? 'Scene ' + s.n + ': ' + s.title : 'Introduction: ' + s.title; }
+	function esc(t) { return t.replace(/&/g, '&amp;').replace(/</g, '&lt;'); }
+
+	// the parts to choose from, with how many lines each has (the speaking parts first, in the order they first speak)
+	var lines = {};
+	DATA.scenes.forEach(function(s) { s.blocks.forEach(function(b) { if (b.say) b.who.forEach(function(w) { lines[w] = (lines[w] || 0) + 1; }); }); });
+	function addGroup(label, names) {
+		var g = document.createElement('optgroup'); g.label = label;
+		names.slice().sort(function(a, b) { return nice(a) < nice(b) ? -1 : 1; }).forEach(function(n) {
+			var o = document.createElement('option'); o.value = slug(n); o.textContent = nice(n) + (lines[n] ? ' (' + lines[n] + (lines[n] === 1 ? ' line)' : ' lines)') : ''); o.dataset.name = n;
+			g.appendChild(o);
+		});
+		partSel.appendChild(g);
+	}
+	addGroup('Speaking parts', DATA.speaking);
+	addGroup('Parts without lines', DATA.silent);
+	DATA.scenes.forEach(function(s) { var o = document.createElement('option'); o.value = String(s.n); o.textContent = sceneName(s); sceneSel.appendChild(o); });
+	function partName() { var o = partSel.selectedOptions[0]; return o && o.dataset.name || ''; }
+
+	function render() {
+		var part = partName(), scene = sceneSel.value, html = '', mine = 0, inScenes = [];
+		DATA.scenes.forEach(function(s) {
+			var here = part && s.parts.indexOf(part) >= 0;
+			if (here) inScenes.push(s);
+			if (scene !== 'all' && String(s.n) !== scene) return;
+			if (scene === 'all' && onlyMine && part && !here) return;
+			html += '<section class="scene" id="scene-' + s.n + '"><h2><small>' + (s.n ? 'Scene ' + s.n : 'Introduction') + '</small>' + esc(s.title) + '</h2>';
+			s.blocks.forEach(function(b) {
+				var me = part && b.who.indexOf(part) >= 0;
+				if (b.cue) html += '<div class="cue' + (me ? ' mine' : '') + '">' + esc(b.cue) + '</div>';
+				else if (b.say) {
+					if (me) mine++;
+					html += '<p class="say' + (me ? ' mine' : '') + '">' + b.say.map(function(r) { return r[1] ? '<i>' + esc(r[0]) + '</i>' : esc(r[0]); }).join('') + '</p>';
+				}
+				else html += '<p class="dir' + (me ? ' me' : '') + '">' + esc(b.dir) + '</p>';
+			});
+			html += '</section>';
+		});
+		out.innerHTML = html;
+		// the summary: your lines, and the scenes you're in (each a link to that scene)
+		if (!part) summary.innerHTML = 'Pick your part to see your lines highlighted.';
+		else {
+			var where = inScenes.map(function(s) { return '<a href="#" data-scene="' + s.n + '">' + (s.n ? 'Scene ' + s.n : 'Introduction') + '</a>'; }).join(', ');
+			summary.innerHTML = '<b>' + esc(nice(part)) + '</b>: ' + (lines[part] ? lines[part] + (lines[part] === 1 ? ' line' : ' lines') : 'no spoken lines') +
+				(where ? ', in ' + where : '') + (scene === 'all' ? '<label class="only"><input type="checkbox" id="only"' + (onlyMine ? ' checked' : '') + '> Only my scenes</label>' : '');
+		}
+		var marks = out.querySelectorAll('.say.mine, .dir.me');
+		nextBtn.hidden = !marks.length;
+		printHead.textContent = 'Follow the Star script · ' + (part ? nice(part) + "'s part, highlighted · " : '') +
+			(scene === 'all' ? (onlyMine && part ? 'the scenes ' + nice(part) + ' is in' : 'the whole script') : sceneName(DATA.scenes.filter(function(s) { return String(s.n) === scene; })[0])) + ' · as of __DATE__';
+		var u = new URLSearchParams(); if (part) u.set('part', slug(part)); if (scene !== 'all') u.set('scene', scene);
+		history.replaceState(null, '', location.pathname + (u.toString() ? '?' + u : ''));
+	}
+
+	// jump to your next line (or direction) below where you're reading, round to the first after the last
+	nextBtn.addEventListener('click', function() {
+		var marks = [].slice.call(out.querySelectorAll('.say.mine, .dir.me')), bar = document.querySelector('.controls').getBoundingClientRect().bottom + 12;
+		var el = marks.filter(function(m) { return m.getBoundingClientRect().top > bar + 4; })[0] || marks[0];
+		if (!el) return;
+		window.scrollTo({top: window.scrollY + el.getBoundingClientRect().top - bar, behavior: 'smooth'});
+		el.classList.add('flash'); setTimeout(function() { el.classList.remove('flash'); }, 900);
+	});
+	summary.addEventListener('click', function(e) {
+		var a = e.target.closest('a[data-scene]');
+		if (!a) return;
+		e.preventDefault(); sceneSel.value = a.dataset.scene; render(); window.scrollTo(0, 0);
+	});
+	summary.addEventListener('change', function(e) { if (e.target.id === 'only') { onlyMine = e.target.checked; render(); } });
+	partSel.addEventListener('change', function() { try { localStorage.setItem(KEY, partSel.value); } catch (e) {} render(); });
+	sceneSel.addEventListener('change', function() { render(); window.scrollTo(0, 0); });
+	document.getElementById('print').addEventListener('click', function() { window.print(); });
+
+	// start from the address (?part=wiseman-2&scene=3), or the part picked last time on this device
+	var q = new URLSearchParams(location.search), want = q.get('part');
+	if (!want) try { want = localStorage.getItem(KEY); } catch (e) {}
+	if (want && partSel.querySelector('option[value="' + want + '"]')) partSel.value = want;
+	if (q.get('scene') && sceneSel.querySelector('option[value="' + q.get('scene') + '"]')) sceneSel.value = q.get('scene');
+	render();
+})();
+</script>
+</body>
+</html>
