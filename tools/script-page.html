@@ -107,7 +107,7 @@ footer {text-align:center; color:var(--muted); font-size:14px; padding:20px 16px
 	<main>
 		<div class="print-head" id="print-head"></div>
 		<p class="summary" id="summary">Pick your part to see your lines highlighted.</p>
-		<p class="intro-note">Your lines are in yellow; stage directions that mention you are marked lightly. The buttons at the bottom
+		<p class="intro-note">Your lines are in yellow. (For the parts with no lines, like Mary and Joseph, the stage directions that mention you are marked instead.) The buttons at the bottom
 			jump to your next or previous line. Pick a scene and the parts list shows only the parts in that scene. Start over clears
 			your choices, ready for the next person or group. To print your part, pick it and print from a computer (the highlights print too).
 			Script as of __DATE__.</p>
@@ -167,6 +167,17 @@ var DATA = __SCRIPT__;
 	DATA.scenes.forEach(function(s) { var o = document.createElement('option'); o.value = String(s.n); o.textContent = sceneName(s); sceneSel.appendChild(o); });
 	function partName() { var o = partSel.selectedOptions[0]; return o && o.dataset.name || ''; }
 
+	// a spoken line in double quotes: round the words, not a direction at its start or end ("(to Herod)" stays outside)
+	function quoted(runs) {
+		var words = runs.map(function(r, i) { return !r[1] && r[0].trim() ? i : -1; }).filter(function(i) { return i >= 0; });
+		return runs.map(function(r, i) {
+			var t = r[0];
+			if (i === words[0]) t = t.replace(/^(\s*)/, '$1\u201c');
+			if (i === words[words.length - 1]) t = t.replace(/(\s*)$/, '\u201d$1');
+			return r[1] ? '<i>' + esc(t) + '</i>' : esc(t);
+		}).join('');
+	}
+
 	function render() {
 		var part = partName(), scene = sceneSel.value, html = '', mine = 0, inScenes = [];
 		DATA.scenes.forEach(function(s) {
@@ -180,9 +191,9 @@ var DATA = __SCRIPT__;
 				if (b.cue) html += '<div class="cue' + (me ? ' mine' : '') + '">' + esc(b.cue) + '</div>';
 				else if (b.say) {
 					if (me) mine++;
-					html += '<p class="say' + (me ? ' mine' : '') + '">' + b.say.map(function(r) { return r[1] ? '<i>' + esc(r[0]) + '</i>' : esc(r[0]); }).join('') + '</p>';
+					html += '<p class="say' + (me ? ' mine' : '') + '">' + quoted(b.say) + '</p>';
 				}
-				else html += '<p class="dir' + (me ? ' me' : '') + '">' + esc(b.dir) + '</p>';
+				else html += '<p class="dir' + (me && !lines[part] ? ' me' : '') + '">' + esc(b.dir) + '</p>';   // (directions are marked only for the parts with no lines)
 			});
 			html += '</section>';
 		});
