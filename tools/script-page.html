@@ -101,15 +101,15 @@ footer {text-align:center; color:var(--muted); font-size:14px; padding:20px 16px
 		<label>Show
 			<select id="scene"><option value="all">The whole script</option></select>
 		</label>
-		<div class="acts"><button type="button" class="over" id="over" title="Clear the part and scene, ready for the next person">Start over</button><button type="button" class="print" id="print">Print</button></div>
+		<div class="acts"><button type="button" class="over" id="over" title="Back to your first line, ready for the next group">Start over</button><button type="button" class="print" id="print">Print</button></div>
 	</div>
 
 	<main>
 		<div class="print-head" id="print-head"></div>
 		<p class="summary" id="summary">Pick your part to see your lines highlighted.</p>
 		<p class="intro-note">Your lines are in yellow. (For the parts with no lines, like Mary and Joseph, the stage directions that mention you are marked instead.) The buttons at the bottom
-			jump to your next or previous line. Pick a scene and the parts list shows only the parts in that scene. Start over clears
-			your choices, ready for the next person or group. To print your part, pick it and print from a computer (the highlights print too).
+			jump to your next or previous line. Pick a scene and the parts list shows only the parts in that scene. Start over takes you
+			back to your first line, ready for the next group. To print your part, pick it and print from a computer (the highlights print too).
 			Script as of __DATE__.</p>
 		<div id="script"></div>
 	</main>
@@ -230,7 +230,7 @@ var DATA = __SCRIPT__;
 			if (last && last.a === a) last.m.push(m); else stops.push({a: a, m: [m]});
 		});
 		function top(s) { return s.a.getBoundingClientRect().top; }
-		var s = dir > 0 ? stops.filter(function(x) { return top(x) > bar + 8; })[0] || stops[0]
+		var s = dir === 0 ? stops[0] : dir > 0 ? stops.filter(function(x) { return top(x) > bar + 8; })[0] || stops[0]
 			: stops.filter(function(x) { return top(x) < bar - 8; }).pop() || stops[stops.length - 1];
 		if (!s) return;
 		window.scrollTo({top: Math.max(0, window.scrollY + top(s) - bar), behavior: 'smooth'});
@@ -238,11 +238,9 @@ var DATA = __SCRIPT__;
 	}
 	document.getElementById('next').addEventListener('click', function() { go(1); });
 	document.getElementById('prev').addEventListener('click', function() { go(-1); });
-	// start over: no part, the whole script, back at the top, and this device forgets the part (ready for the next person or group)
+	// start over: the same part and scene, back to the first line (ready for the next group); with no part picked, back to the top
 	document.getElementById('over').addEventListener('click', function() {
-		try { localStorage.removeItem(KEY); } catch (e) {}
-		partSel.value = ''; sceneSel.value = 'all'; onlyMine = false;
-		buildParts(); render(); window.scrollTo(0, 0);
+		if (out.querySelector('.say.mine, .dir.me')) go(0); else window.scrollTo({top: 0, behavior: 'smooth'});
 	});
 	summary.addEventListener('click', function(e) {
 		var a = e.target.closest('a[data-scene]');
