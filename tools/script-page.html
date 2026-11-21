@@ -30,7 +30,8 @@ a {color:var(--burgundy);}
 .controls select {margin-top:3px; font:16px Inter,Arial,sans-serif; padding:7px 8px; border:1px solid #c9b48a; border-radius:8px; background:#fff; color:var(--ink); width:100%; min-height:42px; text-overflow:ellipsis;}
 .controls .acts {display:flex; gap:8px; flex:0 0 auto;}
 .controls button {font:600 15px Inter,Arial,sans-serif; border:1px solid var(--burgundy); background:#fff; color:var(--burgundy); border-radius:8px; padding:9px 14px; min-height:42px; cursor:pointer;}
-.controls button:hover {background:var(--burgundy); color:#fff;}
+@media (hover:hover) { .controls button:hover {background:var(--burgundy); color:#fff;} }
+.controls button:active {background:var(--burgundy); color:#fff;}
 .summary {font-size:16px; color:var(--muted); margin:14px 0 0; padding:10px 12px; background:var(--cream); border-radius:8px;}
 .summary b {color:var(--ink);}
 .summary label.only {display:inline-flex; flex-direction:row; align-items:center; gap:6px; text-transform:none; letter-spacing:0; font-weight:400; font-size:15px; color:var(--ink); margin-left:10px; cursor:pointer;}
@@ -57,8 +58,11 @@ section.scene > h2 small {display:block; font:600 13px Inter,Arial,sans-serif; l
 .flash {outline:3px solid var(--burgundy); outline-offset:4px; transition:outline-color 1.2s;}
 
 /* the button that jumps to your next line, at the bottom of the screen */
-.next {position:fixed; right:16px; bottom:16px; z-index:6; font:600 16px Inter,Arial,sans-serif; background:var(--burgundy); color:#fff; border:0; border-radius:28px; padding:14px 20px; box-shadow:0 4px 14px rgba(0,0,0,0.25); cursor:pointer;}
-.next[hidden] {display:none;}
+.jump {position:fixed; right:16px; bottom:16px; z-index:6; display:flex; gap:10px;}
+.jump[hidden] {display:none;}
+.jump button {font:600 16px Inter,Arial,sans-serif; background:var(--burgundy); color:#fff; border:0; border-radius:28px; padding:14px 20px; box-shadow:0 4px 14px rgba(0,0,0,0.25); cursor:pointer;}
+.jump button.prev {background:#fff; color:var(--burgundy); border:2px solid var(--burgundy); padding:12px 18px;}
+.controls button.over {border-color:#c9b48a; color:var(--muted);}
 footer {text-align:center; color:var(--muted); font-size:14px; padding:20px 16px 40px;}
 .print-head {display:none;}
 
@@ -66,11 +70,14 @@ footer {text-align:center; color:var(--muted); font-size:14px; padding:20px 16px
 	body {font-size:17px;}
 	.top .t {font-size:17px;}
 	.controls .acts button.print {display:none;}   /* (printing is from a computer) */
+	.controls {gap:6px; padding:8px 10px;}
+	.controls button.over {padding:4px 8px; font-size:13px; line-height:1.15; width:58px; white-space:normal;}
+	.jump {left:16px; justify-content:flex-end;}
 }
 @media print {
 	@page {margin:0.6in;}
 	body {font-size:12pt; -webkit-print-color-adjust:exact; print-color-adjust:exact;}
-	.top, .controls, .next, footer, .intro-note, .summary {display:none !important;}
+	.top, .controls, .jump, footer, .intro-note, .summary {display:none !important;}
 	.print-head {display:block; font:10pt Inter,Arial,sans-serif; color:#555; border-bottom:1px solid #bbb; padding-bottom:4pt; margin-bottom:10pt;}
 	main {max-width:none; padding:0;}
 	section.scene {break-before:page;}
@@ -94,18 +101,19 @@ footer {text-align:center; color:var(--muted); font-size:14px; padding:20px 16px
 		<label>Show
 			<select id="scene"><option value="all">The whole script</option></select>
 		</label>
-		<div class="acts"><button type="button" class="print" id="print">Print</button></div>
+		<div class="acts"><button type="button" class="over" id="over" title="Clear the part and scene, ready for the next person">Start over</button><button type="button" class="print" id="print">Print</button></div>
 	</div>
 
 	<main>
 		<div class="print-head" id="print-head"></div>
 		<p class="summary" id="summary">Pick your part to see your lines highlighted.</p>
-		<p class="intro-note">Your lines are in yellow; stage directions that mention you are marked lightly. The button at the bottom
-			jumps to your next line. To print your part, pick it and print from a computer (the highlights print too).
+		<p class="intro-note">Your lines are in yellow; stage directions that mention you are marked lightly. The buttons at the bottom
+			jump to your next or previous line. Pick a scene and the parts list shows only the parts in that scene. Start over clears
+			your choices, ready for the next person or group. To print your part, pick it and print from a computer (the highlights print too).
 			Script as of __DATE__.</p>
 		<div id="script"></div>
 	</main>
-	<button type="button" class="next" id="next" hidden>Next line ↓</button>
+	<div class="jump" id="jump" hidden><button type="button" class="prev" id="prev">↑ Previous</button><button type="button" id="next">Next line ↓</button></div>
 	<footer>Follow the Star script, as of __DATE__ · <a href="/volunteers/#script">Back to Volunteers</a></footer>
 
 <script>
@@ -113,8 +121,8 @@ var DATA = __SCRIPT__;
 (function() {
 	'use strict';
 	var partSel = document.getElementById('part'), sceneSel = document.getElementById('scene'), out = document.getElementById('script');
-	var summary = document.getElementById('summary'), nextBtn = document.getElementById('next'), printHead = document.getElementById('print-head');
-	var KEY = 'fts-script-part', onlyMine = false;
+	var summary = document.getElementById('summary'), jump = document.getElementById('jump'), printHead = document.getElementById('print-head');
+	var KEY = 'fts-script-part', onlyMine = false, note = '';
 
 	// names as people say them: WISEMAN 2 → Wiseman 2, ANGEL OF THE LORD → Angel of the Lord
 	function nice(n) {
@@ -125,19 +133,37 @@ var DATA = __SCRIPT__;
 	function sceneName(s) { return s.n ? 'Scene ' + s.n + ': ' + s.title : 'Introduction: ' + s.title; }
 	function esc(t) { return t.replace(/&/g, '&amp;').replace(/</g, '&lt;'); }
 
-	// the parts to choose from, with how many lines each has (the speaking parts first, in the order they first speak)
+	// the parts to choose from, with how many lines each has: in the whole script, or (once a scene is picked) only the parts in that scene
 	var lines = {};
 	DATA.scenes.forEach(function(s) { s.blocks.forEach(function(b) { if (b.say) b.who.forEach(function(w) { lines[w] = (lines[w] || 0) + 1; }); }); });
-	function addGroup(label, names) {
-		var g = document.createElement('optgroup'); g.label = label;
-		names.slice().sort(function(a, b) { return nice(a) < nice(b) ? -1 : 1; }).forEach(function(n) {
-			var o = document.createElement('option'); o.value = slug(n); o.textContent = nice(n) + (lines[n] ? ' (' + lines[n] + (lines[n] === 1 ? ' line)' : ' lines)') : ''); o.dataset.name = n;
-			g.appendChild(o);
+	function sceneOf(v) { return DATA.scenes.filter(function(s) { return String(s.n) === v; })[0]; }
+	function count(n, k) { return k ? ' (' + k + (k === 1 ? ' line)' : ' lines)') : ''; }
+	function buildParts() {
+		var s = sceneOf(sceneSel.value), keep = partSel.value, here = {};
+		var names = s ? s.parts : DATA.speaking.concat(DATA.silent);
+		if (s) s.blocks.forEach(function(b) { if (b.say) b.who.forEach(function(w) { here[w] = (here[w] || 0) + 1; }); });
+		var n = s ? here : lines;
+		while (partSel.options.length > 1) partSel.remove(1);
+		[].slice.call(partSel.querySelectorAll('optgroup')).forEach(function(g) { g.remove(); });
+		partSel.options[0].textContent = s ? 'Choose your part in ' + (s.n ? 'Scene ' + s.n : 'the Introduction') + '…' : 'Choose your part…';
+		[[s ? 'Speaking in this scene' : 'Speaking parts', names.filter(function(x) { return n[x]; })],
+		 [s ? 'In this scene, without lines' : 'Parts without lines', names.filter(function(x) { return !n[x]; })]].forEach(function(gr) {
+			if (!gr[1].length) return;
+			var g = document.createElement('optgroup'); g.label = gr[0];
+			gr[1].slice().sort(function(a, b) { return nice(a) < nice(b) ? -1 : 1; }).forEach(function(x) {
+				var o = document.createElement('option'); o.value = slug(x); o.textContent = nice(x) + count(x, n[x]); o.dataset.name = x;
+				g.appendChild(o);
+			});
+			partSel.appendChild(g);
 		});
-		partSel.appendChild(g);
+		// the part picked before stays if it's in this scene; if not, say so and clear it
+		if (keep && partSel.querySelector('option[value="' + keep + '"]')) partSel.value = keep;
+		else if (keep) {
+			var was = (DATA.speaking.concat(DATA.silent)).filter(function(x) { return slug(x) === keep; })[0];
+			note = was && s ? nice(was) + ' isn\u2019t in ' + (s.n ? 'Scene ' + s.n : 'the Introduction') + '. ' : '';
+			partSel.value = '';
+		}
 	}
-	addGroup('Speaking parts', DATA.speaking);
-	addGroup('Parts without lines', DATA.silent);
 	DATA.scenes.forEach(function(s) { var o = document.createElement('option'); o.value = String(s.n); o.textContent = sceneName(s); sceneSel.appendChild(o); });
 	function partName() { var o = partSel.selectedOptions[0]; return o && o.dataset.name || ''; }
 
@@ -162,43 +188,56 @@ var DATA = __SCRIPT__;
 		});
 		out.innerHTML = html;
 		// the summary: your lines, and the scenes you're in (each a link to that scene)
-		if (!part) summary.innerHTML = 'Pick your part to see your lines highlighted.';
+		if (!part) summary.innerHTML = esc(note) + (scene === 'all' ? 'Pick your part to see your lines highlighted.' : 'Pick your part in this scene to see your lines highlighted.');
 		else {
 			var where = inScenes.map(function(s) { return '<a href="#" data-scene="' + s.n + '">' + (s.n ? 'Scene ' + s.n : 'Introduction') + '</a>'; }).join(', ');
+			var inThis = scene === 'all' ? -1 : out.querySelectorAll('.say.mine').length;
 			summary.innerHTML = '<b>' + esc(nice(part)) + '</b>: ' + (lines[part] ? lines[part] + (lines[part] === 1 ? ' line' : ' lines') : 'no spoken lines') +
+				(inThis >= 0 && lines[part] ? ' (' + inThis + ' in this scene)' : '') +
 				(where ? ', in ' + where : '') + (scene === 'all' ? '<label class="only"><input type="checkbox" id="only"' + (onlyMine ? ' checked' : '') + '> Only my scenes</label>' : '');
 		}
 		var marks = out.querySelectorAll('.say.mine, .dir.me');
-		nextBtn.hidden = !marks.length;
+		jump.hidden = !marks.length;
+		note = '';
 		printHead.textContent = 'Follow the Star script · ' + (part ? nice(part) + "'s part, highlighted · " : '') +
-			(scene === 'all' ? (onlyMine && part ? 'the scenes ' + nice(part) + ' is in' : 'the whole script') : sceneName(DATA.scenes.filter(function(s) { return String(s.n) === scene; })[0])) + ' · as of __DATE__';
+			(scene === 'all' ? (onlyMine && part ? 'the scenes ' + nice(part) + ' is in' : 'the whole script') : sceneName(sceneOf(scene))) + ' · as of __DATE__';
 		var u = new URLSearchParams(); if (part) u.set('part', slug(part)); if (scene !== 'all') u.set('scene', scene);
 		history.replaceState(null, '', location.pathname + (u.toString() ? '?' + u : ''));
 	}
 
-	// jump to your next line (or direction) below where you're reading, round to the first after the last
-	nextBtn.addEventListener('click', function() {
-		var marks = [].slice.call(out.querySelectorAll('.say.mine, .dir.me')), bar = document.querySelector('.controls').getBoundingClientRect().bottom + 12;
-		var el = marks.filter(function(m) { return m.getBoundingClientRect().top > bar + 4; })[0] || marks[0];
+	// jump to your next line (or direction) below where you're reading, or the one before; round from the last to the first and back
+	function go(dir) {
+		var marks = [].slice.call(out.querySelectorAll('.say.mine, .dir.me')), bar = document.querySelector('.controls').offsetHeight + 12;   // (where the controls sit once they've stuck to the top)
+		var el = dir > 0 ? marks.filter(function(m) { return m.getBoundingClientRect().top > bar + 4; })[0] || marks[0]
+			: marks.filter(function(m) { return m.getBoundingClientRect().top < bar - 4; }).pop() || marks[marks.length - 1];
 		if (!el) return;
 		window.scrollTo({top: window.scrollY + el.getBoundingClientRect().top - bar, behavior: 'smooth'});
 		el.classList.add('flash'); setTimeout(function() { el.classList.remove('flash'); }, 900);
+	}
+	document.getElementById('next').addEventListener('click', function() { go(1); });
+	document.getElementById('prev').addEventListener('click', function() { go(-1); });
+	// start over: no part, the whole script, back at the top, and this device forgets the part (ready for the next person or group)
+	document.getElementById('over').addEventListener('click', function() {
+		try { localStorage.removeItem(KEY); } catch (e) {}
+		partSel.value = ''; sceneSel.value = 'all'; onlyMine = false;
+		buildParts(); render(); window.scrollTo(0, 0);
 	});
 	summary.addEventListener('click', function(e) {
 		var a = e.target.closest('a[data-scene]');
 		if (!a) return;
-		e.preventDefault(); sceneSel.value = a.dataset.scene; render(); window.scrollTo(0, 0);
+		e.preventDefault(); sceneSel.value = a.dataset.scene; buildParts(); render(); window.scrollTo(0, 0);
 	});
 	summary.addEventListener('change', function(e) { if (e.target.id === 'only') { onlyMine = e.target.checked; render(); } });
 	partSel.addEventListener('change', function() { try { localStorage.setItem(KEY, partSel.value); } catch (e) {} render(); });
-	sceneSel.addEventListener('change', function() { render(); window.scrollTo(0, 0); });
+	sceneSel.addEventListener('change', function() { buildParts(); render(); window.scrollTo(0, 0); });
 	document.getElementById('print').addEventListener('click', function() { window.print(); });
 
 	// start from the address (?part=wiseman-2&scene=3), or the part picked last time on this device
 	var q = new URLSearchParams(location.search), want = q.get('part');
 	if (!want) try { want = localStorage.getItem(KEY); } catch (e) {}
-	if (want && partSel.querySelector('option[value="' + want + '"]')) partSel.value = want;
 	if (q.get('scene') && sceneSel.querySelector('option[value="' + q.get('scene') + '"]')) sceneSel.value = q.get('scene');
+	buildParts();
+	if (want && partSel.querySelector('option[value="' + want + '"]')) partSel.value = want;
 	render();
 })();
 </script>
