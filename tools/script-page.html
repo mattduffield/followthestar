@@ -206,13 +206,24 @@ var DATA = __SCRIPT__;
 	}
 
 	// jump to your next line (or direction) below where you're reading, or the one before; round from the last to the first and back
+	// where each of your turns starts: back past any stage directions to the name of who's speaking (so the name isn't hidden under the
+	// controls); your direction and your line in the same turn are one stop
+	function anchor(m) {
+		for (var c = m.previousElementSibling; c && !c.classList.contains('say'); c = c.previousElementSibling) if (c.classList.contains('cue')) return c;
+		return m;
+	}
 	function go(dir) {
-		var marks = [].slice.call(out.querySelectorAll('.say.mine, .dir.me')), bar = document.querySelector('.controls').offsetHeight + 12;   // (where the controls sit once they've stuck to the top)
-		var el = dir > 0 ? marks.filter(function(m) { return m.getBoundingClientRect().top > bar + 4; })[0] || marks[0]
-			: marks.filter(function(m) { return m.getBoundingClientRect().top < bar - 4; }).pop() || marks[marks.length - 1];
-		if (!el) return;
-		window.scrollTo({top: window.scrollY + el.getBoundingClientRect().top - bar, behavior: 'smooth'});
-		el.classList.add('flash'); setTimeout(function() { el.classList.remove('flash'); }, 900);
+		var stops = [], bar = document.querySelector('.controls').offsetHeight + 20;   // (where the controls sit once they've stuck to the top, and a gap)
+		[].slice.call(out.querySelectorAll('.say.mine, .dir.me')).forEach(function(m) {
+			var a = anchor(m), last = stops[stops.length - 1];
+			if (last && last.a === a) last.m.push(m); else stops.push({a: a, m: [m]});
+		});
+		function top(s) { return s.a.getBoundingClientRect().top; }
+		var s = dir > 0 ? stops.filter(function(x) { return top(x) > bar + 8; })[0] || stops[0]
+			: stops.filter(function(x) { return top(x) < bar - 8; }).pop() || stops[stops.length - 1];
+		if (!s) return;
+		window.scrollTo({top: Math.max(0, window.scrollY + top(s) - bar), behavior: 'smooth'});
+		s.m.forEach(function(m) { m.classList.add('flash'); setTimeout(function() { m.classList.remove('flash'); }, 900); });
 	}
 	document.getElementById('next').addEventListener('click', function() { go(1); });
 	document.getElementById('prev').addEventListener('click', function() { go(-1); });
